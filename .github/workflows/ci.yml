@@ -15,7 +15,7 @@ concurrency:
 jobs:
   android:
     name: Android (lint, tests, debug APK)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     defaults:
       run:
@@ -42,7 +42,7 @@ jobs:
 
   python:
     name: Python prototype (lint, types, security, tests)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     defaults:
       run:
