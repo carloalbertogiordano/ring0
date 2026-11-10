@@ -314,4 +314,14 @@ Check that the ring is charged, out of its case and not connected to anything el
     <string name="habit_metric_rhr">Resting HR</string>
     <string name="habit_metric_sleep">Sleep</string>
     <string name="habit_value">%1$+.0f%% (%2$d nights)</string>
+    <string name="notif_channel_summary">Daily summary</string>
+    <string name="summary_setting">Morning and evening summary</string>
+    <string name="summary_morning_title">Your morning</string>
+    <string name="summary_evening_title">Your day in numbers</string>
+    <string name="summary_recovery">Recovery %1$d</string>
+    <string name="summary_sleep">Sleep %1$s (score %2$d)</string>
+    <string name="summary_energy">Body battery %1$d</string>
+    <string name="summary_load">Load %1$d TRIMP</string>
+    <string name="summary_kcal">%1$d kcal</string>
+    <string name="summary_bedtime">Aim to be asleep by %1$s</string>
 </resources>

@@ -314,4 +314,14 @@ Controlla che l\'anello sia carico, fuori dalla custodia e non collegato ad altr
     <string name="habit_metric_rhr">FC a riposo</string>
     <string name="habit_metric_sleep">Sonno</string>
     <string name="habit_value">%1$+.0f%% (%2$d notti)</string>
+    <string name="notif_channel_summary">Riepilogo giornaliero</string>
+    <string name="summary_setting">Riepilogo mattina e sera</string>
+    <string name="summary_morning_title">La tua mattina</string>
+    <string name="summary_evening_title">La tua giornata in numeri</string>
+    <string name="summary_recovery">Recupero %1$d</string>
+    <string name="summary_sleep">Sonno %1$s (punteggio %2$d)</string>
+    <string name="summary_energy">Batteria corporea %1$d</string>
+    <string name="summary_load">Carico %1$d TRIMP</string>
+    <string name="summary_kcal">%1$d kcal</string>
+    <string name="summary_bedtime">Punta a dormire entro le %1$s</string>
 </resources>

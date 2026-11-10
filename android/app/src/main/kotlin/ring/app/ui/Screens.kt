@@ -587,6 +587,7 @@ private fun SettingsScreen(graph: Graph, onForget: () -> Unit) {
     val thresholds by graph.settings.thresholds.collectAsStateWithLifecycle()
     var interval by remember { mutableIntStateOf(graph.settings.syncIntervalMin) }
     var alertsOn by remember { mutableStateOf(graph.settings.alertsEnabled) }
+    var summaryOn by remember { mutableStateOf(graph.settings.summaryEnabled) }
     var picking by remember { mutableStateOf(false) }
     val alerts by graph.dao.observeAlerts().collectAsStateWithLifecycle(emptyList())
     val scope = androidx.compose.runtime.rememberCoroutineScope()
@@ -681,6 +682,13 @@ private fun SettingsScreen(graph: Graph, onForget: () -> Unit) {
                     TSwitch(alertsOn, {
                         alertsOn = it
                         graph.settings.alertsEnabled = it
+                    })
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    T(stringResource(R.string.summary_setting), size = 12.sp)
+                    TSwitch(summaryOn, {
+                        summaryOn = it
+                        graph.settings.summaryEnabled = it
                     })
                 }
                 Stepper(stringResource(R.string.thr_hr_high), "${thresholds.hrHigh}", { set(thresholds.copy(hrHigh = thresholds.hrHigh - 5)) }, {

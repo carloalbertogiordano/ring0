@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import ring.domain.Profile
 import ring.domain.Sex
+import ring.domain.SummarySlot
 import java.time.LocalDate
 
 data class Thresholds(
@@ -44,6 +45,16 @@ class SettingsStore(context: Context) {
     var sleepTargetMin: Int
         get() = prefs.getInt("sleepTarget", DEFAULT_SLEEP_TARGET_MIN)
         set(value) = prefs.edit().putInt("sleepTarget", value).apply()
+
+    /** Morning and evening summary notifications. */
+    var summaryEnabled: Boolean
+        get() = prefs.getBoolean("summary", true)
+        set(value) = prefs.edit().putBoolean("summary", value).apply()
+
+    /** Local epoch day on which the summary of this slot was last sent, or -1. */
+    fun lastSummaryDay(slot: SummarySlot): Long = prefs.getLong("summary_${slot.name}", NEVER)
+
+    fun markSummary(slot: SummarySlot, epochDay: Long) = prefs.edit().putLong("summary_${slot.name}", epochDay).apply()
 
     var alertsEnabled: Boolean
         get() = prefs.getBoolean("alerts", true)
@@ -102,6 +113,7 @@ class SettingsStore(context: Context) {
     }
 }
 
+private const val NEVER = -1L
 private const val DEFAULT_SLEEP_TARGET_MIN = 480
 private const val DEFAULT_WEIGHT_KG = 70f
 private const val DEFAULT_HEIGHT_CM = 170f

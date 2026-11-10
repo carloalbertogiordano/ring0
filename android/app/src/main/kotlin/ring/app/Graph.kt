@@ -33,6 +33,7 @@ import ring.app.insights.InsightsSnapshot
 import ring.app.insights.SleepInsights
 import ring.app.sync.AlertEngine
 import ring.app.sync.IncidentRecorder
+import ring.app.sync.SummaryNotifier
 import ring.app.sync.SyncEngine
 import ring.domain.RespirationRate
 import ring.domain.Symptom
@@ -118,6 +119,7 @@ class Graph(private val context: Context) {
     private val hub = InsightsHub(insights, SleepInsights(dao), EstimateInsights(dao))
     val incidents = IncidentRecorder(dao)
     val alerts = AlertEngine(context, dao, settings, insights, incidents)
+    private val summaries = SummaryNotifier(context, settings)
     private val _checkRequested = MutableStateFlow(false)
     val checkRequested: StateFlow<Boolean> = _checkRequested
     private val _status = MutableStateFlow(Status(lastSyncEpoch = settings.lastSyncEpoch))
@@ -191,6 +193,7 @@ class Graph(private val context: Context) {
     suspend fun refreshInsights() {
         val snapshot = hub.compute(settings.profile.value, settings.sleepTargetMin)
         _status.update { it.copy(insights = snapshot) }
+        summaries.maybeNotify(snapshot)
     }
 
     /** Turns on the default automatic measurements (heart every 5 min, SpO2, stress, HRV, temperature). */
