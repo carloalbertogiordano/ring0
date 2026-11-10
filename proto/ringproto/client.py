@@ -43,23 +43,48 @@ class RingClient:
         self._default_timeout = default_timeout
         self._on_unsolicited = on_unsolicited
         self._lock = asyncio.Lock()
-        self._pending: tuple[int, asyncio.Future[Packet]] | None = None
+        self._pending: tuple[int, asyncio.Queue[Packet]] | None = None
         transport.set_notify_handler(self._handle_notification)
 
     async def request(self, cmd: int, payload: bytes = b"", timeout: float | None = None) -> Packet:
-        """Invia un comando e attende la risposta con lo stesso id."""
+        """Invia un comando e attende una sola risposta con lo stesso id."""
+        packets = await self.request_many(cmd, payload, is_last=lambda _: True, timeout=timeout)
+        return packets[0]
+
+    async def request_many(
+        self,
+        cmd: int,
+        payload: bytes = b"",
+        *,
+        is_last: Callable[[list[Packet]], bool],
+        timeout: float | None = None,
+    ) -> list[Packet]:
+        """Invia un comando e raccoglie le risposte finche' `is_last(pacchetti_finora)` e' vero.
+
+        Il timeout vale per ogni singolo pacchetto atteso.
+        """
+        wait = timeout or self._default_timeout
+        packets: list[Packet] = []
         async with self._lock:
-            future: asyncio.Future[Packet] = asyncio.get_running_loop().create_future()
-            self._pending = (cmd, future)
+            queue: asyncio.Queue[Packet] = asyncio.Queue()
+            self._pending = (cmd, queue)
             try:
                 await self._transport.write(build(cmd, payload))
-                async with asyncio.timeout(timeout or self._default_timeout):
-                    pkt = await future
-            except TimeoutError as exc:
-                msg = f"no response to command {cmd:#04x}"
-                raise RingTimeoutError(msg) from exc
+                while True:
+                    packets.append(await self._next(queue, cmd, wait))
+                    if is_last(packets):
+                        return packets
             finally:
                 self._pending = None
+
+    @staticmethod
+    async def _next(queue: asyncio.Queue[Packet], cmd: int, wait: float) -> Packet:
+        try:
+            async with asyncio.timeout(wait):
+                pkt = await queue.get()
+        except TimeoutError as exc:
+            msg = f"no response to command {cmd:#04x}"
+            raise RingTimeoutError(msg) from exc
         if pkt.is_error:
             msg = f"ring reported error for command {cmd:#04x}"
             raise RingCommandError(msg)
@@ -71,7 +96,7 @@ class RingClient:
         except PacketError as exc:
             log.warning("dropping malformed notification %s: %s", data.hex(), exc)
             return
-        if self._pending and self._pending[0] == pkt.cmd and not self._pending[1].done():
-            self._pending[1].set_result(pkt)
+        if self._pending and self._pending[0] == pkt.cmd:
+            self._pending[1].put_nowait(pkt)
         elif self._on_unsolicited:
             self._on_unsolicited(pkt)

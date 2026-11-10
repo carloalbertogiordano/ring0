@@ -1,4 +1,5 @@
 import asyncio
+from collections.abc import Callable
 
 import pytest
 
@@ -80,7 +81,7 @@ async def test_client_is_usable_after_a_timeout() -> None:
     assert (await client.request(0x03)).cmd == 0x03
 
 
-def _stop_after(count: int):  # noqa: ANN202
+def _stop_after(count: int) -> Callable[[list[Packet]], bool]:
     return lambda packets: len(packets) >= count
 
 
