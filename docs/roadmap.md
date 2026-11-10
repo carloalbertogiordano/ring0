@@ -45,4 +45,5 @@ Non previsto: pressione arteriosa (PPG senza calibrazione non e' affidabile).
 12. Export verso homelab (MQTT/InfluxDB) in modulo separato, dietro interruttore; l'app base resta senza INTERNET
 
 ## Fase E - Ricerca sul ring
-13. PPG grezzo ad alta frequenza (firmware / stream modificato); firmware OTA in Ghidra  [hw]
+13. [IDEA, 2026-11-11] Superare il limite dello stream real-time (l'anello chiude da solo a ~30 s, ~14 s di aggancio, 17-20 battiti utili): capire dal firmware (OTA decompilato, Ghidra) se il limite e' nel firmware o nella configurazione del sensore PPG; solo analisi a freddo, nessun flash senza ok esplicito; un solo anello, rischio di brick. Se riuscisse: RR continui per un controllo del ritmo vero (64+ battiti, specificita' 99%), PPG grezzo.
+13b. PPG grezzo ad alta frequenza (firmware / stream modificato); firmware OTA in Ghidra  [hw]
