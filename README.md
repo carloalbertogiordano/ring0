@@ -40,3 +40,5 @@ Protocol knowledge was cross-checked against open projects: [colmi_r02_client](h
 [Gadgetbridge](https://codeberg.org/Freeyourgadget/Gadgetbridge) (AGPL-3.0) and
 [ATC_RF03_Ring](https://github.com/atc1441/ATC_RF03_Ring) (GPL-3.0) and
 [colmi-r09-smart-ring](https://github.com/patmorli/colmi-r09-smart-ring) (MIT). No code was copied from them.
+The rhythm check was tuned on, and its tests use short excerpts of, the
+[MIT-BIH Atrial Fibrillation Database](https://physionet.org/content/afdb/1.0.0/) (PhysioNet, ODC-By 1.0; Moody & Mark, 1983).

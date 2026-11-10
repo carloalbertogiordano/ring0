@@ -107,6 +107,15 @@ centrale limitati. Decisione: funzione opzionale e disattivata di default, solo 
   frazione di punti di svolta), soglie **calibrate su PhysioNet (MIT-BIH Atrial Fibrillation DB, scaricabile)** piu' i tuoi ritmi sinusali
   reali, e risultato a tre livelli (regolare / irregolare, riprova / irregolare ripetuto: sentire un medico). Extrasistoli e
   movimento danno falsi positivi: ripetere prima di avvisare. Testo sempre: "non e' una diagnosi; se hai palpitazioni o sintomi, ECG".
+- **Calibrazione eseguita (2026-11-10)** sul MIT-BIH Atrial Fibrillation Database (PhysioNet, ODC-By; 23 registrazioni, 16.366 finestre da 64
+  battiti, 7.389 FA e 8.977 ritmo sinusale). Caratteristiche: RMSSD/RR medio e entropia campionaria (m=2, r=0,2 SD). Finestra singola con
+  nRMSSD > 0,17 e SampEn > 1,2: sensibilita' 87%, specificita' 98,6% (holdout per registrazione: 86,9% / 99,6%). Controllo da 128 battiti
+  (finestre di 64 con passo 16, irregolare se almeno meta' sono segnalate): sensibilita' 87,4%, specificita' 99,6%; con rumore di
+  temporizzazione di 10 ms 89,3% / 97,9%, con 20 ms 92,8% / 96,0%. Il test Kotlin riproduce i valori di riferimento di Python e usa 20
+  estratti casuali (10 FA, 10 sinusali) come fixture.
+- **Cosa NON e' validato**: il flusso RR dell'R09 e' ottico e arriva a pacchetti: se l'anello salta battiti o ripete valori, le differenze
+  tra RR consecutivi si gonfiano e il ritmo sinusale potrebbe sembrare irregolare. Prima di fidarsi vanno raccolti controlli a riposo reali
+  (in debug gli RR grezzi vanno nel logcat con tag `Rhythm`) e verificato che il ritmo sinusale dell'utente risulti regolare.
 - Rischio: non possiamo validare la sensibilita' su FA reale con questo anello, solo l'algoritmo su dataset pubblici. Va detto.
 
 ## 15. Idratazione: quanto e' stimabile?

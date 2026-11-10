@@ -33,6 +33,8 @@ import ring.app.insights.InsightsSnapshot
 import ring.app.insights.SleepInsights
 import ring.app.sync.AlertEngine
 import ring.app.sync.IncidentRecorder
+import ring.app.sync.RhythmOutcome
+import ring.app.sync.RhythmRunner
 import ring.app.sync.SummaryNotifier
 import ring.app.sync.SyncEngine
 import ring.domain.RespirationRate
@@ -95,6 +97,9 @@ data class Status(
     val measuring: Boolean = false,
     val monitors: Map<String, Boolean> = emptyMap(),
     val insights: InsightsSnapshot = InsightsSnapshot(),
+    val rhythmMeasuring: Boolean = false,
+    val rhythmBeats: Int = 0,
+    val rhythm: RhythmOutcome? = null,
     val liveTarget: Int = 12,
     val spo2Measuring: Boolean = false,
     val liveSpo2: Int? = null,
@@ -120,6 +125,7 @@ class Graph(private val context: Context) {
     val incidents = IncidentRecorder(dao)
     val alerts = AlertEngine(context, dao, settings, insights, incidents)
     private val summaries = SummaryNotifier(context, settings)
+    private val rhythmRunner = RhythmRunner(dao, RhythmRunner.isDebuggable(context.applicationInfo.flags))
     private val _checkRequested = MutableStateFlow(false)
     val checkRequested: StateFlow<Boolean> = _checkRequested
     private val _status = MutableStateFlow(Status(lastSyncEpoch = settings.lastSyncEpoch))
@@ -186,6 +192,23 @@ class Graph(private val context: Context) {
             dao.deleteDemoSamples()
             dao.deleteDemoSleep()
             refreshInsights()
+        }
+    }
+
+    /** Rhythm check: about two minutes of RR intervals at rest, screened for pulse irregularity (not a diagnosis). */
+    fun rhythmCheck() {
+        scope.launch {
+            _status.update { it.copy(rhythmMeasuring = true, rhythmBeats = 0, rhythm = null, lastError = null) }
+            try {
+                ensureConnected()
+                val outcome = rhythmRunner.run(session) { n -> _status.update { it.copy(rhythmBeats = n) } }
+                if (outcome == null) _status.update { it.copy(lastError = context.getString(R.string.measure_failed)) }
+                _status.update { it.copy(rhythm = outcome) }
+            } catch (e: Exception) {
+                _status.update { it.copy(lastError = e.message ?: e.javaClass.simpleName) }
+            } finally {
+                _status.update { it.copy(rhythmMeasuring = false) }
+            }
         }
     }
 

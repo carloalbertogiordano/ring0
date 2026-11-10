@@ -213,6 +213,7 @@ private fun HomeScreen(graph: Graph, onOpenCheck: () -> Unit) {
         if (!status.connected && !status.syncing && status.connectFailures >= 2) item { NotFoundCard(graph) }
         item { CheckCard(onOpenCheck) }
         item { LiveCard(graph) }
+        item { RhythmCard(graph) }
         item { ReadinessCard(graph) }
         item { BodyBatteryCard(graph) }
         item { SleepInsightsCard(graph) }

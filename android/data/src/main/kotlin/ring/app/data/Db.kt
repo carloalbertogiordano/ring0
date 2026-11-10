@@ -21,6 +21,9 @@ object SampleType {
     const val HRV_LIVE = "hrv_live"
     const val RESP = "resp"
 
+    /** Rhythm check result: 1 = irregular, 0 = regular (inconclusive checks are not stored). */
+    const val RHYTHM = "rhythm"
+
     const val SPO2 = "spo2"
     const val BATTERY = "battery"
 }
