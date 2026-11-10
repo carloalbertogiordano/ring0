@@ -12,6 +12,7 @@ from ringproto.commands.battery import read_battery
 from ringproto.commands.hr_log import read_hr_log
 from ringproto.commands.hr_settings import HeartRateSettings, read_hr_settings, write_hr_settings
 from ringproto.commands.set_time import set_time
+from ringproto.commands.slot_log import SlotLog, read_hrv_log, read_stress_log
 from ringproto.connect import connect_ring
 
 Handler = Callable[[RingClient, argparse.Namespace], Awaitable[object]]
@@ -52,6 +53,22 @@ async def _hr_log(ring: RingClient, args: argparse.Namespace) -> object:
     return f"{len(log.readings())} readings"
 
 
+def _show_slots(log: SlotLog | None) -> str:
+    if log is None:
+        return "no data"
+    day = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
+    lines = [f"{when.isoformat()} {value}" for when, value in log.readings(day)]
+    return "\n".join([f"interval={log.interval_minutes}min", *lines, f"{len(lines)} readings"])
+
+
+async def _stress_log(ring: RingClient, _args: argparse.Namespace) -> str:
+    return _show_slots(await read_stress_log(ring))
+
+
+async def _hrv_log(ring: RingClient, args: argparse.Namespace) -> str:
+    return _show_slots(await read_hrv_log(ring, args.days_ago))
+
+
 async def _raw(ring: RingClient, args: argparse.Namespace) -> str:
     """Esplora un comando V1: invia `--cmd/--payload` e raccoglie fino a `--count` pacchetti."""
     count = args.count
@@ -70,6 +87,8 @@ COMMANDS: dict[str, Handler] = {
     "hr-settings": _hr_settings,
     "hr-log": _hr_log,
     "monitors": _monitors,
+    "stress-log": _stress_log,
+    "hrv-log": _hrv_log,
     "raw": _raw,
 }
 
@@ -94,6 +113,7 @@ def main() -> None:
     parser.add_argument("--enable", nargs="+", help="monitors: spo2 stress hrv temperature")
     parser.add_argument("--cmd", type=lambda v: int(v, 0), help="raw: id comando V1")
     parser.add_argument("--count", type=int, default=1, help="raw: pacchetti da attendere")
+    parser.add_argument("--days-ago", type=int, default=0, help="hrv-log: giorni fa")
     parser.add_argument("--disable", action="store_true", help="hr-settings: disabilita")
     parser.add_argument("--date", type=date.fromisoformat, help="hr-log: giorno YYYY-MM-DD (UTC)")
     parser.add_argument("--type", type=lambda v: int(v, 0), help="bigdata: tipo (es. 0x25)")
