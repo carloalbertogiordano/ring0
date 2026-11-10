@@ -20,6 +20,20 @@ class MainActivity : ComponentActivity() {
         setContent { RingTheme { AppRoot(graph, ::startRingService) } }
         // already set up: restart the service if the permissions are still granted
         if (graph.settings.onboarded) startRingService()
+        handleIntent(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent?) {
+        if (intent?.getBooleanExtra(EXTRA_OPEN_CHECK, false) == true) (application as RingApp).graph.requestCheck()
+    }
+
+    companion object {
+        const val EXTRA_OPEN_CHECK = "open_check"
     }
 
     private fun startRingService() {

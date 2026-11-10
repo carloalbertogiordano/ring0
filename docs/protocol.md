@@ -119,3 +119,9 @@ comando funziona. Implementazione: `android/protocol/.../RealTime.kt`, `Hrv.kt`.
 Risposta reale `bc 2a 31 00 <crc> 00 …`: payload 49 byte = `[giorni fa][24 x (min,max)]` orari. Sul ring: SpO2 96% (media di min/max).
 ## 0x25 Temperatura (app): risposta reale `bc 25 32 00 …` payload 50 byte, conferma il layout a blocchi.
 ## 0x27 Sonno: ancora senza dati (risposta `bc 27 01 00 bf 40 00`); layout da Gadgetbridge, non verificato.
+
+## 0x69 / 0x6A real-time SpO2 (kind 3) - VERIFIED (2026-11-10, Android app)
+Start `69 03 01 00…`, stop `6a 03 00 00…`. Replies `69 03 <error> <spO2 %> 00…`: about 25 s of zeros while the sensor locks on,
+then values like 96, 97, 97, 99 (error byte 0). The app takes the median of 5 consecutive readings within 2 points.
+The ring has a single PPG sensor, so SpO2 and the heart/RR measurement (kind 1) must be run one after the other.
+Stress (kind 8) is untested on the R09.

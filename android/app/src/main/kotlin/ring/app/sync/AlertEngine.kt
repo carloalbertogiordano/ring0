@@ -3,6 +3,9 @@ package ring.app.sync
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.NotificationChannel
+import android.app.PendingIntent
+import android.content.Intent
+import ring.app.MainActivity
 import android.app.NotificationManager
 import android.content.Context
 import android.content.pm.PackageManager
@@ -24,7 +27,7 @@ import ring.domain.WarningLevel
 import ring.app.insights.Insights
 
 /** Checks thresholds on the latest measurements and notifies (with a cooldown per alert kind). */
-class AlertEngine(private val context: Context, private val dao: RingDao, private val settings: SettingsStore, private val insights: Insights) {
+class AlertEngine(private val context: Context, private val dao: RingDao, private val settings: SettingsStore, private val insights: Insights, private val incidents: IncidentRecorder) {
     init {
         val channel = NotificationChannel(CHANNEL, context.getString(R.string.notif_channel_alerts), NotificationManager.IMPORTANCE_HIGH)
         context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
@@ -64,11 +67,13 @@ class AlertEngine(private val context: Context, private val dao: RingDao, privat
         if (now - settings.lastAlert(kind) < COOLDOWN_SECONDS) return
         settings.markAlert(kind, now)
         dao.insertAlert(AlertEntity(ts = now, kind = kind, value = value, threshold = threshold, detail = detail))
-        notify(kind, alertText(context, kind, value, threshold, detail))
+        val isIncident = kind in incidents.incidentKinds
+        if (isIncident) incidents.recordAlert(kind, value, now)
+        notify(kind, alertText(context, kind, value, threshold, detail), isIncident)
     }
 
     @SuppressLint("MissingPermission")
-    private fun notify(kind: String, message: String) {
+    private fun notify(kind: String, message: String, offerCheck: Boolean) {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return
         val n = NotificationCompat.Builder(context, CHANNEL)
             .setSmallIcon(R.drawable.ic_stat_ring)
@@ -76,6 +81,15 @@ class AlertEngine(private val context: Context, private val dao: RingDao, privat
             .setContentText(message)
             .setStyle(NotificationCompat.BigTextStyle().bigText(message))
             .setAutoCancel(true)
+            .apply {
+                if (offerCheck) {
+                    val open = Intent(context, MainActivity::class.java).putExtra(MainActivity.EXTRA_OPEN_CHECK, true)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                    val pending = PendingIntent.getActivity(context, kind.hashCode(), open, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+                    setContentIntent(pending)
+                    addAction(0, context.getString(R.string.notif_action_check), pending)
+                }
+            }
             .build()
         context.getSystemService(NotificationManager::class.java).notify(kind.hashCode(), n)
     }

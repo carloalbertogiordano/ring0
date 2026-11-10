@@ -20,6 +20,9 @@ import ring.domain.Baseline
 
 data class ReadinessReport(val readiness: Readiness?, val baselineDays: Int)
 
+/** Recent context used by the check: baselines and the latest values. */
+data class CheckContext(val restingHr: Double?, val hrvZ: Double?, val skinTemp: Double?, val tempZ: Double?, val stress: Int?)
+
 /** Computes recovery and the illness warning from stored data (all local). */
 class Insights(private val dao: RingDao, private val zone: ZoneId = ZoneId.systemDefault()) {
     private fun List<Sample>.timed() = map { TimedValue(it.ts, it.value) }
@@ -80,7 +83,29 @@ class Insights(private val dao: RingDao, private val zone: ZoneId = ZoneId.syste
         return IllnessWarning.assess(signals)
     }
 
+    /** Context for a check: resting HR, how HRV and skin temperature compare with the last two weeks, latest stress. */
+    suspend fun checkContext(now: Long = Instant.now().epochSecond): CheckContext {
+        val twoWeeks = now - 14 * DAY
+        fun recent(samples: List<Sample>) = samples.lastOrNull()?.takeIf { now - it.ts <= RECENT_SECONDS }?.value
+        val hrv = dao.range(SampleType.HRV, twoWeeks, now)
+        val temp = dao.range(SampleType.TEMP, twoWeeks, now)
+        val hrvLatest = recent(hrv)
+        val tempLatest = recent(temp)
+        val hrvBase = Baseline.of(hrv.map { kotlin.math.ln(it.value.coerceAtLeast(1.0)) }, window = BASELINE_SAMPLES, minSpread = MIN_HRV_LN_SPREAD)
+        val tempBase = Baseline.of(temp.map(Sample::value), window = BASELINE_SAMPLES, minSpread = MIN_TEMP_SPREAD)
+        return CheckContext(
+            restingHr = RestingHr.estimate(dao.range(SampleType.HR, now - DAY, now).timed()),
+            hrvZ = hrvLatest?.let { hrvBase?.z(kotlin.math.ln(it.coerceAtLeast(1.0))) },
+            skinTemp = tempLatest,
+            tempZ = tempLatest?.let { tempBase?.z(it) },
+            stress = recent(dao.range(SampleType.STRESS, twoWeeks, now))?.toInt(),
+        )
+    }
+
     private companion object {
+        const val RECENT_SECONDS = 3 * 3_600L
+        const val BASELINE_SAMPLES = 2_000
+        const val MIN_HRV_LN_SPREAD = 0.10
         const val DAY = 86_400L
         const val SECONDS_PER_MINUTE = 60
         const val HISTORY_NIGHTS = 28

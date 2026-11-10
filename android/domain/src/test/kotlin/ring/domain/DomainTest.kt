@@ -250,3 +250,66 @@ class RestingHrTest {
         assertNull(RestingHr.estimate(day.take(10)))
     }
 }
+
+class TriageTest {
+    private fun input(
+        bpm: Int? = 120, restingHr: Double? = 60.0, spo2: Int? = 97, stress: Int? = 30, hrvZ: Double? = 0.0,
+        skinTemp: Double? = 36.6, tempZ: Double? = 0.0, moving: Boolean? = null, symptoms: Set<Symptom> = emptySet(),
+    ) = TriageInput(bpm, restingHr, spo2, stress, hrvZ, skinTemp, tempZ, moving, symptoms)
+
+    @Test fun `exercise explains a high heart rate`() {
+        val r = Triage.assess(input(moving = true))
+        assertEquals(listOf(TriageCause.ACTIVITY), r.causes)
+        assertEquals(TriageLevel.NORMAL, r.level)
+        assertEquals(listOf(TriageAdvice.REST_AND_RECHECK), r.advice)
+    }
+
+    @Test fun `high stress or low hrv points to stress`() {
+        assertEquals(listOf(TriageCause.STRESS), Triage.assess(input(stress = 82)).causes)
+        assertEquals(listOf(TriageCause.STRESS), Triage.assess(input(hrvZ = -2.0)).causes)
+        assertEquals(TriageLevel.NORMAL, Triage.assess(input(stress = 82)).level)
+    }
+
+    @Test fun `fever signs raise a watch`() {
+        val byTemp = Triage.assess(input(skinTemp = 38.1))
+        assertTrue(TriageCause.POSSIBLE_ILLNESS in byTemp.causes)
+        assertEquals(TriageLevel.WATCH, byTemp.level)
+        assertTrue(TriageCause.POSSIBLE_ILLNESS in Triage.assess(input(tempZ = 2.0, hrvZ = -1.2)).causes)
+        assertTrue(TriageCause.POSSIBLE_ILLNESS in Triage.assess(input(symptoms = setOf(Symptom.FEVER_OR_CHILLS))).causes)
+    }
+
+    @Test fun `low oxygen is a watch and very low oxygen is urgent`() {
+        val low = Triage.assess(input(spo2 = 92))
+        assertTrue(TriageCause.LOW_OXYGEN in low.causes)
+        assertEquals(TriageLevel.WATCH, low.level)
+        val urgent = Triage.assess(input(spo2 = 88))
+        assertEquals(TriageLevel.URGENT, urgent.level)
+        assertEquals(listOf(TriageAdvice.SEEK_MEDICAL_HELP), urgent.advice)
+    }
+
+    @Test fun `red flag symptoms are always urgent`() {
+        for (s in listOf(Symptom.CHEST_PAIN, Symptom.SHORTNESS_OF_BREATH, Symptom.DIZZINESS_OR_FAINTING)) {
+            assertEquals(TriageLevel.URGENT, Triage.assess(input(moving = true, symptoms = setOf(s))).level, "$s")
+        }
+    }
+
+    @Test fun `an unexplained elevated rate is a watch with advice to recheck`() {
+        val r = Triage.assess(input(bpm = 125))
+        assertEquals(listOf(TriageCause.UNEXPLAINED), r.causes)
+        assertEquals(TriageLevel.WATCH, r.level)
+        assertEquals(listOf(TriageAdvice.REST_AND_RECHECK, TriageAdvice.MONITOR), r.advice)
+    }
+
+    @Test fun `a normal reading with no findings just monitors`() {
+        val r = Triage.assess(input(bpm = 72))
+        assertTrue(r.causes.isEmpty())
+        assertEquals(TriageLevel.NORMAL, r.level)
+        assertEquals(listOf(TriageAdvice.MONITOR), r.advice)
+    }
+
+    @Test fun `stimulants and missing data are handled`() {
+        assertEquals(listOf(TriageCause.STIMULANT), Triage.assess(input(symptoms = setOf(Symptom.CAFFEINE_OR_STIMULANT))).causes)
+        val empty = Triage.assess(TriageInput(null, null, null, null, null, null, null, null, emptySet()))
+        assertEquals(TriageLevel.NORMAL, empty.level)
+    }
+}

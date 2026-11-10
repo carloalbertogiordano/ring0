@@ -54,6 +54,35 @@ data class AlertEntity(
     val detail: String = "",
 )
 
+/**
+ * An incident: something went off (an alert fired, or the user started a check). It stores the context at that
+ * moment and, once a check was done, the result. Only codes and numbers are stored, never localized text.
+ */
+@Entity(tableName = "incidents")
+data class IncidentEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val ts: Long,
+    /** Alert kind that opened it, or "manual". */
+    val source: String,
+    val triggerValue: Double = 0.0,
+    /** TriageLevel name, empty until a check was done. */
+    val level: String = "",
+    /** Comma-separated TriageCause names. */
+    val causes: String = "",
+    /** Comma-separated TriageAdvice names. */
+    val advice: String = "",
+    /** Comma-separated Symptom names. */
+    val symptoms: String = "",
+    val bpm: Int? = null,
+    val rmssd: Double? = null,
+    val spo2: Int? = null,
+    val stress: Double? = null,
+    val skinTemp: Double? = null,
+    /** Heart rate of the previous hour as "ts:bpm;ts:bpm". */
+    val hrTrend: String = "",
+    val checked: Boolean = false,
+)
+
 @Dao
 interface RingDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -92,6 +121,21 @@ interface RingDao {
     @Query("DELETE FROM alerts")
     suspend fun clearAlerts()
 
+    @Insert
+    suspend fun insertIncident(incident: IncidentEntity): Long
+
+    @androidx.room.Update
+    suspend fun updateIncident(incident: IncidentEntity)
+
+    @Query("SELECT * FROM incidents ORDER BY ts DESC LIMIT 50")
+    fun observeIncidents(): Flow<List<IncidentEntity>>
+
+    @Query("SELECT * FROM incidents WHERE ts >= :since AND checked = 0 ORDER BY ts DESC LIMIT 1")
+    suspend fun latestUnchecked(since: Long): IncidentEntity?
+
+    @Query("DELETE FROM incidents")
+    suspend fun clearIncidents()
+
     @Query("DELETE FROM samples WHERE demo = 1")
     suspend fun deleteDemoSamples()
 
@@ -99,7 +143,7 @@ interface RingDao {
     suspend fun deleteDemoSleep()
 }
 
-@Database(entities = [Sample::class, SleepEntity::class, AlertEntity::class], version = 3, exportSchema = false)
+@Database(entities = [Sample::class, SleepEntity::class, AlertEntity::class, IncidentEntity::class], version = 4, exportSchema = false)
 abstract class RingDb : RoomDatabase() {
     abstract fun dao(): RingDao
 }
@@ -118,5 +162,17 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
         db.execSQL("ALTER TABLE alerts ADD COLUMN value REAL NOT NULL DEFAULT 0")
         db.execSQL("ALTER TABLE alerts ADD COLUMN threshold REAL NOT NULL DEFAULT 0")
         db.execSQL("ALTER TABLE alerts ADD COLUMN detail TEXT NOT NULL DEFAULT ''")
+    }
+}
+
+/** v3 -> v4: incident log. */
+val MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS incidents (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, ts INTEGER NOT NULL, " +
+                "source TEXT NOT NULL, triggerValue REAL NOT NULL, level TEXT NOT NULL, causes TEXT NOT NULL, " +
+                "advice TEXT NOT NULL, symptoms TEXT NOT NULL, bpm INTEGER, rmssd REAL, spo2 INTEGER, stress REAL, " +
+                "skinTemp REAL, hrTrend TEXT NOT NULL, checked INTEGER NOT NULL)",
+        )
     }
 }

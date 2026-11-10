@@ -60,6 +60,9 @@ private val PERIODS = listOf(R.string.period_24h to 24L * 3600, R.string.period_
 /** Root: first run, system errors (permissions, Bluetooth) or the app with its tab bar. */
 @Composable
 fun AppRoot(graph: Graph, startService: () -> Unit) {
+    var showCheck by remember { mutableStateOf(false) }
+    val checkRequested by graph.checkRequested.collectAsStateWithLifecycle()
+    androidx.compose.runtime.LaunchedEffect(checkRequested) { if (checkRequested) { showCheck = true; graph.consumeCheckRequest() } }
     val ctx = LocalContext.current
     var onboarded by remember { mutableStateOf(graph.settings.onboarded) }
     var tick by remember { mutableIntStateOf(0) }
@@ -71,7 +74,8 @@ fun AppRoot(graph: Graph, startService: () -> Unit) {
             !onboarded -> Onboarding(graph) { graph.settings.onboarded = true; onboarded = true; startService() }
             !nearby -> PermissionDenied()
             !btOn -> BluetoothOff { tick++ }
-            else -> MainScaffold(graph) { onboarded = false }
+            showCheck -> CheckScreen(graph) { showCheck = false }
+            else -> MainScaffold(graph, onOpenCheck = { showCheck = true }) { onboarded = false }
         }
     }
 }
@@ -117,12 +121,12 @@ private fun PermissionDenied() {
 }
 
 @Composable
-private fun MainScaffold(graph: Graph, onForget: () -> Unit) {
+private fun MainScaffold(graph: Graph, onOpenCheck: () -> Unit, onForget: () -> Unit) {
     var tab by remember { mutableIntStateOf(0) }
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
         Box(Modifier.weight(1f)) {
             when (tab) {
-                0 -> HomeScreen(graph)
+                0 -> HomeScreen(graph, onOpenCheck)
                 1 -> HistoryScreen(graph)
                 else -> SettingsScreen(graph, onForget)
             }
@@ -141,7 +145,7 @@ private fun MainScaffold(graph: Graph, onForget: () -> Unit) {
 private val PAD = PaddingValues(horizontal = 14.dp, vertical = 10.dp)
 
 @Composable
-private fun HomeScreen(graph: Graph) {
+private fun HomeScreen(graph: Graph, onOpenCheck: () -> Unit) {
     val status by graph.status.collectAsStateWithLifecycle()
     val thresholds by graph.settings.thresholds.collectAsStateWithLifecycle()
     val alerts by graph.dao.observeAlerts().collectAsStateWithLifecycle(emptyList())
@@ -163,8 +167,16 @@ private fun HomeScreen(graph: Graph) {
         if (lowBattery && battery != null) {
             item { Banner(stringResource(R.string.low_battery_title, battery.level), stringResource(R.string.low_battery_body), Term.crit) }
         }
-        recentAlert?.let { a -> item { Banner(alertText(a), DAY_TIME.format(Instant.ofEpochSecond(a.ts)), Term.warn) } }
+        recentAlert?.let { a ->
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Banner(alertText(a), DAY_TIME.format(Instant.ofEpochSecond(a.ts)), Term.warn)
+                    if (a.kind in INCIDENT_ALERT_KINDS) TButton(stringResource(R.string.btn_check_now), onOpenCheck, Modifier.fillMaxWidth(), BtnKind.GHOST)
+                }
+            }
+        }
         if (!status.connected && !status.syncing && status.connectFailures >= 2) item { NotFoundCard(graph) }
+        item { CheckCard(onOpenCheck) }
         item { LiveCard(graph) }
         item { ReadinessCard(graph) }
         item {
@@ -226,9 +238,15 @@ private fun LiveCard(graph: Graph) {
         status.liveSpo2?.let { T(stringResource(R.string.spo2_result, it), size = 13.sp, color = Term.info) }
         TButton(
             if (status.spo2Measuring) stringResource(R.string.btn_measuring) else stringResource(R.string.btn_spo2),
-            { graph.measureSpo2() }, Modifier.fillMaxWidth(), BtnKind.GHOST, enabled = !status.measuring && !status.spo2Measuring,
+            { graph.measureSpo2() }, Modifier.fillMaxWidth(), BtnKind.GHOST, enabled = !status.measuring && !status.spo2Measuring && !status.stressMeasuring,
         )
         T(stringResource(R.string.spo2_hint), size = 10.sp, color = Term.faint)
+        status.liveStress?.let { T(stringResource(R.string.stress_result, it), size = 13.sp, color = Term.rem) }
+        TButton(
+            if (status.stressMeasuring) stringResource(R.string.btn_measuring) else stringResource(R.string.btn_stress),
+            { graph.measureStress() }, Modifier.fillMaxWidth(), BtnKind.GHOST,
+            enabled = !status.measuring && !status.spo2Measuring && !status.stressMeasuring,
+        )
         T(stringResource(R.string.full_hint), size = 10.sp, color = Term.faint)
     }
 }
@@ -316,6 +334,7 @@ private fun HistoryScreen(graph: Graph) {
     val to = remember(period) { Instant.now().epochSecond }
     val from = to - PERIODS[period].second
     val sleep by remember(period) { graph.dao.observeSleep(from) }.collectAsStateWithLifecycle(emptyList())
+    val incidents by graph.dao.observeIncidents().collectAsStateWithLifecycle(emptyList())
     LazyColumn(contentPadding = PAD, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -330,6 +349,10 @@ private fun HistoryScreen(graph: Graph) {
         item { HistoryPanel(graph, stringResource(R.string.chart_hrv_live), SampleType.HRV_LIVE, " ms", from, to, Term.rem, 20.0, 0, null) }
         item { HistoryPanel(graph, stringResource(R.string.chart_resp), SampleType.RESP, " /min", from, to, Term.info, 4.0, 0, null) }
         item { HistoryPanel(graph, stringResource(R.string.chart_spo2), SampleType.SPO2, " %", from, to, Term.accent, 4.0, 0, thresholds.spo2Low.toDouble()) }
+        if (incidents.isNotEmpty()) {
+            item { Label(stringResource(R.string.incidents_title)) }
+            items(incidents) { IncidentCard(it) }
+        }
         if (sleep.isNotEmpty()) {
             item { Label(stringResource(R.string.sleep_label)) }
             items(sleep) { s -> SleepCard(s.start, s.end, s.lightMin, s.deepMin, s.remMin, s.awakeMin) }
@@ -468,4 +491,13 @@ private fun componentRes(component: ring.domain.ReadinessComponent): Int = when 
     ring.domain.ReadinessComponent.HRV -> R.string.comp_hrv
     ring.domain.ReadinessComponent.RESTING_HR -> R.string.comp_resting_hr
     ring.domain.ReadinessComponent.SLEEP -> R.string.comp_sleep
+}
+
+private val INCIDENT_ALERT_KINDS = setOf("hr_high", "hr_low", "spo2_low", "temp_high", "stress_high", "illness")
+
+@Composable
+private fun CheckCard(onOpen: () -> Unit) = TCard {
+    Label(stringResource(R.string.home_check_title))
+    T(stringResource(R.string.home_check_body), size = 12.sp, color = Term.dim)
+    TButton(stringResource(R.string.btn_check_now), onOpen, Modifier.fillMaxWidth())
 }

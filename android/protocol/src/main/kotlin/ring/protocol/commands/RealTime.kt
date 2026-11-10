@@ -23,6 +23,9 @@ object RealTimeCommand {
     const val CMD_STOP = 0x6A
     const val KIND_HEART_RATE = 1
     const val KIND_SPO2 = 3
+
+    /** "Pressure" in the vendor protocol, i.e. stress. Support on the R09 is not verified. */
+    const val KIND_STRESS = 8
     private const val ACTION_START = 1
     private const val DEFAULT_MAX_PACKETS = 150
     private const val DEFAULT_TARGET_BEATS = 12

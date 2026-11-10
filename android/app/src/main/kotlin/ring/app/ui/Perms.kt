@@ -48,3 +48,7 @@ fun ago(epoch: Long): String {
         else -> stringResource(R.string.ago_days, (min / (60 * 24)).toInt())
     }
 }
+
+private val DAY_TIME_FORMAT = DateTimeFormatter.ofPattern("d MMM HH:mm").withZone(ZoneId.systemDefault())
+
+fun dayTime(epoch: Long): String = DAY_TIME_FORMAT.format(Instant.ofEpochSecond(epoch))

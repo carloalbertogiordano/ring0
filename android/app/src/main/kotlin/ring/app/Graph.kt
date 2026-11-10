@@ -18,11 +18,17 @@ import ring.app.ble.RingBleManager
 import ring.app.ble.RingSession
 import ring.app.data.MIGRATION_1_2
 import ring.app.data.MIGRATION_2_3
+import ring.app.data.MIGRATION_3_4
 import ring.app.data.RingDb
 import ring.app.data.Sample
 import ring.app.data.SampleType
 import ring.app.data.SettingsStore
 import ring.app.insights.Insights
+import ring.app.sync.IncidentRecorder
+import ring.domain.Symptom
+import ring.domain.Triage
+import ring.domain.TriageInput
+import ring.domain.TriageResult
 import ring.app.insights.ReadinessReport
 import ring.domain.RespirationRate
 import ring.app.sync.AlertEngine
@@ -52,6 +58,19 @@ data class LiveResult(
 )
 
 /** State observed by the UI. */
+enum class CheckPhase { IDLE, HEART, SPO2, DONE, FAILED }
+
+/** Progress and outcome of the check. */
+data class CheckState(
+    val phase: CheckPhase = CheckPhase.IDLE,
+    val result: TriageResult? = null,
+    val bpm: Int? = null,
+    val spo2: Int? = null,
+    val stress: Int? = null,
+    val skinTemp: Double? = null,
+    val rmssd: Double? = null,
+)
+
 data class Status(
     val connected: Boolean = false,
     val battery: Battery? = null,
@@ -70,18 +89,24 @@ data class Status(
     val liveTarget: Int = 12,
     val spo2Measuring: Boolean = false,
     val liveSpo2: Int? = null,
+    val stressMeasuring: Boolean = false,
+    val liveStress: Int? = null,
+    val check: CheckState = CheckState(),
 )
 
 /** Oggetti condivisi tra UI e servizio: database, connessione BLE, sync, alert. */
 class Graph(private val context: Context) {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    val dao = Room.databaseBuilder(context, RingDb::class.java, "ring.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3).build().dao()
+    val dao = Room.databaseBuilder(context, RingDb::class.java, "ring.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).build().dao()
     val settings = SettingsStore(context)
     private val manager = RingBleManager(context)
     val session = RingSession(manager)
     private val sync = SyncEngine(dao)
     val insights = Insights(dao)
-    val alerts = AlertEngine(context, dao, settings, insights)
+    private val incidents = IncidentRecorder(dao)
+    val alerts = AlertEngine(context, dao, settings, insights, incidents)
+    private val _checkRequested = MutableStateFlow(false)
+    val checkRequested: StateFlow<Boolean> = _checkRequested
     private val _status = MutableStateFlow(Status(lastSyncEpoch = settings.lastSyncEpoch))
     val status: StateFlow<Status> = _status
     private val syncLock = Mutex()
@@ -168,36 +193,134 @@ class Graph(private val context: Context) {
     }
 
     /**
-     * Misura live: bpm e HRV (RMSSD/SDNN) dai battiti RR; il sensore impiega ~30-60 s ad agganciarsi.
+     * Live heart measurement: bpm and HRV (RMSSD/SDNN) from the RR beats; the sensor needs ~30-60 s to lock on.
      * With `withRespiration` it collects more beats (~70) to also estimate the breathing rate.
      */
+    private suspend fun heartMeasure(withRespiration: Boolean): LiveResult? {
+        val target = if (withRespiration) RESPIRATION_BEATS else QUICK_BEATS
+        _status.update { it.copy(measuring = true, live = null, liveBeats = 0, liveTarget = target, lastError = null) }
+        try {
+            ensureConnected()
+            val m = RealTimeCommand.measure(session.v1, maxPackets = target * PACKETS_PER_BEAT_BUDGET, targetBeats = target) { n ->
+                _status.update { it.copy(liveBeats = n) }
+            }
+            if (m == null) {
+                _status.update { it.copy(lastError = context.getString(R.string.measure_failed)) }
+                return null
+            }
+            val rr = Hrv.clean(m.rr)
+            val breath = if (withRespiration) RespirationRate.fromRr(m.rr) else null
+            val result = LiveResult(m.bpm, Hrv.rmssd(rr), Hrv.sdnn(rr), rr.size, breath?.breathsPerMinute, breath?.confidence ?: 0.0)
+            _status.update { it.copy(live = result) }
+            val now = Instant.now().epochSecond
+            m.bpm?.let { dao.upsertSamples(listOf(Sample(SampleType.HR, now, it.toDouble()))) }
+            result.rmssd?.let { dao.upsertSamples(listOf(Sample(SampleType.HRV_LIVE, now, it))) }
+            breath?.takeIf { it.confidence >= MIN_BREATH_CONFIDENCE }?.let {
+                dao.upsertSamples(listOf(Sample(SampleType.RESP, now, it.breathsPerMinute)))
+            }
+            return result
+        } catch (e: Exception) {
+            _status.update { it.copy(lastError = e.message ?: e.javaClass.simpleName) }
+            return null
+        } finally {
+            _status.update { it.copy(measuring = false) }
+        }
+    }
+
+    /** SpO2 on demand (the ring has one sensor, so this runs after, not together with, the heart measurement). */
+    private suspend fun spo2Measure(): Int? {
+        _status.update { it.copy(spo2Measuring = true, liveSpo2 = null) }
+        try {
+            ensureConnected()
+            val value = RealTimeCommand.measureValue(session.v1, RealTimeCommand.KIND_SPO2)
+            _status.update { it.copy(liveSpo2 = value) }
+            if (value == null) {
+                _status.update { it.copy(lastError = context.getString(R.string.spo2_failed)) }
+            } else {
+                dao.upsertSamples(listOf(Sample(SampleType.SPO2, Instant.now().epochSecond, value.toDouble())))
+            }
+            return value
+        } catch (e: Exception) {
+            _status.update { it.copy(lastError = e.message ?: e.javaClass.simpleName) }
+            return null
+        } finally {
+            _status.update { it.copy(spo2Measuring = false) }
+        }
+    }
+
+    /** Experimental: on-demand stress ("pressure" real-time kind). Not verified on the R09. */
+    private suspend fun stressMeasure(): Int? {
+        _status.update { it.copy(stressMeasuring = true, liveStress = null) }
+        try {
+            ensureConnected()
+            val value = RealTimeCommand.measureValue(session.v1, RealTimeCommand.KIND_STRESS)
+            _status.update { it.copy(liveStress = value) }
+            if (value == null) {
+                _status.update { it.copy(lastError = context.getString(R.string.stress_failed)) }
+            } else {
+                dao.upsertSamples(listOf(Sample(SampleType.STRESS, Instant.now().epochSecond, value.toDouble())))
+            }
+            return value
+        } catch (e: Exception) {
+            _status.update { it.copy(lastError = e.message ?: e.javaClass.simpleName) }
+            return null
+        } finally {
+            _status.update { it.copy(stressMeasuring = false) }
+        }
+    }
+
     fun measureLive(withRespiration: Boolean = false) {
         scope.launch {
-            val target = if (withRespiration) RESPIRATION_BEATS else QUICK_BEATS
-            _status.update { it.copy(measuring = true, live = null, liveBeats = 0, liveTarget = target, lastError = null) }
-            try {
-                ensureConnected()
-                val m = RealTimeCommand.measure(session.v1, maxPackets = target * PACKETS_PER_BEAT_BUDGET, targetBeats = target) { n ->
-                    _status.update { it.copy(liveBeats = n) }
-                }
-                if (m == null) {
-                    _status.update { it.copy(lastError = context.getString(R.string.measure_failed)) }
-                } else {
-                    val rr = Hrv.clean(m.rr)
-                    val breath = if (withRespiration) RespirationRate.fromRr(m.rr) else null
-                    val result = LiveResult(m.bpm, Hrv.rmssd(rr), Hrv.sdnn(rr), rr.size, breath?.breathsPerMinute, breath?.confidence ?: 0.0)
-                    _status.update { it.copy(live = result) }
-                    val now = Instant.now().epochSecond
-                    m.bpm?.let { dao.upsertSamples(listOf(Sample(SampleType.HR, now, it.toDouble()))) }
-                    result.rmssd?.let { dao.upsertSamples(listOf(Sample(SampleType.HRV_LIVE, now, it))) }
-                    breath?.takeIf { it.confidence >= MIN_BREATH_CONFIDENCE }?.let {
-                        dao.upsertSamples(listOf(Sample(SampleType.RESP, now, it.breathsPerMinute)))
-                    }
-                }
-            } catch (e: Exception) {
-                _status.update { it.copy(lastError = e.message ?: e.javaClass.simpleName) }
-            } finally {
-                _status.update { it.copy(measuring = false) }
+            // the full measure also takes SpO2 afterwards (same sensor, so one after the other)
+            if (heartMeasure(withRespiration) != null && withRespiration) spo2Measure()
+        }
+    }
+
+    fun measureSpo2() {
+        scope.launch { spo2Measure() }
+    }
+
+    fun measureStress() {
+        scope.launch { stressMeasure() }
+    }
+
+    /** Asks the UI to open the check screen (from a notification). */
+    fun requestCheck() {
+        _checkRequested.value = true
+    }
+
+    fun consumeCheckRequest() {
+        _checkRequested.value = false
+    }
+
+    fun resetCheck() {
+        _status.update { it.copy(check = CheckState()) }
+    }
+
+    /**
+     * The check: quick heart + HRV, then SpO2, then the recent context and the symptoms go through the triage rules.
+     * The outcome is stored in the incident log.
+     */
+    fun runCheck(symptoms: Set<Symptom>) {
+        scope.launch {
+            _status.update { it.copy(check = CheckState(phase = CheckPhase.HEART)) }
+            val live = heartMeasure(false)
+            if (live == null) {
+                _status.update { it.copy(check = CheckState(phase = CheckPhase.FAILED)) }
+                return@launch
+            }
+            _status.update { it.copy(check = it.check.copy(phase = CheckPhase.SPO2, bpm = live.bpm)) }
+            val spo2 = spo2Measure()
+            val now = Instant.now().epochSecond
+            val ctx = insights.checkContext(now)
+            val input = TriageInput(
+                bpm = live.bpm, restingHr = ctx.restingHr, spo2 = spo2, stress = ctx.stress, hrvZ = ctx.hrvZ,
+                skinTemp = ctx.skinTemp, tempZ = ctx.tempZ, moving = null, symptoms = symptoms,
+            )
+            val result = Triage.assess(input)
+            incidents.saveCheck(now, input, live.rmssd, result)
+            _status.update {
+                it.copy(check = CheckState(CheckPhase.DONE, result, live.bpm, spo2, ctx.stress, ctx.skinTemp, rmssd = live.rmssd))
             }
         }
     }
@@ -229,27 +352,6 @@ class Graph(private val context: Context) {
                 _status.update { it.copy(monitors = it.monitors + (name to confirmed)) }
             } catch (e: Exception) {
                 _status.update { it.copy(lastError = e.message ?: e.javaClass.simpleName) }
-            }
-        }
-    }
-
-    /** Measures SpO2 on demand (the ring shares one sensor, so this is separate from the heart measurement). */
-    fun measureSpo2() {
-        scope.launch {
-            _status.update { it.copy(spo2Measuring = true, liveSpo2 = null, lastError = null) }
-            try {
-                ensureConnected()
-                val value = RealTimeCommand.measureValue(session.v1, RealTimeCommand.KIND_SPO2)
-                _status.update { it.copy(liveSpo2 = value) }
-                if (value == null) {
-                    _status.update { it.copy(lastError = context.getString(R.string.spo2_failed)) }
-                } else {
-                    dao.upsertSamples(listOf(Sample(SampleType.SPO2, Instant.now().epochSecond, value.toDouble())))
-                }
-            } catch (e: Exception) {
-                _status.update { it.copy(lastError = e.message ?: e.javaClass.simpleName) }
-            } finally {
-                _status.update { it.copy(spo2Measuring = false) }
             }
         }
     }
