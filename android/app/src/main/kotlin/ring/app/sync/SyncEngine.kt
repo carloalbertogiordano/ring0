@@ -30,17 +30,22 @@ data class SyncReport(
 
 /** Scarica dal ring gli ultimi giorni e li salva (idempotente: chiave (tipo, istante)). */
 class SyncEngine(private val dao: RingDao) {
-    suspend fun sync(session: RingSession, days: Int): SyncReport {
+    suspend fun sync(session: RingSession, days: Int, onProgress: (String, Float) -> Unit = { _, _ -> }): SyncReport {
         val errors = mutableListOf<String>()
         var inserted = 0
+        val total = TOTAL_FIXED_STEPS + 2 * days
+        var done = 0
 
         suspend fun <T> step(name: String, block: suspend () -> T): T? =
             try {
+                onProgress(name, done.toFloat() / total)
                 block()
             } catch (e: Exception) {
                 Log.w(TAG, "sync step $name failed", e)
                 errors += "$name: ${e.message ?: e.javaClass.simpleName}"
                 null
+            } finally {
+                done++
             }
 
         suspend fun save(type: String, readings: List<Reading>) {
@@ -88,5 +93,6 @@ class SyncEngine(private val dao: RingDao) {
     private companion object {
         const val TAG = "SyncEngine"
         const val SECONDS_PER_DAY = 86_400L
+        const val TOTAL_FIXED_STEPS = 6
     }
 }

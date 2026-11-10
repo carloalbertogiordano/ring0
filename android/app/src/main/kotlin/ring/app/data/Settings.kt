@@ -28,6 +28,10 @@ class SettingsStore(context: Context) {
         get() = prefs.getInt("syncMin", 15)
         set(value) = prefs.edit().putInt("syncMin", value).apply()
 
+    var onboarded: Boolean
+        get() = prefs.getBoolean("onboarded", false)
+        set(value) = prefs.edit().putBoolean("onboarded", value).apply()
+
     var alertsEnabled: Boolean
         get() = prefs.getBoolean("alerts", true)
         set(value) = prefs.edit().putBoolean("alerts", value).apply()

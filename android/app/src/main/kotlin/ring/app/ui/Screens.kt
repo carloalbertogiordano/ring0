@@ -1,300 +1,384 @@
 package ring.app.ui
 
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import ring.app.Graph
-import ring.app.ble.FoundDevice
-import ring.app.ble.scanDevices
+import ring.app.data.Sample
 import ring.app.data.SampleType
 import ring.app.data.Thresholds
 
-private val TIME = DateTimeFormatter.ofPattern("d MMM HH:mm").withZone(ZoneId.systemDefault())
-private val PERIODS = listOf("24 ore" to 24L * 3600, "7 giorni" to 7L * 86_400, "30 giorni" to 30L * 86_400)
+private val DAY_TIME = DateTimeFormatter.ofPattern("d MMM HH:mm").withZone(ZoneId.systemDefault())
+private val PERIODS = listOf("24 h" to 24L * 3600, "7 gg" to 7L * 86_400, "30 gg" to 30L * 86_400)
 
-private fun ago(epoch: Long): String {
-    if (epoch == 0L) return "mai"
-    val min = (Instant.now().epochSecond - epoch) / 60
-    return if (min < 1) "adesso" else if (min < 60) "$min min fa" else "${min / 60} h fa"
+/** Radice: primo avvio, errori di sistema (permessi, Bluetooth) oppure l'app con la barra a schede. */
+@Composable
+fun AppRoot(graph: Graph, startService: () -> Unit) {
+    val ctx = LocalContext.current
+    var onboarded by remember { mutableStateOf(graph.settings.onboarded) }
+    var tick by remember { mutableIntStateOf(0) }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { tick++ }
+    val nearby = remember(tick) { Perms.hasNearby(ctx) }
+    val btOn = remember(tick) { Perms.bluetoothOn(ctx) }
+    Box(Modifier.fillMaxSize().background(Term.bg)) {
+        when {
+            !onboarded -> Onboarding(graph) { graph.settings.onboarded = true; onboarded = true; startService() }
+            !nearby -> PermissionDenied()
+            !btOn -> BluetoothOff { tick++ }
+            else -> MainScaffold(graph) { onboarded = false }
+        }
+    }
 }
 
 @Composable
-fun RingApp(graph: Graph) {
-    var tab by remember { mutableIntStateOf(0) }
-    Scaffold(bottomBar = {
-        NavigationBar {
-            listOf("Home", "Storico", "Impostazioni").forEachIndexed { i, label ->
-                NavigationBarItem(selected = tab == i, onClick = { tab = i }, icon = {}, label = { Text(label) })
-            }
+private fun SystemScreen(title: String, body: String, color: Color, action: String, onAction: () -> Unit, extra: @Composable () -> Unit = {}) =
+    Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Box(Modifier.weight(1f))
+        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Box(Modifier.size(56.dp).border(BorderStroke(1.dp, color)), contentAlignment = Alignment.Center) { T("!", size = 28.sp, color = color, weight = FontWeight.Bold) }
+            T(title, size = 22.sp, weight = FontWeight.Bold, align = TextAlign.Center)
+            T(body, size = 12.sp, color = Term.dim, align = TextAlign.Center)
+            extra()
         }
-    }) { padding ->
-        Column(Modifier.padding(padding).fillMaxSize()) {
+        Box(Modifier.weight(1f))
+        TButton(action, onAction, Modifier.fillMaxWidth())
+    }
+
+@Composable
+private fun BluetoothOff(onChanged: () -> Unit) {
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { onChanged() }
+    SystemScreen(
+        "Bluetooth spento", "Senza Bluetooth l'app non può leggere l'anello. I dati già scaricati restano nell'app.",
+        Term.crit, "Attiva Bluetooth", { launcher.launch(Intent(Perms.enableBluetoothAction)) },
+    )
+}
+
+@Composable
+private fun PermissionDenied() {
+    val ctx = LocalContext.current
+    SystemScreen(
+        "Permesso negato", "L'app non vede nessun dispositivo Bluetooth perché \"Dispositivi nelle vicinanze\" è negato.",
+        Term.crit, "Apri impostazioni app",
+        { ctx.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", ctx.packageName, null)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) },
+    ) {
+        TCard {
+            T("1  Apri le impostazioni dell'app", size = 12.sp)
+            T("2  Vai su Permessi", size = 12.sp)
+            T("3  Scegli Dispositivi nelle vicinanze e imposta Consenti", size = 12.sp)
+        }
+        T("Su GrapheneOS il permesso si chiama allo stesso modo. Non serve la posizione.", size = 11.sp, color = Term.dim, align = TextAlign.Center)
+    }
+}
+
+@Composable
+private fun MainScaffold(graph: Graph, onForget: () -> Unit) {
+    var tab by remember { mutableIntStateOf(0) }
+    Column(Modifier.fillMaxSize().statusBarsPadding()) {
+        Box(Modifier.weight(1f)) {
             when (tab) {
                 0 -> HomeScreen(graph)
                 1 -> HistoryScreen(graph)
-                else -> SettingsScreen(graph)
+                else -> SettingsScreen(graph, onForget)
+            }
+        }
+        Row(Modifier.fillMaxWidth().background(Color(0xFF050C08)).border(BorderStroke(1.dp, Term.line2)).navigationBarsPadding()) {
+            listOf("Home", "Storico", "Impost.").forEachIndexed { i, label ->
+                T(
+                    label.uppercase(), Modifier.weight(1f).clickable { tab = i }.padding(vertical = 16.dp), 11.sp,
+                    if (tab == i) Term.accent else Term.faint, if (tab == i) FontWeight.Bold else FontWeight.Normal, TextAlign.Center, 1.4.sp,
+                )
             }
         }
     }
 }
+
+private val PAD = PaddingValues(horizontal = 14.dp, vertical = 10.dp)
 
 @Composable
 private fun HomeScreen(graph: Graph) {
     val status by graph.status.collectAsStateWithLifecycle()
-    val hr by graph.dao.observeLatest(SampleType.HR).collectAsStateWithLifecycle(null)
-    val temp by graph.dao.observeLatest(SampleType.TEMP).collectAsStateWithLifecycle(null)
-    val stress by graph.dao.observeLatest(SampleType.STRESS).collectAsStateWithLifecycle(null)
-    val hrv by graph.dao.observeLatest(SampleType.HRV).collectAsStateWithLifecycle(null)
-    val spo2 by graph.dao.observeLatest(SampleType.SPO2).collectAsStateWithLifecycle(null)
-    val sleep by graph.dao.observeSleep(0).collectAsStateWithLifecycle(emptyList())
+    val thresholds by graph.settings.thresholds.collectAsStateWithLifecycle()
     val alerts by graph.dao.observeAlerts().collectAsStateWithLifecycle(emptyList())
-    LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    val sleep by graph.dao.observeSleep(0).collectAsStateWithLifecycle(emptyList())
+    val battery = status.battery
+    val lowBattery = battery != null && !battery.charging && battery.level <= thresholds.batteryLow
+    val recentAlert = alerts.firstOrNull { Instant.now().epochSecond - it.ts < 24 * 3600 && it.kind != "battery_low" }
+    LazyColumn(contentPadding = PAD, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(if (status.connected) "Ring connesso" else status.connectionText, style = MaterialTheme.typography.titleLarge)
-                    status.battery?.let {
-                        Text("Batteria ${it.level}%${if (it.charging) " · in carica" else ""}")
-                        LinearProgressIndicator(progress = { it.level / 100f }, modifier = Modifier.fillMaxWidth())
-                    }
-                    Text("Ultima sincronizzazione: ${ago(status.lastSyncEpoch)}", style = MaterialTheme.typography.bodySmall)
-                    status.lastError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
-                    Button(onClick = { graph.scope.launchSync(graph) }, enabled = !status.syncing) {
-                        Text(if (status.syncing) "Sincronizzazione…" else "Sincronizza ora")
-                    }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                T("RING", size = 15.sp, weight = FontWeight.Bold, spacing = 4.sp)
+                when {
+                    battery != null && status.connected -> TPill("${battery.level}%${if (battery.charging) " · carica" else ""}", if (lowBattery) Term.crit else Term.accent, pulse = true)
+                    status.syncing -> TPill("sincronizzo…", Term.info, pulse = true)
+                    else -> TPill("offline", Term.warn)
                 }
             }
         }
-        item {
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("Frequenza cardiaca live", style = MaterialTheme.typography.titleMedium)
-                    val live = status.live
-                    Text(
-                        when {
-                            status.measuring -> "Misuro… battiti ${status.liveBeats}/12 (30-60 s, dito fermo)"
-                            live?.bpm != null -> "${live.bpm} bpm"
-                            else -> "—"
-                        },
-                        style = MaterialTheme.typography.headlineMedium,
-                    )
-                    if (!status.measuring && live != null) {
-                        Text(
-                            "HRV: RMSSD ${live.rmssd?.let { "%.0f ms".format(it) } ?: "—"} · SDNN ${live.sdnn?.let { "%.0f ms".format(it) } ?: "—"} · ${live.beats} battiti",
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                    }
-                    Button(onClick = { graph.measureLive() }, enabled = !status.measuring) { Text("Misura ora") }
-                }
-            }
+        if (lowBattery && battery != null) {
+            item { Banner("Ricarica l'anello · ${battery.level}%", "Sotto il 20% le misure automatiche possono fermarsi e l'anello si spegne.", Term.crit) }
         }
+        recentAlert?.let { a -> item { Banner(a.message, DAY_TIME.format(Instant.ofEpochSecond(a.ts)), Term.warn) } }
+        if (!status.connected && !status.syncing && status.connectFailures >= 2) item { NotFoundCard(graph) }
+        item { LiveCard(graph) }
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Tile("Cuore", hr?.let { "${it.value.toInt()} bpm" }, hr?.ts, Modifier.weight(1f))
-                    Tile("Temperatura", temp?.let { "%.1f °C".format(it.value) }, temp?.ts, Modifier.weight(1f))
+                    MetricTile("Cuore", SampleType.HR, "bpm", 0, Term.accent, graph, Modifier.weight(1f), warnAbove = thresholds.hrHigh.toDouble())
+                    MetricTile("Temperatura", SampleType.TEMP, "°C", 1, Color(0xFFFF9D3B), graph, Modifier.weight(1f), warnAbove = thresholds.tempHigh)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Tile("Stress", stress?.let { "${it.value.toInt()}" }, stress?.ts, Modifier.weight(1f))
-                    Tile("HRV", hrv?.let { "${it.value.toInt()} ms" }, hrv?.ts, Modifier.weight(1f))
+                    MetricTile("Stress", SampleType.STRESS, "", 0, Term.rem, graph, Modifier.weight(1f), warnAbove = thresholds.stressHigh.toDouble())
+                    MetricTile("HRV", SampleType.HRV, "ms", 0, Term.info, graph, Modifier.weight(1f))
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Tile("SpO2", spo2?.let { "${it.value.toInt()} %" }, spo2?.ts, Modifier.weight(1f))
+                    MetricTile("SpO2", SampleType.SPO2, "%", 0, Term.accent, graph, Modifier.weight(1f), warnBelow = thresholds.spo2Low.toDouble())
                     val last = sleep.firstOrNull()
-                    Tile("Sonno", last?.let { "%dh %02dm".format((it.end - it.start) / 3600, (it.end - it.start) / 60 % 60) }, last?.end, Modifier.weight(1f))
+                    Tile("Sonno", last?.let { "%dh %02d".format((it.end - it.start) / 3600, (it.end - it.start) / 60 % 60) } ?: "—", "", last?.let { "${clock(it.end)} · ${ago(it.end)}" } ?: "nessuna notte", Modifier.weight(1f)) {}
                 }
             }
         }
-        if (alerts.isNotEmpty()) {
-            item { Text("Alert recenti", style = MaterialTheme.typography.titleMedium) }
-            items(alerts.take(5)) { a ->
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(12.dp)) {
-                        Text(a.message)
-                        Text(TIME.format(Instant.ofEpochSecond(a.ts)), style = MaterialTheme.typography.bodySmall)
-                    }
-                }
+        item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                T("Ultima sync ${ago(status.lastSyncEpoch)}", size = 11.sp, color = Term.dim)
+                TButton(if (status.syncing) "…" else "Sincronizza", { graph.scope.launch { graph.syncNow() } }, kind = BtnKind.GHOST, enabled = !status.syncing)
             }
+            status.lastError?.let { T(it, Modifier.padding(top = 6.dp), 11.sp, Term.crit) }
         }
     }
-}
-
-private fun kotlinx.coroutines.CoroutineScope.launchSync(graph: Graph) {
-    launch { graph.syncNow() }
 }
 
 @Composable
-private fun Tile(title: String, value: String?, ts: Long?, modifier: Modifier) {
-    Card(modifier) {
-        Column(Modifier.padding(12.dp)) {
-            Text(title, style = MaterialTheme.typography.labelMedium)
-            Text(value ?: "—", style = MaterialTheme.typography.titleLarge)
-            Text(ts?.let { ago(it) } ?: "", style = MaterialTheme.typography.bodySmall)
+private fun LiveCard(graph: Graph) {
+    val status by graph.status.collectAsStateWithLifecycle()
+    val live = status.live
+    TCard(hot = true) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Label("Cuore · live")
+            T(if (status.measuring) "${status.liveBeats}/12 battiti" else live?.let { "${it.beats} battiti" } ?: "", size = 11.sp, color = Term.dim)
         }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
+            Num(live?.bpm?.toString() ?: "—", "bpm", 44.sp, if (live?.bpm != null) Term.accent else Term.faint)
+            Column(horizontalAlignment = Alignment.End) {
+                Label("HRV RMSSD")
+                Num(live?.rmssd?.let { "%.0f".format(it) } ?: "—", "ms", 22.sp)
+            }
+        }
+        Ecg(active = status.measuring)
+        if (status.measuring) T("Misuro… tieni il dito fermo, ci vogliono 30-60 s", size = 11.sp, color = Term.dim)
+        TButton(if (status.measuring) "Misuro…" else "Misura ora", { graph.measureLive() }, Modifier.fillMaxWidth(), enabled = !status.measuring)
     }
+}
+
+@Composable
+private fun NotFoundCard(graph: Graph) = TCard(accent = Term.warn) {
+    T("Anello non trovato", size = 16.sp, weight = FontWeight.Bold, color = Term.warn)
+    T("Controlla questi punti:", size = 12.sp, color = Term.dim)
+    T("? Fuori dalla custodia di ricarica", size = 12.sp)
+    T("? Carico almeno al 20%", size = 12.sp)
+    T("? Non collegato ad altro (QRing, altro telefono)", size = 12.sp)
+    TButton("Riprova", { graph.scope.launch { graph.syncNow() } }, Modifier.fillMaxWidth())
+}
+
+@Composable
+private fun MetricTile(
+    title: String,
+    type: String,
+    unit: String,
+    decimals: Int,
+    color: Color,
+    graph: Graph,
+    modifier: Modifier,
+    warnAbove: Double? = null,
+    warnBelow: Double? = null,
+) {
+    val now = remember { Instant.now().epochSecond }
+    val samples by remember(type) { graph.dao.observe(type, now - 86_400, now + 3600) }.collectAsStateWithLifecycle(emptyList())
+    val last = samples.lastOrNull()
+    val alert = last != null && ((warnAbove != null && last.value > warnAbove) || (warnBelow != null && last.value < warnBelow))
+    Tile(
+        title, last?.let { "%.${decimals}f".format(it.value) } ?: "—", unit,
+        last?.let { "${clock(it.ts)} · ${ago(it.ts)}" } ?: "nessun dato", modifier, alert,
+    ) { if (samples.size >= 2) Sparkline(samples.map { it.value }, if (alert) Term.warn else color) }
+}
+
+@Composable
+private fun Tile(title: String, value: String, unit: String, sub: String, modifier: Modifier, alert: Boolean = false, spark: @Composable () -> Unit) = Column(
+    modifier.background(Term.panel).border(BorderStroke(1.dp, if (alert) Term.warn.copy(alpha = 0.6f) else Term.line)).padding(horizontal = 10.dp, vertical = 8.dp),
+    verticalArrangement = Arrangement.spacedBy(2.dp),
+) {
+    Label(title)
+    Num(value, unit, 22.sp, if (alert) Term.warn else Term.text)
+    Box(Modifier.height(26.dp)) { spark() }
+    T(sub, size = 10.sp, color = Term.dim, maxLines = 1)
 }
 
 @Composable
 private fun HistoryScreen(graph: Graph) {
     var period by remember { mutableIntStateOf(0) }
+    val thresholds by graph.settings.thresholds.collectAsStateWithLifecycle()
     val to = remember(period) { Instant.now().epochSecond }
     val from = to - PERIODS[period].second
-    val hr by remember(period) { graph.dao.observe(SampleType.HR, from, to) }.collectAsStateWithLifecycle(emptyList())
-    val temp by remember(period) { graph.dao.observe(SampleType.TEMP, from, to) }.collectAsStateWithLifecycle(emptyList())
-    val stress by remember(period) { graph.dao.observe(SampleType.STRESS, from, to) }.collectAsStateWithLifecycle(emptyList())
-    val hrv by remember(period) { graph.dao.observe(SampleType.HRV, from, to) }.collectAsStateWithLifecycle(emptyList())
-    val hrvLive by remember(period) { graph.dao.observe(SampleType.HRV_LIVE, from, to) }.collectAsStateWithLifecycle(emptyList())
-    val spo2 by remember(period) { graph.dao.observe(SampleType.SPO2, from, to) }.collectAsStateWithLifecycle(emptyList())
     val sleep by remember(period) { graph.dao.observeSleep(from) }.collectAsStateWithLifecycle(emptyList())
-    LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    LazyColumn(contentPadding = PAD, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                PERIODS.forEachIndexed { i, (label, _) -> FilterChip(selected = period == i, onClick = { period = i }, label = { Text(label) }) }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                T("STORICO", size = 15.sp, weight = FontWeight.Bold, spacing = 4.sp)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { PERIODS.forEachIndexed { i, (label, _) -> TChip(label, period == i) { period = i } } }
             }
         }
-        item { MetricCard("Frequenza cardiaca", " bpm", hr, from, to, Color(0xFFE53935), 20.0) }
-        item { MetricCard("Temperatura cutanea", " °C", temp, from, to, Color(0xFFFB8C00), 1.0, decimals = 1) }
-        item { MetricCard("Stress", "", stress, from, to, Color(0xFF8E24AA), 20.0) }
-        item { MetricCard("HRV", " ms", hrv, from, to, Color(0xFF3949AB), 20.0) }
-        item { MetricCard("HRV live (RMSSD)", " ms", hrvLive, from, to, Color(0xFF5E35B1), 20.0) }
-        item { MetricCard("SpO2", " %", spo2, from, to, Color(0xFF00897B), 4.0) }
+        item { HistoryPanel(graph, "Frequenza cardiaca", SampleType.HR, " bpm", from, to, Term.accent, 20.0, 0, thresholds.hrHigh.toDouble()) }
+        item { HistoryPanel(graph, "Temperatura cutanea", SampleType.TEMP, " °C", from, to, Color(0xFFFF9D3B), 1.0, 1, thresholds.tempHigh) }
+        item { HistoryPanel(graph, "Stress", SampleType.STRESS, "", from, to, Term.rem, 20.0, 0, thresholds.stressHigh.toDouble()) }
+        item { HistoryPanel(graph, "HRV (anello)", SampleType.HRV, " ms", from, to, Term.info, 20.0, 0, null) }
+        item { HistoryPanel(graph, "HRV live (RMSSD)", SampleType.HRV_LIVE, " ms", from, to, Term.rem, 20.0, 0, null) }
+        item { HistoryPanel(graph, "SpO2", SampleType.SPO2, " %", from, to, Term.accent, 4.0, 0, thresholds.spo2Low.toDouble()) }
         if (sleep.isNotEmpty()) {
-            item { Text("Sonno", style = MaterialTheme.typography.titleMedium) }
-            items(sleep) { s ->
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(12.dp)) {
-                        val total = (s.end - s.start) / 60
-                        Text("${TIME.format(Instant.ofEpochSecond(s.start))} → ${TIME.format(Instant.ofEpochSecond(s.end))}  (${total / 60}h ${total % 60}m)")
-                        Text("leggero ${s.lightMin}m · profondo ${s.deepMin}m · REM ${s.remMin}m · sveglio ${s.awakeMin}m", style = MaterialTheme.typography.bodySmall)
-                    }
-                }
-            }
+            item { Label("Sonno") }
+            items(sleep) { s -> SleepCard(s.start, s.end, s.lightMin, s.deepMin, s.remMin, s.awakeMin) }
         }
     }
 }
 
 @Composable
-private fun SettingsScreen(graph: Graph) {
-    val context = LocalContext.current
+private fun HistoryPanel(graph: Graph, title: String, type: String, unit: String, from: Long, to: Long, color: Color, minSpan: Double, decimals: Int, threshold: Double?) {
+    val samples by remember(type, from) { graph.dao.observe(type, from, to) }.collectAsStateWithLifecycle(emptyList())
+    val fmt = { v: Double -> "%.${decimals}f".format(v) }
+    TCard {
+        Label(title)
+        if (samples.isNotEmpty()) {
+            T(
+                "ultimo ${fmt(samples.last().value)}$unit (${ago(samples.last().ts)}) · min ${fmt(samples.minOf { it.value })} · " +
+                    "media ${fmt(samples.map(Sample::value).average())} · max ${fmt(samples.maxOf { it.value })}",
+                size = 10.sp, color = Term.dim,
+            )
+        }
+        TermChart(samples, from, to, color, minSpan = minSpan, threshold = threshold, format = fmt)
+    }
+}
+
+@Composable
+private fun SleepCard(start: Long, end: Long, light: Int, deep: Int, rem: Int, awake: Int) = TCard {
+    val total = ((end - start) / 60).toInt()
+    T("${DAY_TIME.format(Instant.ofEpochSecond(start))} → ${DAY_TIME.format(Instant.ofEpochSecond(end))}  (${total / 60}h ${total % 60}m)", size = 12.sp)
+    val sum = (light + deep + rem + awake).coerceAtLeast(1)
+    Row(Modifier.fillMaxWidth().height(10.dp)) {
+        listOf(deep to Term.info, light to Term.accent, rem to Term.rem, awake to Term.crit).forEach { (m, c) ->
+            if (m > 0) Box(Modifier.weight(m.toFloat() / sum).fillMaxSize().background(c.copy(alpha = 0.85f)))
+        }
+    }
+    T("profondo ${deep}m · leggero ${light}m · REM ${rem}m · sveglio ${awake}m", size = 10.sp, color = Term.dim)
+}
+
+@Composable
+private fun SettingsScreen(graph: Graph, onForget: () -> Unit) {
     val status by graph.status.collectAsStateWithLifecycle()
     val thresholds by graph.settings.thresholds.collectAsStateWithLifecycle()
-    var address by remember { mutableStateOf(graph.settings.deviceAddress) }
     var interval by remember { mutableIntStateOf(graph.settings.syncIntervalMin) }
     var alertsOn by remember { mutableStateOf(graph.settings.alertsEnabled) }
-    var scanning by remember { mutableStateOf(false) }
-    val found = remember { mutableStateListOf<FoundDevice>() }
-    val scope = rememberCoroutineScope()
+    var picking by remember { mutableStateOf(false) }
     val alerts by graph.dao.observeAlerts().collectAsStateWithLifecycle(emptyList())
-
-    LaunchedEffect(scanning) {
-        if (scanning) {
-            found.clear()
-            scanDevices(context).collect { d -> if (found.none { it.address == d.address }) found += d }
-        }
-    }
-    LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    fun set(t: Thresholds) = graph.settings.setThresholds(t)
+    LazyColumn(contentPadding = PAD, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        item { T("IMPOSTAZIONI", size = 15.sp, weight = FontWeight.Bold, spacing = 4.sp) }
         item {
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Ring", style = MaterialTheme.typography.titleMedium)
-                    Text(address ?: "nessun ring selezionato")
-                    OutlinedButton(onClick = { scanning = !scanning }) { Text(if (scanning) "Ferma ricerca" else "Cerca ring") }
-                    if (scanning) {
-                        found.sortedByDescending { it.rssi }.forEach { d ->
-                            OutlinedButton(onClick = {
-                                graph.settings.deviceAddress = d.address
-                                address = d.address
-                                scanning = false
-                            }) { Text("${d.name}  ${d.address}  (${d.rssi} dBm)") }
-                        }
-                    }
-                    Text("Sincronizza ogni", style = MaterialTheme.typography.labelMedium)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf(5, 15, 30, 60).forEach { m ->
-                            FilterChip(selected = interval == m, onClick = { interval = m; graph.settings.syncIntervalMin = m }, label = { Text("$m min") })
-                        }
-                    }
+            TCard(hot = true) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    T("Anello", weight = FontWeight.Bold)
+                    TPill(if (status.connected) "connesso" else "offline", if (status.connected) Term.accent else Term.warn)
                 }
+                KeyValue("Indirizzo", graph.settings.deviceAddress ?: "—")
+                status.battery?.let { KeyValue("Batteria", "${it.level}%${if (it.charging) " · in carica" else ""}") }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TButton("Cambia anello", { picking = !picking }, kind = BtnKind.GHOST)
+                    TButton("Dimentica", { graph.disconnect(); graph.settings.deviceAddress = null; graph.settings.lastSyncEpoch = 0; onForget() }, kind = BtnKind.CRIT)
+                }
+                if (picking) RingPicker { d -> graph.settings.deviceAddress = d.address; graph.settings.lastSyncEpoch = 0; picking = false; graph.disconnect() }
             }
         }
         item {
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Monitoraggio automatico del ring", style = MaterialTheme.typography.titleMedium)
-                    OutlinedButton(onClick = { graph.refreshMonitors() }) { Text("Leggi stato dal ring") }
-                    listOf("hr" to "Frequenza cardiaca (ogni 5 min)", "SPO2" to "SpO2", "STRESS" to "Stress", "HRV" to "HRV", "TEMPERATURE" to "Temperatura").forEach { (key, label) ->
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text(label)
-                            Switch(checked = status.monitors[key] == true, onCheckedChange = { graph.setMonitor(key, it) }, enabled = status.monitors.containsKey(key))
-                        }
-                    }
-                }
+            TCard {
+                Label("Sincronizza ogni")
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf(5, 15, 30, 60).forEach { m -> TChip("$m min", interval == m) { interval = m; graph.settings.syncIntervalMin = m } } }
             }
         }
         item {
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Alert", style = MaterialTheme.typography.titleMedium)
-                        Switch(checked = alertsOn, onCheckedChange = { alertsOn = it; graph.settings.alertsEnabled = it })
-                    }
-                    Stepper("FC alta (bpm)", thresholds.hrHigh.toDouble(), 5.0) { graph.settings.setThresholds(thresholds.copy(hrHigh = it.toInt())) }
-                    Stepper("FC bassa (bpm)", thresholds.hrLow.toDouble(), 5.0) { graph.settings.setThresholds(thresholds.copy(hrLow = it.toInt())) }
-                    Stepper("Temperatura alta (°C)", thresholds.tempHigh, 0.1) { graph.settings.setThresholds(thresholds.copy(tempHigh = it)) }
-                    Stepper("Stress alto", thresholds.stressHigh.toDouble(), 5.0) { graph.settings.setThresholds(thresholds.copy(stressHigh = it.toInt())) }
-                    Stepper("SpO2 bassa (%)", thresholds.spo2Low.toDouble(), 1.0) { graph.settings.setThresholds(thresholds.copy(spo2Low = it.toInt())) }
-                    Stepper("Batteria bassa (%)", thresholds.batteryLow.toDouble(), 5.0) { graph.settings.setThresholds(thresholds.copy(batteryLow = it.toInt())) }
-                    OutlinedButton(onClick = { scope.launch { graph.dao.clearAlerts() } }, enabled = alerts.isNotEmpty()) { Text("Cancella storico alert (${alerts.size})") }
+            TCard {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Label("Misure automatiche dell'anello")
+                    TButton("Leggi", { graph.refreshMonitors() }, kind = BtnKind.GHOST)
                 }
+                listOf("hr" to "Cuore (ogni 5 min)", "SPO2" to "SpO2", "STRESS" to "Stress", "HRV" to "HRV", "TEMPERATURE" to "Temperatura").forEach { (key, label) ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        T(label, size = 12.sp)
+                        TSwitch(status.monitors[key] == true, { graph.setMonitor(key, it) }, enabled = status.monitors.containsKey(key))
+                    }
+                }
+                if (status.monitors.isEmpty()) T("Tocca Leggi per vedere lo stato dal ring.", size = 11.sp, color = Term.dim)
             }
         }
-    }
-}
-
-@Composable
-private fun Stepper(label: String, value: Double, step: Double, onChange: (Double) -> Unit) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = { onChange(value - step) }) { Text("−") }
-            Text(if (step < 1) "%.1f".format(value) else "%.0f".format(value), modifier = Modifier.padding(top = 10.dp))
-            OutlinedButton(onClick = { onChange(value + step) }) { Text("+") }
+        item {
+            TCard {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Label("Alert")
+                    TSwitch(alertsOn, { alertsOn = it; graph.settings.alertsEnabled = it })
+                }
+                Stepper("Cuore alto (bpm)", "${thresholds.hrHigh}", { set(thresholds.copy(hrHigh = thresholds.hrHigh - 5)) }, { set(thresholds.copy(hrHigh = thresholds.hrHigh + 5)) })
+                Stepper("Cuore basso (bpm)", "${thresholds.hrLow}", { set(thresholds.copy(hrLow = thresholds.hrLow - 5)) }, { set(thresholds.copy(hrLow = thresholds.hrLow + 5)) })
+                Stepper("Temperatura (°C)", "%.1f".format(thresholds.tempHigh), { set(thresholds.copy(tempHigh = thresholds.tempHigh - 0.1)) }, { set(thresholds.copy(tempHigh = thresholds.tempHigh + 0.1)) })
+                Stepper("Stress alto", "${thresholds.stressHigh}", { set(thresholds.copy(stressHigh = thresholds.stressHigh - 5)) }, { set(thresholds.copy(stressHigh = thresholds.stressHigh + 5)) })
+                Stepper("SpO2 bassa (%)", "${thresholds.spo2Low}", { set(thresholds.copy(spo2Low = thresholds.spo2Low - 1)) }, { set(thresholds.copy(spo2Low = thresholds.spo2Low + 1)) })
+                Stepper("Batteria bassa (%)", "${thresholds.batteryLow}", { set(thresholds.copy(batteryLow = thresholds.batteryLow - 5)) }, { set(thresholds.copy(batteryLow = thresholds.batteryLow + 5)) })
+                TButton("Cancella storico alert (${alerts.size})", { scope.launch { graph.dao.clearAlerts() } }, Modifier.fillMaxWidth(), BtnKind.GHOST, enabled = alerts.isNotEmpty())
+            }
+        }
+        item {
+            TCard {
+                Label("Privacy")
+                KeyValue("Permesso internet", "assente", Term.accent)
+                KeyValue("Dati", "solo su questo telefono")
+            }
         }
     }
 }

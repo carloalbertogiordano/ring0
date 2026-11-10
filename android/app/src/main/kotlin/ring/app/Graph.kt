@@ -45,6 +45,9 @@ data class Status(
     val battery: Battery? = null,
     val capabilities: Capabilities? = null,
     val syncing: Boolean = false,
+    val syncStep: String = "",
+    val syncProgress: Float = 0f,
+    val connectFailures: Int = 0,
     val lastSyncEpoch: Long = 0,
     val lastError: String? = null,
     val live: LiveResult? = null,
@@ -71,8 +74,13 @@ class Graph(private val context: Context) {
         val address = settings.deviceAddress ?: error("Nessun ring selezionato")
         _status.update { it.copy(connectionText = "Connessione…") }
         val adapter = context.getSystemService(BluetoothManager::class.java).adapter
-        manager.connectTo(adapter.getRemoteDevice(address))
-        _status.update { it.copy(connected = true, connectionText = "Connesso") }
+        try {
+            manager.connectTo(adapter.getRemoteDevice(address))
+        } catch (e: Exception) {
+            _status.update { it.copy(connectFailures = it.connectFailures + 1) }
+            throw e
+        }
+        _status.update { it.copy(connected = true, connectionText = "Connesso", connectFailures = 0) }
         // un real-time rimasto attivo consuma batteria: stop di sicurezza a ogni connessione
         runCatching { session.v1.send(RealTimeCommand.CMD_STOP, byteArrayOf(RealTimeCommand.KIND_HEART_RATE.toByte(), 0, 0)) }
     }
@@ -83,7 +91,7 @@ class Graph(private val context: Context) {
         try {
             ensureConnected()
             val days = if (settings.lastSyncEpoch == 0L) FIRST_SYNC_DAYS else REGULAR_SYNC_DAYS
-            val report = sync.sync(session, days)
+            val report = sync.sync(session, days) { step, fraction -> _status.update { it.copy(syncStep = step, syncProgress = fraction) } }
             if (report.errors.isEmpty()) settings.lastSyncEpoch = Instant.now().epochSecond
             _status.update {
                 it.copy(
@@ -97,7 +105,20 @@ class Graph(private val context: Context) {
         } catch (e: Exception) {
             _status.update { it.copy(connected = manager.isConnected, connectionText = if (manager.isConnected) "Connesso" else "Non connesso", lastError = e.message ?: e.javaClass.simpleName) }
         } finally {
-            _status.update { it.copy(syncing = false) }
+            _status.update { it.copy(syncing = false, syncProgress = 1f) }
+        }
+    }
+
+    /** Attiva le misure automatiche di default (cuore ogni 5 min, SpO2, stress, HRV, temperatura). */
+    suspend fun enableDefaultMonitors() {
+        try {
+            ensureConnected()
+            val result = mutableMapOf<String, Boolean>()
+            result["hr"] = HrSettingsCommand.write(session.v1, HeartRateSettings(true, HR_INTERVAL_MIN)).enabled
+            Feature.entries.forEach { result[it.name] = AutoMonitorCommand.write(session.v1, it, true) }
+            _status.update { it.copy(monitors = result) }
+        } catch (e: Exception) {
+            _status.update { it.copy(lastError = e.message ?: e.javaClass.simpleName) }
         }
     }
 
