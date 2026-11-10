@@ -2,7 +2,7 @@ import asyncio
 
 import pytest
 
-from ringproto.client import RingClient, RingCommandError, RingTimeout
+from ringproto.client import RingClient, RingCommandError, RingTimeoutError
 from ringproto.packet import Packet
 from tests.fakes import FakeTransport, error_response, response
 
@@ -24,7 +24,7 @@ async def test_request_sends_packet_and_returns_matching_response() -> None:
 async def test_request_times_out_when_ring_is_silent() -> None:
     client = RingClient(FakeTransport(), default_timeout=0.05)
 
-    with pytest.raises(RingTimeout, match="0x03"):
+    with pytest.raises(RingTimeoutError, match="0x03"):
         await client.request(0x03)
 
 
@@ -73,9 +73,8 @@ async def test_malformed_notification_is_dropped() -> None:
 async def test_client_is_usable_after_a_timeout() -> None:
     tr = FakeTransport()
     client = RingClient(tr, default_timeout=0.05)
-    with pytest.raises(RingTimeout):
+    with pytest.raises(RingTimeoutError):
         await client.request(0x03)
 
     tr.responses[0x03] = [BATTERY_RSP]
     assert (await client.request(0x03)).cmd == 0x03
-

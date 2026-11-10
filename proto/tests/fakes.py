@@ -41,4 +41,3 @@ def error_response(cmd: int) -> bytes:
     raw[0] |= 0x80
     raw[15] = sum(raw[:15]) & 0xFF
     return bytes(raw)
-

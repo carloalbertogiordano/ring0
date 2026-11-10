@@ -32,4 +32,4 @@ ignore = [".venv"]
 min-similarity-lines = 4
 ignore-imports = true
 [tool.pylint.messages_control]
-disable = ["missing-module-docstring", "missing-function-docstring", "missing-class-docstring"]
+disable = ["too-few-public-methods", "missing-module-docstring", "missing-function-docstring", "missing-class-docstring"]
