@@ -1,9 +1,9 @@
 package ring.protocol.commands
 
-import java.time.Instant
 import ring.protocol.Packet
 import ring.protocol.RingClient
 import ring.protocol.u8
+import java.time.Instant
 
 data class SlotLog(val intervalMinutes: Int, val samples: List<Int>) {
     fun readings(dayStart: Instant): List<Reading> =

@@ -1,13 +1,13 @@
 package ring.app.ui
 
-import ring.app.R
-import androidx.compose.ui.res.stringResource
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,14 +16,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.border
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -31,13 +29,14 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -48,6 +47,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.catch
 import ring.app.Graph
+import ring.app.R
 import ring.app.ble.FoundDevice
 import ring.app.ble.scanDevices
 
@@ -60,7 +60,11 @@ private fun OnboardingFrame(step: Int, title: String, content: @Composable Colum
             T(title, size = 15.sp, weight = FontWeight.Bold, spacing = 2.sp)
             T("${step + 1} / $STEPS", size = 11.sp, color = Term.dim)
         }
-        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp), content = content)
+        Column(
+            Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            content = content,
+        )
         Column(verticalArrangement = Arrangement.spacedBy(8.dp), content = footer)
     }
 }
@@ -80,7 +84,8 @@ fun Onboarding(graph: Graph, onDone: () -> Unit) {
 
 @Composable
 private fun Welcome(onNext: () -> Unit) = OnboardingFrame(
-    0, "RING",
+    0,
+    "RING",
     content = {
         Box(Modifier.height(24.dp))
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -99,7 +104,14 @@ private fun Welcome(onNext: () -> Unit) = OnboardingFrame(
 
 @Composable
 private fun LauncherMark(size: androidx.compose.ui.unit.Dp) {
-    Box(Modifier.size(size).clip(androidx.compose.foundation.shape.RoundedCornerShape(24.dp)).background(Term.bg).border(BorderStroke(1.dp, Term.line2), androidx.compose.foundation.shape.RoundedCornerShape(24.dp)), contentAlignment = Alignment.Center) {
+    Box(
+        Modifier.size(
+            size,
+        ).clip(
+            androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+        ).background(Term.bg).border(BorderStroke(1.dp, Term.line2), androidx.compose.foundation.shape.RoundedCornerShape(24.dp)),
+        contentAlignment = Alignment.Center,
+    ) {
         Radar(size * 0.7f, found = false)
         Ecg(Modifier.padding(horizontal = 18.dp), active = true)
     }
@@ -115,7 +127,8 @@ private fun PermissionsStep(onBack: () -> Unit, onNext: () -> Unit) {
     val battery = remember(tick) { Perms.batteryUnrestricted(ctx) }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { tick++ }
     OnboardingFrame(
-        1, stringResource(R.string.ob_perm_title),
+        1,
+        stringResource(R.string.ob_perm_title),
         content = {
             T(stringResource(R.string.ob_perm_intro), size = 12.sp, color = Term.dim)
             PermCard(stringResource(R.string.perm_nearby), stringResource(R.string.perm_nearby_why), nearby, required = true)
@@ -125,7 +138,12 @@ private fun PermissionsStep(onBack: () -> Unit, onNext: () -> Unit) {
         footer = {
             if (!nearby || !notif) {
                 TButton(stringResource(R.string.btn_grant), {
-                    launcher.launch(buildList { if (!nearby) addAll(Perms.nearby); if (!notif) add(Perms.NOTIFICATIONS) }.toTypedArray())
+                    launcher.launch(
+                        buildList {
+                            if (!nearby) addAll(Perms.nearby)
+                            if (!notif) add(Perms.NOTIFICATIONS)
+                        }.toTypedArray(),
+                    )
                 }, Modifier.fillMaxWidth())
             }
             if (!battery) {
@@ -145,7 +163,16 @@ private fun PermissionsStep(onBack: () -> Unit, onNext: () -> Unit) {
 private fun PermCard(title: String, why: String, ok: Boolean, required: Boolean = false) = TCard(hot = ok) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
         T(title, weight = FontWeight.Bold, modifier = Modifier.weight(1f))
-        TPill(if (ok) stringResource(R.string.perm_state_granted) else if (required) stringResource(R.string.perm_state_required) else stringResource(R.string.perm_state_to_grant), if (ok) Term.accent else Term.warn)
+        TPill(
+            if (ok) {
+                stringResource(R.string.perm_state_granted)
+            } else if (required) {
+                stringResource(R.string.perm_state_required)
+            } else {
+                stringResource(R.string.perm_state_to_grant)
+            },
+            if (ok) Term.accent else Term.warn,
+        )
     }
     T(why, size = 12.sp, color = Term.dim)
 }
@@ -167,7 +194,12 @@ fun RingPicker(onPick: (FoundDevice) -> Unit) {
             if (i >= 0) found[i] = d else found += d
         }
     }
-    LaunchedEffect(Unit) { while (true) { delay(1000); seconds++ } }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(1000)
+            seconds++
+        }
+    }
     val rings = found.filter(::looksLikeRing).sortedByDescending { it.rssi }
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Radar(150.dp, found = rings.isNotEmpty())
@@ -181,7 +213,9 @@ fun RingPicker(onPick: (FoundDevice) -> Unit) {
                 Term.dim,
             )
         }
-        TButton(if (showAll) stringResource(R.string.scan_hide_others) else stringResource(R.string.scan_show_all), { showAll = !showAll }, kind = BtnKind.GHOST)
+        TButton(if (showAll) stringResource(R.string.scan_hide_others) else stringResource(R.string.scan_show_all), {
+            showAll = !showAll
+        }, kind = BtnKind.GHOST)
         if (showAll) found.filterNot(::looksLikeRing).sortedByDescending { it.rssi }.forEach { d -> DeviceCard(d, onPick) }
     }
 }
@@ -198,8 +232,14 @@ private fun DeviceCard(d: FoundDevice, onPick: (FoundDevice) -> Unit) = TCard(ho
 
 @Composable
 private fun ScanStep(graph: Graph, onBack: () -> Unit, onNext: () -> Unit) = OnboardingFrame(
-    2, stringResource(R.string.ob_scan_title),
-    content = { RingPicker { d -> graph.settings.deviceAddress = d.address; onNext() } },
+    2,
+    stringResource(R.string.ob_scan_title),
+    content = {
+        RingPicker { d ->
+            graph.settings.deviceAddress = d.address
+            onNext()
+        }
+    },
     footer = { TButton("Indietro", onBack, Modifier.fillMaxWidth(), BtnKind.GHOST) },
 )
 
@@ -221,12 +261,33 @@ private fun ConnectStep(graph: Graph, onBack: () -> Unit, onNext: () -> Unit) {
     val failed = !status.syncing && status.lastError != null && started
     val finished = !status.syncing && status.lastError == null && monitorsDone
     OnboardingFrame(
-        3, stringResource(R.string.ob_connect_title),
+        3,
+        stringResource(R.string.ob_connect_title),
         content = {
             TCard {
-                StepRow(if (status.connected) "ok" else if (failed) "x" else "wait", stringResource(R.string.step_connected), status.capabilities?.let { stringResource(R.string.step_caps) } ?: "COLMI Ring")
+                StepRow(
+                    if (status.connected) {
+                        "ok"
+                    } else if (failed) {
+                        "x"
+                    } else {
+                        "wait"
+                    },
+                    stringResource(R.string.step_connected),
+                    status.capabilities?.let { stringResource(R.string.step_caps) } ?: "COLMI Ring",
+                )
                 StepRow(if (status.capabilities != null) "ok" else "wait", stringResource(R.string.step_clock), "UTC")
-                StepRow(if (finished) "ok" else if (failed) "x" else "wait", stringResource(R.string.step_history), status.syncStep.ifEmpty { stringResource(R.string.step_waiting) })
+                StepRow(
+                    if (finished) {
+                        "ok"
+                    } else if (failed) {
+                        "x"
+                    } else {
+                        "wait"
+                    },
+                    stringResource(R.string.step_history),
+                    status.syncStep.ifEmpty { stringResource(R.string.step_waiting) },
+                )
                 if (status.syncing || finished) {
                     Box(Modifier.fillMaxWidth().height(6.dp).background(Term.bg).border(BorderStroke(1.dp, Term.line2))) {
                         Box(Modifier.fillMaxWidth(if (finished) 1f else status.syncProgress.coerceIn(0.03f, 1f)).height(6.dp).background(Term.accent))
@@ -244,7 +305,12 @@ private fun ConnectStep(graph: Graph, onBack: () -> Unit, onNext: () -> Unit) {
             }
         },
         footer = {
-            if (failed) TButton(stringResource(R.string.btn_retry), { started = false; monitorsDone = false }, Modifier.fillMaxWidth())
+            if (failed) {
+                TButton(stringResource(R.string.btn_retry), {
+                    started = false
+                    monitorsDone = false
+                }, Modifier.fillMaxWidth())
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TButton(stringResource(R.string.btn_back), onBack, Modifier.weight(1f), BtnKind.GHOST)
                 TButton(stringResource(R.string.btn_continue), onNext, Modifier.weight(1f), enabled = finished)
@@ -255,14 +321,33 @@ private fun ConnectStep(graph: Graph, onBack: () -> Unit, onNext: () -> Unit) {
 
 @Composable
 private fun StepRow(state: String, title: String, sub: String) = Row(Modifier.padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-    val c = when (state) { "ok" -> Term.accent; "x" -> Term.crit; else -> Term.faint }
-    Box(Modifier.size(20.dp).border(BorderStroke(1.dp, c)), contentAlignment = Alignment.Center) { T(when (state) { "ok" -> "✓"; "x" -> "!"; else -> "…" }, size = 11.sp, color = c, weight = FontWeight.Bold) }
-    Column { T(title, weight = FontWeight.Bold); T(sub, size = 11.sp, color = Term.dim) }
+    val c = when (state) {
+        "ok" -> Term.accent
+        "x" -> Term.crit
+        else -> Term.faint
+    }
+    Box(Modifier.size(20.dp).border(BorderStroke(1.dp, c)), contentAlignment = Alignment.Center) {
+        T(
+            when (state) {
+                "ok" -> "✓"
+                "x" -> "!"
+                else -> "…"
+            },
+            size = 11.sp,
+            color = c,
+            weight = FontWeight.Bold,
+        )
+    }
+    Column {
+        T(title, weight = FontWeight.Bold)
+        T(sub, size = 11.sp, color = Term.dim)
+    }
 }
 
 @Composable
 private fun DoneStep(graph: Graph, onDone: () -> Unit) = OnboardingFrame(
-    4, stringResource(R.string.ob_done_title),
+    4,
+    stringResource(R.string.ob_done_title),
     content = {
         Box(Modifier.height(40.dp))
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {

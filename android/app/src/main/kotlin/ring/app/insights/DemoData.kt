@@ -1,13 +1,13 @@
 package ring.app.insights
 
+import ring.app.data.Sample
+import ring.app.data.SampleType
+import ring.app.data.SleepEntity
 import java.time.Instant
 import java.time.ZoneId
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
-import ring.app.data.Sample
-import ring.app.data.SampleType
-import ring.app.data.SleepEntity
 
 /** Synthetic data to try charts, recovery and warnings without waiting for days of real data. */
 object DemoData {
@@ -17,7 +17,7 @@ object DemoData {
     private const val DAYS = 14
     private const val HOUR = 3_600L
 
-    /** `sick`: nelle ultime due notti temperatura e FC a riposo salgono e l'HRV scende. */
+    /** `sick`: in the last two nights temperature and resting HR rise and HRV drops. */
     fun generate(now: Long, sick: Boolean, zone: ZoneId = ZoneId.systemDefault()): Demo {
         val samples = mutableListOf<Sample>()
         val sleep = mutableListOf<SleepEntity>()
@@ -25,6 +25,7 @@ object DemoData {
         for (back in DAYS downTo 0) {
             val dayStart = todayStart - back * DAY
             val lastTwo = sick && back <= 1
+
             fun hourOfDay(ts: Long) = ((ts - dayStart) / HOUR).toInt()
             var ts = dayStart
             // today: only until 07:00, so last night is complete and does not overlap the real data

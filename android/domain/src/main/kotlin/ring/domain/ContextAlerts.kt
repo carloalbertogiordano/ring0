@@ -31,7 +31,7 @@ object ContextAlerts {
     private const val SPO2_SEVERE_DROP = 4.0
 
     /**
-     * FC alta: ultimi 2 campioni oltre soglia e il contesto non e' "in movimento". Se il contesto e' ignoto
+     * High HR: the last 2 samples above the threshold and the context is not "moving". If the context is unknown
      * (no step data) the threshold is raised by a margin. Low HR: 2 samples below the threshold.
      */
     fun heartRate(recent: List<TimedValue>, high: Double, low: Double, isResting: (Long) -> Boolean?): HrAlert? {

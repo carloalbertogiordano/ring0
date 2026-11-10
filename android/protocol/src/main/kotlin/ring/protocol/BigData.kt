@@ -29,9 +29,12 @@ object BigData {
     fun encodeFrame(typeId: Int, payload: ByteArray = ByteArray(0)): ByteArray {
         val crc = crc16Modbus(payload)
         val header = byteArrayOf(
-            MAGIC.toByte(), typeId.toByte(),
-            payload.size.toByte(), (payload.size shr 8).toByte(),
-            crc.toByte(), (crc shr 8).toByte(),
+            MAGIC.toByte(),
+            typeId.toByte(),
+            payload.size.toByte(),
+            (payload.size shr 8).toByte(),
+            crc.toByte(),
+            (crc shr 8).toByte(),
         )
         return header + payload
     }
@@ -56,19 +59,23 @@ class FrameAssembler {
     /** null = more data needed; otherwise one parsing step (with a valid frame, or a discarded one). */
     private fun step(): Step? {
         val start = buffer.indexOfFirst { it.toInt() and 0xFF == BigData.MAGIC }
-        if (start < 0) {
-            buffer = ByteArray(0)
-            return null
-        }
-        buffer = buffer.copyOfRange(start, buffer.size)
+        buffer = if (start < 0) ByteArray(0) else buffer.copyOfRange(start, buffer.size)
         if (buffer.size < BigData.HEADER_LENGTH) return null
         val length = buffer.u16le(2)
-        if (length > BigData.MAX_PAYLOAD) {
-            buffer = buffer.copyOfRange(1, buffer.size)
-            return Step(null)
-        }
         val total = BigData.HEADER_LENGTH + length
-        if (buffer.size < total) return null
+        return when {
+            length > BigData.MAX_PAYLOAD -> skipByte()
+            buffer.size < total -> null
+            else -> takeFrame(total)
+        }
+    }
+
+    private fun skipByte(): Step {
+        buffer = buffer.copyOfRange(1, buffer.size)
+        return Step(null)
+    }
+
+    private fun takeFrame(total: Int): Step {
         val payload = buffer.copyOfRange(BigData.HEADER_LENGTH, total)
         val type = buffer.u8(1)
         val crc = buffer.u16le(4)

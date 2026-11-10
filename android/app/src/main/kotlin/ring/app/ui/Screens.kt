@@ -1,8 +1,5 @@
 package ring.app.ui
 
-import ring.app.alerts.alertText
-import ring.app.R
-import androidx.compose.ui.res.stringResource
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
@@ -38,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -45,14 +43,16 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.launch
 import ring.app.Graph
+import ring.app.R
+import ring.app.alerts.alertText
 import ring.app.data.Sample
 import ring.app.data.SampleType
 import ring.app.data.Thresholds
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 private val DAY_TIME = DateTimeFormatter.ofPattern("d MMM HH:mm").withZone(ZoneId.systemDefault())
 private val PERIODS = listOf(R.string.period_24h to 24L * 3600, R.string.period_7d to 7L * 86_400, R.string.period_30d to 30L * 86_400)
@@ -62,7 +62,12 @@ private val PERIODS = listOf(R.string.period_24h to 24L * 3600, R.string.period_
 fun AppRoot(graph: Graph, startService: () -> Unit) {
     var showCheck by remember { mutableStateOf(false) }
     val checkRequested by graph.checkRequested.collectAsStateWithLifecycle()
-    androidx.compose.runtime.LaunchedEffect(checkRequested) { if (checkRequested) { showCheck = true; graph.consumeCheckRequest() } }
+    androidx.compose.runtime.LaunchedEffect(checkRequested) {
+        if (checkRequested) {
+            showCheck = true
+            graph.consumeCheckRequest()
+        }
+    }
     val ctx = LocalContext.current
     var onboarded by remember { mutableStateOf(graph.settings.onboarded) }
     var tick by remember { mutableIntStateOf(0) }
@@ -71,10 +76,18 @@ fun AppRoot(graph: Graph, startService: () -> Unit) {
     val btOn = remember(tick) { Perms.bluetoothOn(ctx) }
     Box(Modifier.fillMaxSize().background(Term.bg)) {
         when {
-            !onboarded -> Onboarding(graph) { graph.settings.onboarded = true; onboarded = true; startService() }
+            !onboarded -> Onboarding(graph) {
+                graph.settings.onboarded = true
+                onboarded = true
+                startService()
+            }
+
             !nearby -> PermissionDenied()
+
             !btOn -> BluetoothOff { tick++ }
+
             showCheck -> CheckScreen(graph) { showCheck = false }
+
             else -> MainScaffold(graph, onOpenCheck = { showCheck = true }) { onboarded = false }
         }
     }
@@ -85,7 +98,9 @@ private fun SystemScreen(title: String, body: String, color: Color, action: Stri
     Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Box(Modifier.weight(1f))
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Box(Modifier.size(56.dp).border(BorderStroke(1.dp, color)), contentAlignment = Alignment.Center) { T("!", size = 28.sp, color = color, weight = FontWeight.Bold) }
+            Box(Modifier.size(56.dp).border(BorderStroke(1.dp, color)), contentAlignment = Alignment.Center) {
+                T("!", size = 28.sp, color = color, weight = FontWeight.Bold)
+            }
             T(title, size = 22.sp, weight = FontWeight.Bold, align = TextAlign.Center)
             T(body, size = 12.sp, color = Term.dim, align = TextAlign.Center)
             extra()
@@ -98,8 +113,11 @@ private fun SystemScreen(title: String, body: String, color: Color, action: Stri
 private fun BluetoothOff(onChanged: () -> Unit) {
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { onChanged() }
     SystemScreen(
-        stringResource(R.string.bt_off_title), stringResource(R.string.bt_off_body),
-        Term.crit, stringResource(R.string.btn_enable_bt), { launcher.launch(Intent(Perms.enableBluetoothAction)) },
+        stringResource(R.string.bt_off_title),
+        stringResource(R.string.bt_off_body),
+        Term.crit,
+        stringResource(R.string.btn_enable_bt),
+        { launcher.launch(Intent(Perms.enableBluetoothAction)) },
     )
 }
 
@@ -107,9 +125,15 @@ private fun BluetoothOff(onChanged: () -> Unit) {
 private fun PermissionDenied() {
     val ctx = LocalContext.current
     SystemScreen(
-        stringResource(R.string.perm_denied_title), stringResource(R.string.perm_denied_body),
-        Term.crit, stringResource(R.string.btn_open_app_settings),
-        { ctx.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", ctx.packageName, null)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) },
+        stringResource(R.string.perm_denied_title),
+        stringResource(R.string.perm_denied_body),
+        Term.crit,
+        stringResource(R.string.btn_open_app_settings),
+        {
+            ctx.startActivity(
+                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", ctx.packageName, null)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
+        },
     ) {
         TCard {
             T(stringResource(R.string.perm_denied_step1), size = 12.sp)
@@ -134,8 +158,13 @@ private fun MainScaffold(graph: Graph, onOpenCheck: () -> Unit, onForget: () -> 
         Row(Modifier.fillMaxWidth().background(Color(0xFF050C08)).border(BorderStroke(1.dp, Term.line2)).navigationBarsPadding()) {
             listOf(R.string.tab_home, R.string.tab_history, R.string.tab_settings).forEachIndexed { i, label ->
                 T(
-                    stringResource(label).uppercase(), Modifier.weight(1f).clickable { tab = i }.padding(vertical = 16.dp), 11.sp,
-                    if (tab == i) Term.accent else Term.faint, if (tab == i) FontWeight.Bold else FontWeight.Normal, TextAlign.Center, 1.4.sp,
+                    stringResource(label).uppercase(),
+                    Modifier.weight(1f).clickable { tab = i }.padding(vertical = 16.dp),
+                    11.sp,
+                    if (tab == i) Term.accent else Term.faint,
+                    if (tab == i) FontWeight.Bold else FontWeight.Normal,
+                    TextAlign.Center,
+                    1.4.sp,
                 )
             }
         }
@@ -158,8 +187,14 @@ private fun HomeScreen(graph: Graph, onOpenCheck: () -> Unit) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 T("RING", size = 15.sp, weight = FontWeight.Bold, spacing = 4.sp)
                 when {
-                    battery != null && status.connected -> TPill(if (battery.charging) stringResource(R.string.pill_charging, battery.level) else "${battery.level}%", if (lowBattery) Term.crit else Term.accent, pulse = true)
+                    battery != null && status.connected -> TPill(
+                        if (battery.charging) stringResource(R.string.pill_charging, battery.level) else "${battery.level}%",
+                        if (lowBattery) Term.crit else Term.accent,
+                        pulse = true,
+                    )
+
                     status.syncing -> TPill(stringResource(R.string.pill_syncing), Term.info, pulse = true)
+
                     else -> TPill(stringResource(R.string.pill_offline), Term.warn)
                 }
             }
@@ -182,17 +217,61 @@ private fun HomeScreen(graph: Graph, onOpenCheck: () -> Unit) {
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    MetricTile(stringResource(R.string.tile_heart), SampleType.HR, "bpm", 0, Term.accent, graph, Modifier.weight(1f), warnAbove = thresholds.hrHigh.toDouble())
-                    MetricTile(stringResource(R.string.tile_temp), SampleType.TEMP, "°C", 1, Color(0xFFFF9D3B), graph, Modifier.weight(1f), warnAbove = thresholds.tempHigh)
+                    MetricTile(
+                        stringResource(R.string.tile_heart),
+                        SampleType.HR,
+                        "bpm",
+                        0,
+                        Term.accent,
+                        graph,
+                        Modifier.weight(1f),
+                        warnAbove = thresholds.hrHigh.toDouble(),
+                    )
+                    MetricTile(
+                        stringResource(R.string.tile_temp),
+                        SampleType.TEMP,
+                        "°C",
+                        1,
+                        Color(0xFFFF9D3B),
+                        graph,
+                        Modifier.weight(1f),
+                        warnAbove = thresholds.tempHigh,
+                    )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    MetricTile(stringResource(R.string.tile_stress), SampleType.STRESS, "", 0, Term.rem, graph, Modifier.weight(1f), warnAbove = thresholds.stressHigh.toDouble())
+                    MetricTile(
+                        stringResource(R.string.tile_stress),
+                        SampleType.STRESS,
+                        "",
+                        0,
+                        Term.rem,
+                        graph,
+                        Modifier.weight(1f),
+                        warnAbove = thresholds.stressHigh.toDouble(),
+                    )
                     MetricTile(stringResource(R.string.tile_hrv), SampleType.HRV, "ms", 0, Term.info, graph, Modifier.weight(1f))
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    MetricTile(stringResource(R.string.tile_spo2), SampleType.SPO2, "%", 0, Term.accent, graph, Modifier.weight(1f), warnBelow = thresholds.spo2Low.toDouble())
+                    MetricTile(
+                        stringResource(R.string.tile_spo2),
+                        SampleType.SPO2,
+                        "%",
+                        0,
+                        Term.accent,
+                        graph,
+                        Modifier.weight(1f),
+                        warnBelow = thresholds.spo2Low.toDouble(),
+                    )
                     val last = sleep.firstOrNull()
-                    Tile(stringResource(R.string.tile_sleep), last?.let { "%dh %02d".format((it.end - it.start) / 3600, (it.end - it.start) / 60 % 60) } ?: "—", "", last?.let { "${clock(it.end)} · ${ago(it.end)}" } ?: stringResource(R.string.no_night), Modifier.weight(1f)) {}
+                    Tile(
+                        stringResource(R.string.tile_sleep),
+                        last?.let {
+                            "%dh %02d".format((it.end - it.start) / 3600, (it.end - it.start) / 60 % 60)
+                        } ?: "—",
+                        "",
+                        last?.let { "${clock(it.end)} · ${ago(it.end)}" } ?: stringResource(R.string.no_night),
+                        Modifier.weight(1f),
+                    ) {}
                 }
             }
         }
@@ -200,7 +279,9 @@ private fun HomeScreen(graph: Graph, onOpenCheck: () -> Unit) {
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 T(stringResource(R.string.sync_last, ago(status.lastSyncEpoch)), size = 11.sp, color = Term.dim)
-                TButton(if (status.syncing) "…" else stringResource(R.string.btn_sync), { graph.scope.launch { graph.syncNow() } }, kind = BtnKind.GHOST, enabled = !status.syncing)
+                TButton(if (status.syncing) "…" else stringResource(R.string.btn_sync), {
+                    graph.scope.launch { graph.syncNow() }
+                }, kind = BtnKind.GHOST, enabled = !status.syncing)
             }
             status.lastError?.let { T(it, Modifier.padding(top = 6.dp), 11.sp, Term.crit) }
         }
@@ -214,7 +295,16 @@ private fun LiveCard(graph: Graph) {
     TCard(hot = true) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Label(stringResource(R.string.live_title))
-            T(if (status.measuring) stringResource(R.string.live_beats_progress, status.liveBeats, status.liveTarget) else live?.let { stringResource(R.string.live_beats, it.beats) } ?: "", size = 11.sp, color = Term.dim)
+            T(
+                if (status.measuring) {
+                    stringResource(R.string.live_beats_progress, status.liveBeats, status.liveTarget)
+                } else {
+                    live?.let { stringResource(R.string.live_beats, it.beats) }
+                        ?: ""
+                },
+                size = 11.sp,
+                color = Term.dim,
+            )
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
             Num(live?.bpm?.toString() ?: "—", "bpm", 44.sp, if (live?.bpm != null) Term.accent else Term.faint)
@@ -229,23 +319,47 @@ private fun LiveCard(graph: Graph) {
         Ecg(active = status.measuring)
         if (status.measuring) {
             T(
-                if (status.liveBeats == 0) stringResource(R.string.live_phase1)
-                else stringResource(R.string.live_phase2, status.liveBeats, status.liveTarget),
-                size = 11.sp, color = Term.accent,
+                if (status.liveBeats == 0) {
+                    stringResource(R.string.live_phase1)
+                } else {
+                    stringResource(R.string.live_phase2, status.liveBeats, status.liveTarget)
+                },
+                size = 11.sp,
+                color = Term.accent,
             )
         }
-        TButton(if (status.measuring) stringResource(R.string.btn_measuring) else stringResource(R.string.btn_quick), { graph.measureLive(false) }, Modifier.fillMaxWidth(), enabled = !status.measuring && !status.spo2Measuring)
-        TButton(stringResource(R.string.btn_full), { graph.measureLive(true) }, Modifier.fillMaxWidth(), BtnKind.GHOST, enabled = !status.measuring && !status.spo2Measuring)
+        TButton(
+            if (status.measuring) stringResource(R.string.btn_measuring) else stringResource(R.string.btn_quick),
+            {
+                graph.measureLive(false)
+            },
+            Modifier.fillMaxWidth(),
+            enabled =
+                !status.measuring && !status.spo2Measuring,
+        )
+        TButton(
+            stringResource(R.string.btn_full),
+            { graph.measureLive(true) },
+            Modifier.fillMaxWidth(),
+            BtnKind.GHOST,
+            enabled =
+                !status.measuring && !status.spo2Measuring,
+        )
         T(stringResource(R.string.full_hint), size = 10.sp, color = Term.faint)
         status.liveSpo2?.let { T(stringResource(R.string.spo2_result, it), size = 13.sp, color = Term.info) }
         TButton(
             if (status.spo2Measuring) stringResource(R.string.btn_measuring) else stringResource(R.string.btn_spo2),
-            { graph.measureSpo2() }, Modifier.fillMaxWidth(), BtnKind.GHOST, enabled = !status.measuring && !status.spo2Measuring && !status.stressMeasuring,
+            { graph.measureSpo2() },
+            Modifier.fillMaxWidth(),
+            BtnKind.GHOST,
+            enabled = !status.measuring && !status.spo2Measuring && !status.stressMeasuring,
         )
         status.liveStress?.let { T(stringResource(R.string.stress_result, it), size = 13.sp, color = Term.rem) }
         TButton(
             if (status.stressMeasuring) stringResource(R.string.btn_measuring) else stringResource(R.string.btn_stress),
-            { graph.measureStress() }, Modifier.fillMaxWidth(), BtnKind.GHOST,
+            { graph.measureStress() },
+            Modifier.fillMaxWidth(),
+            BtnKind.GHOST,
             enabled = !status.measuring && !status.spo2Measuring && !status.stressMeasuring,
         )
         T(stringResource(R.string.spo2_hint), size = 10.sp, color = Term.faint)
@@ -266,7 +380,12 @@ private fun ReadinessCard(graph: Graph) {
             T(stringResource(R.string.recovery_need_data), size = 12.sp, color = Term.dim)
             T(stringResource(R.string.hrv_days_so_far, report?.baselineDays ?: 0), size = 11.sp, color = Term.dim)
         } else {
-            val color = when (r.level) { ring.domain.ReadinessLevel.HIGH -> Term.accent; ring.domain.ReadinessLevel.GOOD -> Term.accent; ring.domain.ReadinessLevel.MODERATE -> Term.warn; ring.domain.ReadinessLevel.LOW -> Term.crit }
+            val color = when (r.level) {
+                ring.domain.ReadinessLevel.HIGH -> Term.accent
+                ring.domain.ReadinessLevel.GOOD -> Term.accent
+                ring.domain.ReadinessLevel.MODERATE -> Term.warn
+                ring.domain.ReadinessLevel.LOW -> Term.crit
+            }
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Num("${r.score}", "/100", 40.sp, color)
                 T(stringResource(levelRes(r.level)), size = 14.sp, color = color, weight = FontWeight.Bold)
@@ -312,14 +431,20 @@ private fun MetricTile(
     val last = samples.lastOrNull()
     val alert = last != null && ((warnAbove != null && last.value > warnAbove) || (warnBelow != null && last.value < warnBelow))
     Tile(
-        title, last?.let { "%.${decimals}f".format(it.value) } ?: "—", unit,
-        last?.let { "${clock(it.ts)} · ${ago(it.ts)}" } ?: stringResource(R.string.no_data), modifier, alert,
+        title,
+        last?.let { "%.${decimals}f".format(it.value) } ?: "—",
+        unit,
+        last?.let { "${clock(it.ts)} · ${ago(it.ts)}" } ?: stringResource(R.string.no_data),
+        modifier,
+        alert,
     ) { if (samples.size >= 2) Sparkline(samples.map { it.value }, if (alert) Term.warn else color) }
 }
 
 @Composable
 private fun Tile(title: String, value: String, unit: String, sub: String, modifier: Modifier, alert: Boolean = false, spark: @Composable () -> Unit) = Column(
-    modifier.background(Term.panel).border(BorderStroke(1.dp, if (alert) Term.warn.copy(alpha = 0.6f) else Term.line)).padding(horizontal = 10.dp, vertical = 8.dp),
+    modifier.background(
+        Term.panel,
+    ).border(BorderStroke(1.dp, if (alert) Term.warn.copy(alpha = 0.6f) else Term.line)).padding(horizontal = 10.dp, vertical = 8.dp),
     verticalArrangement = Arrangement.spacedBy(2.dp),
 ) {
     Label(title)
@@ -341,8 +466,24 @@ private fun HistoryScreen(graph: Graph) {
     editing?.let { current ->
         IncidentEditor(
             current,
-            onSave = { scope.launch { graph.saveIncident(it); editing = null } },
-            onDelete = if (current.id != 0L) ({ scope.launch { graph.deleteIncident(current.id); editing = null } }) else null,
+            onSave = {
+                scope.launch {
+                    graph.saveIncident(it)
+                    editing = null
+                }
+            },
+            onDelete = if (current.id != 0L) {
+                (
+                    {
+                        scope.launch {
+                            graph.deleteIncident(current.id)
+                            editing = null
+                        }
+                    }
+                )
+            } else {
+                null
+            },
             onDismiss = { editing = null },
         )
     }
@@ -350,12 +491,24 @@ private fun HistoryScreen(graph: Graph) {
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 T(stringResource(R.string.history_title), size = 15.sp, weight = FontWeight.Bold, spacing = 4.sp)
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { PERIODS.forEachIndexed { i, (label, _) -> TChip(stringResource(label), period == i) { period = i } } }
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    PERIODS.forEachIndexed {
+                        i,
+                        (label, _),
+                        ->
+                        TChip(stringResource(label), period == i) {
+                            period =
+                                i
+                        }
+                    }
+                }
             }
         }
         item { HistoryPanel(graph, stringResource(R.string.chart_hr), SampleType.HR, " bpm", from, to, Term.accent, 20.0, 0, thresholds.hrHigh.toDouble()) }
         item { HistoryPanel(graph, stringResource(R.string.chart_temp), SampleType.TEMP, " °C", from, to, Color(0xFFFF9D3B), 1.0, 1, thresholds.tempHigh) }
-        item { HistoryPanel(graph, stringResource(R.string.chart_stress), SampleType.STRESS, "", from, to, Term.rem, 20.0, 0, thresholds.stressHigh.toDouble()) }
+        item {
+            HistoryPanel(graph, stringResource(R.string.chart_stress), SampleType.STRESS, "", from, to, Term.rem, 20.0, 0, thresholds.stressHigh.toDouble())
+        }
         item { HistoryPanel(graph, stringResource(R.string.chart_hrv_ring), SampleType.HRV, " ms", from, to, Term.info, 20.0, 0, null) }
         item { HistoryPanel(graph, stringResource(R.string.chart_hrv_live), SampleType.HRV_LIVE, " ms", from, to, Term.rem, 20.0, 0, null) }
         item { HistoryPanel(graph, stringResource(R.string.chart_resp), SampleType.RESP, " /min", from, to, Term.info, 4.0, 0, null) }
@@ -376,7 +529,18 @@ private fun HistoryScreen(graph: Graph) {
 }
 
 @Composable
-private fun HistoryPanel(graph: Graph, title: String, type: String, unit: String, from: Long, to: Long, color: Color, minSpan: Double, decimals: Int, threshold: Double?) {
+private fun HistoryPanel(
+    graph: Graph,
+    title: String,
+    type: String,
+    unit: String,
+    from: Long,
+    to: Long,
+    color: Color,
+    minSpan: Double,
+    decimals: Int,
+    threshold: Double?,
+) {
     val samples by remember(type, from) { graph.dao.observe(type, from, to) }.collectAsStateWithLifecycle(emptyList())
     val fmt = { v: Double -> "%.${decimals}f".format(v) }
     TCard {
@@ -384,10 +548,16 @@ private fun HistoryPanel(graph: Graph, title: String, type: String, unit: String
         if (samples.isNotEmpty()) {
             T(
                 stringResource(
-                    R.string.stats_line, fmt(samples.last().value), unit, ago(samples.last().ts), fmt(samples.minOf { it.value }),
-                    fmt(samples.map(Sample::value).average()), fmt(samples.maxOf { it.value }),
+                    R.string.stats_line,
+                    fmt(samples.last().value),
+                    unit,
+                    ago(samples.last().ts),
+                    fmt(samples.minOf { it.value }),
+                    fmt(samples.map(Sample::value).average()),
+                    fmt(samples.maxOf { it.value }),
                 ),
-                size = 10.sp, color = Term.dim,
+                size = 10.sp,
+                color = Term.dim,
             )
         }
         TermChart(samples, from, to, color, minSpan = minSpan, threshold = threshold, format = fmt)
@@ -416,6 +586,7 @@ private fun SettingsScreen(graph: Graph, onForget: () -> Unit) {
     var picking by remember { mutableStateOf(false) }
     val alerts by graph.dao.observeAlerts().collectAsStateWithLifecycle(emptyList())
     val scope = androidx.compose.runtime.rememberCoroutineScope()
+
     fun set(t: Thresholds) = graph.settings.setThresholds(t)
     LaunchedEffect(status.connected) { if (status.connected && status.monitors.isEmpty()) graph.refreshMonitors() }
     LazyColumn(contentPadding = PAD, verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -424,26 +595,54 @@ private fun SettingsScreen(graph: Graph, onForget: () -> Unit) {
             TCard(hot = true) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     T(stringResource(R.string.ring_label), weight = FontWeight.Bold)
-                    TPill(if (status.connected) stringResource(R.string.connected) else stringResource(R.string.pill_offline), if (status.connected) Term.accent else Term.warn)
+                    TPill(
+                        if (status.connected) stringResource(R.string.connected) else stringResource(R.string.pill_offline),
+                        if (status.connected) Term.accent else Term.warn,
+                    )
                 }
                 KeyValue(stringResource(R.string.address_label), graph.settings.deviceAddress ?: "—")
-                status.battery?.let { KeyValue(stringResource(R.string.battery_label), if (it.charging) stringResource(R.string.battery_charging, it.level) else "${it.level}%") }
+                status.battery?.let {
+                    KeyValue(stringResource(R.string.battery_label), if (it.charging) stringResource(R.string.battery_charging, it.level) else "${it.level}%")
+                }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TButton(stringResource(R.string.btn_change_ring), { picking = !picking }, Modifier.weight(1f), BtnKind.GHOST)
                     TButton(stringResource(R.string.btn_find_ring), { graph.findRing() }, Modifier.weight(1f), BtnKind.GHOST, enabled = status.connected)
                 }
                 TButton(
                     stringResource(R.string.btn_forget),
-                    { graph.disconnect(); graph.settings.deviceAddress = null; graph.settings.lastSyncEpoch = 0; onForget() },
-                    Modifier.fillMaxWidth(), BtnKind.CRIT,
+                    {
+                        graph.disconnect()
+                        graph.settings.deviceAddress = null
+                        graph.settings.lastSyncEpoch = 0
+                        onForget()
+                    },
+                    Modifier.fillMaxWidth(),
+                    BtnKind.CRIT,
                 )
-                if (picking) RingPicker { d -> graph.settings.deviceAddress = d.address; graph.settings.lastSyncEpoch = 0; picking = false; graph.disconnect() }
+                if (picking) {
+                    RingPicker { d ->
+                        graph.settings.deviceAddress = d.address
+                        graph.settings.lastSyncEpoch = 0
+                        picking = false
+                        graph.disconnect()
+                    }
+                }
             }
         }
         item {
             TCard {
                 Label(stringResource(R.string.sync_every))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf(5, 15, 30, 60).forEach { m -> TChip(stringResource(R.string.minutes_n, m), interval == m) { interval = m; graph.settings.syncIntervalMin = m } } }
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf(5, 15, 30, 60).forEach { m ->
+                        TChip(
+                            stringResource(R.string.minutes_n, m),
+                            interval == m,
+                        ) {
+                            interval = m
+                            graph.settings.syncIntervalMin = m
+                        }
+                    }
+                }
             }
         }
         item {
@@ -452,7 +651,13 @@ private fun SettingsScreen(graph: Graph, onForget: () -> Unit) {
                     Label(stringResource(R.string.monitors_title))
                     TButton(stringResource(R.string.btn_read), { graph.refreshMonitors() }, kind = BtnKind.GHOST)
                 }
-                listOf("hr" to R.string.monitor_hr, "SPO2" to R.string.monitor_spo2, "STRESS" to R.string.monitor_stress, "HRV" to R.string.monitor_hrv, "TEMPERATURE" to R.string.monitor_temp).forEach { (key, label) ->
+                listOf(
+                    "hr" to R.string.monitor_hr,
+                    "SPO2" to R.string.monitor_spo2,
+                    "STRESS" to R.string.monitor_stress,
+                    "HRV" to R.string.monitor_hrv,
+                    "TEMPERATURE" to R.string.monitor_temp,
+                ).forEach { (key, label) ->
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         T(stringResource(label), size = 12.sp)
                         TSwitch(status.monitors[key] == true, { graph.setMonitor(key, it) }, enabled = status.monitors.containsKey(key))
@@ -465,15 +670,62 @@ private fun SettingsScreen(graph: Graph, onForget: () -> Unit) {
             TCard {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Label(stringResource(R.string.alerts_title))
-                    TSwitch(alertsOn, { alertsOn = it; graph.settings.alertsEnabled = it })
+                    TSwitch(alertsOn, {
+                        alertsOn = it
+                        graph.settings.alertsEnabled = it
+                    })
                 }
-                Stepper(stringResource(R.string.thr_hr_high), "${thresholds.hrHigh}", { set(thresholds.copy(hrHigh = thresholds.hrHigh - 5)) }, { set(thresholds.copy(hrHigh = thresholds.hrHigh + 5)) })
-                Stepper(stringResource(R.string.thr_hr_low), "${thresholds.hrLow}", { set(thresholds.copy(hrLow = thresholds.hrLow - 5)) }, { set(thresholds.copy(hrLow = thresholds.hrLow + 5)) })
-                Stepper(stringResource(R.string.thr_temp), "%.1f".format(thresholds.tempHigh), { set(thresholds.copy(tempHigh = thresholds.tempHigh - 0.1)) }, { set(thresholds.copy(tempHigh = thresholds.tempHigh + 0.1)) })
-                Stepper(stringResource(R.string.thr_stress), "${thresholds.stressHigh}", { set(thresholds.copy(stressHigh = thresholds.stressHigh - 5)) }, { set(thresholds.copy(stressHigh = thresholds.stressHigh + 5)) })
-                Stepper(stringResource(R.string.thr_spo2), "${thresholds.spo2Low}", { set(thresholds.copy(spo2Low = thresholds.spo2Low - 1)) }, { set(thresholds.copy(spo2Low = thresholds.spo2Low + 1)) })
-                Stepper(stringResource(R.string.thr_battery), "${thresholds.batteryLow}", { set(thresholds.copy(batteryLow = thresholds.batteryLow - 5)) }, { set(thresholds.copy(batteryLow = thresholds.batteryLow + 5)) })
-                TButton(stringResource(R.string.btn_clear_alerts, alerts.size), { scope.launch { graph.dao.clearAlerts() } }, Modifier.fillMaxWidth(), BtnKind.GHOST, enabled = alerts.isNotEmpty())
+                Stepper(stringResource(R.string.thr_hr_high), "${thresholds.hrHigh}", { set(thresholds.copy(hrHigh = thresholds.hrHigh - 5)) }, {
+                    set(
+                        thresholds.copy(
+                            hrHigh =
+                                thresholds.hrHigh + 5,
+                        ),
+                    )
+                })
+                Stepper(stringResource(R.string.thr_hr_low), "${thresholds.hrLow}", { set(thresholds.copy(hrLow = thresholds.hrLow - 5)) }, {
+                    set(
+                        thresholds.copy(
+                            hrLow =
+                                thresholds.hrLow + 5,
+                        ),
+                    )
+                })
+                Stepper(stringResource(R.string.thr_temp), "%.1f".format(thresholds.tempHigh), { set(thresholds.copy(tempHigh = thresholds.tempHigh - 0.1)) }, {
+                    set(
+                        thresholds.copy(
+                            tempHigh =
+                                thresholds.tempHigh + 0.1,
+                        ),
+                    )
+                })
+                Stepper(stringResource(R.string.thr_stress), "${thresholds.stressHigh}", { set(thresholds.copy(stressHigh = thresholds.stressHigh - 5)) }, {
+                    set(
+                        thresholds.copy(
+                            stressHigh =
+                                thresholds.stressHigh + 5,
+                        ),
+                    )
+                })
+                Stepper(stringResource(R.string.thr_spo2), "${thresholds.spo2Low}", { set(thresholds.copy(spo2Low = thresholds.spo2Low - 1)) }, {
+                    set(
+                        thresholds.copy(
+                            spo2Low =
+                                thresholds.spo2Low + 1,
+                        ),
+                    )
+                })
+                Stepper(stringResource(R.string.thr_battery), "${thresholds.batteryLow}", { set(thresholds.copy(batteryLow = thresholds.batteryLow - 5)) }, {
+                    set(
+                        thresholds.copy(
+                            batteryLow =
+                                thresholds.batteryLow + 5,
+                        ),
+                    )
+                })
+                TButton(stringResource(R.string.btn_clear_alerts, alerts.size), {
+                    scope.launch { graph.dao.clearAlerts() }
+                }, Modifier.fillMaxWidth(), BtnKind.GHOST, enabled = alerts.isNotEmpty())
             }
         }
         item {

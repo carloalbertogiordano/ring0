@@ -1,10 +1,10 @@
 package ring.domain
 
+import ring.protocol.commands.Hrv
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.sin
-import ring.protocol.commands.Hrv
 
 data class RespirationEstimate(val breathsPerMinute: Double, val confidence: Double)
 
@@ -25,19 +25,24 @@ object RespirationRate {
     private const val PEAK_HALF_WIDTH = 0.03
     private const val SECONDS_PER_MINUTE = 60.0
     private const val MS_PER_SECOND = 1000.0
+    private const val EPSILON = 1e-9
+    private const val HALF = 0.5
 
     fun fromRr(rrMs: List<Int>): RespirationEstimate? {
         val rr = Hrv.clean(rrMs)
         if (rr.size < MIN_BEATS) return null
         val times = DoubleArray(rr.size)
         var acc = 0.0
-        rr.forEachIndexed { i, v -> acc += v / MS_PER_SECOND; times[i] = acc }
+        rr.forEachIndexed { i, v ->
+            acc += v / MS_PER_SECOND
+            times[i] = acc
+        }
         if (times.last() - times.first() < MIN_SECONDS) return null
         val signal = detrend(resample(times, rr.map { it.toDouble() }))
-        val freqs = generateSequence(BAND_LOW) { it + STEP }.takeWhile { it <= BAND_HIGH + 1e-9 }.toList()
+        val freqs = generateSequence(BAND_LOW) { it + STEP }.takeWhile { it <= BAND_HIGH + EPSILON }.toList()
         val power = spectrum(signal, freqs)
         val total = power.sum()
-        if (total <= 1e-9) return null
+        if (total <= EPSILON) return null
         val peak = power.indices.maxBy { power[it] }
         val refined = refine(freqs, power, peak)
         val near = freqs.indices.filter { kotlin.math.abs(freqs[it] - refined) <= PEAK_HALF_WIDTH }.sumOf { power[it] }
@@ -90,6 +95,6 @@ object RespirationRate {
         val c = power[peak + 1]
         val denom = a - 2 * b + c
         if (denom == 0.0) return freqs[peak]
-        return freqs[peak] + 0.5 * (a - c) / denom * STEP
+        return freqs[peak] + HALF * (a - c) / denom * STEP
     }
 }

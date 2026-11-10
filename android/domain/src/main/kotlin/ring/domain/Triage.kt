@@ -42,30 +42,41 @@ object Triage {
     private const val ELEVATED_OVER_RESTING = 25.0
     private val RED_FLAGS = setOf(Symptom.CHEST_PAIN, Symptom.SHORTNESS_OF_BREATH, Symptom.DIZZINESS_OR_FAINTING)
 
+    private val WATCH_CAUSES = setOf(TriageCause.LOW_OXYGEN, TriageCause.POSSIBLE_ILLNESS, TriageCause.UNEXPLAINED)
+
     fun assess(input: TriageInput): TriageResult {
-        val urgent = (input.spo2 != null && input.spo2 < SPO2_URGENT) || input.symptoms.any { it in RED_FLAGS }
-        val causes = buildList {
-            if (input.moving == true || Symptom.EXERCISED in input.symptoms) add(TriageCause.ACTIVITY)
-            if ((input.stress ?: 0) >= STRESS_HIGH || (input.hrvZ ?: 0.0) <= -Z_LIMIT) add(TriageCause.STRESS)
-            val feverish = Symptom.FEVER_OR_CHILLS in input.symptoms || (input.skinTemp ?: 0.0) >= FEVER_C ||
-                ((input.tempZ ?: 0.0) >= Z_LIMIT && (input.hrvZ ?: 0.0) <= -Z_SOFT)
-            if (feverish) add(TriageCause.POSSIBLE_ILLNESS)
-            if (input.spo2 != null && input.spo2 in SPO2_URGENT until SPO2_LOW) add(TriageCause.LOW_OXYGEN)
-            if (Symptom.CAFFEINE_OR_STIMULANT in input.symptoms) add(TriageCause.STIMULANT)
-        }
-        val elevated = input.bpm != null && input.restingHr != null && input.bpm > input.restingHr + ELEVATED_OVER_RESTING
-        val finalCauses = if (causes.isEmpty() && elevated) listOf(TriageCause.UNEXPLAINED) else causes
-        val watch = finalCauses.any { it == TriageCause.LOW_OXYGEN || it == TriageCause.POSSIBLE_ILLNESS || it == TriageCause.UNEXPLAINED }
+        val elevated = isElevated(input)
+        val causes = causesOf(input).ifEmpty { if (elevated) listOf(TriageCause.UNEXPLAINED) else emptyList() }
         val level = when {
-            urgent -> TriageLevel.URGENT
-            watch -> TriageLevel.WATCH
+            isUrgent(input) -> TriageLevel.URGENT
+            causes.any { it in WATCH_CAUSES } -> TriageLevel.WATCH
             else -> TriageLevel.NORMAL
         }
-        val advice = when (level) {
-            TriageLevel.URGENT -> listOf(TriageAdvice.SEEK_MEDICAL_HELP)
-            TriageLevel.WATCH -> listOf(TriageAdvice.REST_AND_RECHECK, TriageAdvice.MONITOR)
-            TriageLevel.NORMAL -> if (elevated) listOf(TriageAdvice.REST_AND_RECHECK) else listOf(TriageAdvice.MONITOR)
-        }
-        return TriageResult(level, finalCauses, advice)
+        return TriageResult(level, causes, adviceFor(level, elevated))
+    }
+
+    private fun isUrgent(input: TriageInput): Boolean =
+        (input.spo2 != null && input.spo2 < SPO2_URGENT) || input.symptoms.any { it in RED_FLAGS }
+
+    private fun isElevated(input: TriageInput): Boolean =
+        input.bpm != null && input.restingHr != null && input.bpm > input.restingHr + ELEVATED_OVER_RESTING
+
+    private fun isFeverish(input: TriageInput): Boolean =
+        Symptom.FEVER_OR_CHILLS in input.symptoms ||
+            (input.skinTemp ?: 0.0) >= FEVER_C ||
+            ((input.tempZ ?: 0.0) >= Z_LIMIT && (input.hrvZ ?: 0.0) <= -Z_SOFT)
+
+    private fun causesOf(input: TriageInput): List<TriageCause> = buildList {
+        if (input.moving == true || Symptom.EXERCISED in input.symptoms) add(TriageCause.ACTIVITY)
+        if ((input.stress ?: 0) >= STRESS_HIGH || (input.hrvZ ?: 0.0) <= -Z_LIMIT) add(TriageCause.STRESS)
+        if (isFeverish(input)) add(TriageCause.POSSIBLE_ILLNESS)
+        if (input.spo2 != null && input.spo2 in SPO2_URGENT until SPO2_LOW) add(TriageCause.LOW_OXYGEN)
+        if (Symptom.CAFFEINE_OR_STIMULANT in input.symptoms) add(TriageCause.STIMULANT)
+    }
+
+    private fun adviceFor(level: TriageLevel, elevated: Boolean): List<TriageAdvice> = when (level) {
+        TriageLevel.URGENT -> listOf(TriageAdvice.SEEK_MEDICAL_HELP)
+        TriageLevel.WATCH -> listOf(TriageAdvice.REST_AND_RECHECK, TriageAdvice.MONITOR)
+        TriageLevel.NORMAL -> if (elevated) listOf(TriageAdvice.REST_AND_RECHECK) else listOf(TriageAdvice.MONITOR)
     }
 }

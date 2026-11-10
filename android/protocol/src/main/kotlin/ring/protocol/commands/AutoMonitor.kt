@@ -4,7 +4,7 @@ import ring.protocol.Packet
 import ring.protocol.RingClient
 import ring.protocol.u8
 
-/** Misura automatica configurabile: (id comando, prefisso payload). */
+/** Configurable automatic measurement: (command id, payload prefix). */
 enum class Feature(val cmd: Int, val prefix: ByteArray) {
     SPO2(0x2C, byteArrayOf()),
     STRESS(0x36, byteArrayOf()),

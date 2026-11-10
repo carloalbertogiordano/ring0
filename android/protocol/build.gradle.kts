@@ -21,17 +21,18 @@ tasks.test {
     useJUnitPlatform()
 }
 
-// `test` standard usa worker via TCP loopback, che su questa macchina Gradle rifiuta (vedi gradle.properties).
-// `runTests` lancia la JUnit Console come semplice processo figlio.
+// The standard `test` task uses TCP loopback workers, which Gradle refuses on this machine (see gradle.properties).
+// `runTests` launches the JUnit Console as a plain child process.
 tasks.register<JavaExec>("runTests") {
     group = "verification"
-    description = "Esegue i test JUnit senza i worker TCP di Gradle"
+    description = "Runs the JUnit tests without Gradle TCP workers"
     dependsOn("testClasses")
     classpath = sourceSets["test"].runtimeClasspath + consoleLauncher
     mainClass.set("org.junit.platform.console.ConsoleLauncher")
     args(
         "execute",
-        "--scan-classpath", sourceSets["test"].output.classesDirs.asPath,
+        "--scan-classpath",
+        sourceSets["test"].output.classesDirs.asPath,
         "--fail-if-no-tests",
         "--details=tree",
         "--disable-banner",

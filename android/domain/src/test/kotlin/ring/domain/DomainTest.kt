@@ -1,5 +1,7 @@
 package ring.domain
 
+import ring.protocol.commands.SleepStage
+import ring.protocol.commands.SleepStageType
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -9,8 +11,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import ring.protocol.commands.SleepStage
-import ring.protocol.commands.SleepStageType
 
 /** Synthetic RR series: 800 ms base modulated by breathing at `freq` Hz (RSA) plus deterministic noise. */
 private fun synthRr(freq: Double, seconds: Double, amp: Double = 50.0, base: Double = 800.0, noise: Double = 6.0): List<Int> {
@@ -117,10 +117,15 @@ class ReadinessTest {
 
 class SleepTest {
     private val night = SleepNight(
-        startEpoch = 0, endEpoch = 8 * 3600L,
+        startEpoch = 0,
+        endEpoch = 8 * 3600L,
         stages = listOf(
-            SleepStage(SleepStageType.AWAKE, 10), SleepStage(SleepStageType.LIGHT, 200), SleepStage(SleepStageType.DEEP, 80),
-            SleepStage(SleepStageType.REM, 90), SleepStage(SleepStageType.AWAKE, 20), SleepStage(SleepStageType.LIGHT, 40),
+            SleepStage(SleepStageType.AWAKE, 10),
+            SleepStage(SleepStageType.LIGHT, 200),
+            SleepStage(SleepStageType.DEEP, 80),
+            SleepStage(SleepStageType.REM, 90),
+            SleepStage(SleepStageType.AWAKE, 20),
+            SleepStage(SleepStageType.LIGHT, 40),
             SleepStage(SleepStageType.AWAKE, 5),
         ),
     )
@@ -228,6 +233,7 @@ class ContextAlertsTest {
 
     @Test fun `spo2 needs two low samples or one severe drop`() {
         val now = 10_000L
+
         fun s(ts: Long, v: Double) = TimedValue(ts, v)
         assertTrue(ContextAlerts.spo2(listOf(s(now - 3600, 90.0), s(now - 100, 91.0)), 92.0, now))
         assertTrue(!ContextAlerts.spo2(listOf(s(now - 100, 91.0)), 92.0, now))
@@ -253,8 +259,15 @@ class RestingHrTest {
 
 class TriageTest {
     private fun input(
-        bpm: Int? = 120, restingHr: Double? = 60.0, spo2: Int? = 97, stress: Int? = 30, hrvZ: Double? = 0.0,
-        skinTemp: Double? = 36.6, tempZ: Double? = 0.0, moving: Boolean? = null, symptoms: Set<Symptom> = emptySet(),
+        bpm: Int? = 120,
+        restingHr: Double? = 60.0,
+        spo2: Int? = 97,
+        stress: Int? = 30,
+        hrvZ: Double? = 0.0,
+        skinTemp: Double? = 36.6,
+        tempZ: Double? = 0.0,
+        moving: Boolean? = null,
+        symptoms: Set<Symptom> = emptySet(),
     ) = TriageInput(bpm, restingHr, spo2, stress, hrvZ, skinTemp, tempZ, moving, symptoms)
 
     @Test fun `exercise explains a high heart rate`() {

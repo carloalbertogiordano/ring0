@@ -8,7 +8,7 @@ import ring.protocol.RingTimeoutException
 import ring.protocol.u16le
 import ring.protocol.u8
 
-/** Pacchetto real-time: bpm (0 finche' il sensore non si e' agganciato) e, dopo ~30 s, intervallo RR in ms (0 se assente). */
+/** Real-time packet: bpm (0 until the sensor locks on) and, after ~30 s, the RR interval in ms (0 if absent). */
 data class RealTimeReading(val kind: Int, val errorCode: Int, val value: Int, val rrMs: Int = 0)
 
 /** Result of a live measurement: bpm and collected RR beats (consecutive duplicates dropped). */
@@ -42,7 +42,7 @@ object RealTimeCommand {
         return RealTimeReading(pkt.payload.u8(0), pkt.payload.u8(1), pkt.payload.u8(2), pkt.payload.u16le(RR_OFFSET))
     }
 
-    /** RR distinti consecutivi: lo stesso valore ripetuto in pacchetti vicini e' lo stesso battito. */
+    /** Distinct consecutive RR values: the same value repeated in neighbouring packets is the same beat. */
     fun beats(readings: List<RealTimeReading>): List<Int> {
         val out = mutableListOf<Int>()
         for (r in readings) if (r.rrMs > 0 && r.rrMs != out.lastOrNull()) out += r.rrMs
@@ -63,7 +63,9 @@ object RealTimeCommand {
         var latest: List<Packet> = emptyList()
         try {
             val packets = client.requestMany(
-                CMD_START, byteArrayOf(kind.toByte(), ACTION_START.toByte()), timeoutMs = PACKET_TIMEOUT_MS,
+                CMD_START,
+                byteArrayOf(kind.toByte(), ACTION_START.toByte()),
+                timeoutMs = PACKET_TIMEOUT_MS,
             ) { received ->
                 latest = received
                 val decoded = received.map(::decode)
@@ -103,13 +105,16 @@ object RealTimeCommand {
         onProgress: (Int) -> Unit = {},
     ): Int? {
         var latest: List<Packet> = emptyList()
+
         fun valueOf(readings: List<RealTimeReading>): Int? =
             readings.map { it.value }.filter { it > 0 }.takeLast(STABLE_READINGS)
                 .takeIf { it.size >= STABLE_READINGS && it.max() - it.min() <= MAX_SPREAD }
                 ?.sorted()?.let { it[it.size / 2] }
         try {
             val packets = client.requestMany(
-                CMD_START, byteArrayOf(kind.toByte(), ACTION_START.toByte()), timeoutMs = PACKET_TIMEOUT_MS,
+                CMD_START,
+                byteArrayOf(kind.toByte(), ACTION_START.toByte()),
+                timeoutMs = PACKET_TIMEOUT_MS,
             ) { received ->
                 latest = received
                 val decoded = received.map(::decode)

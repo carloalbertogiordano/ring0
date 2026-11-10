@@ -5,13 +5,13 @@ import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCharacteristic
 import android.content.Context
 import android.util.Log
-import java.util.UUID
 import no.nordicsemi.android.ble.BleManager
 import no.nordicsemi.android.ble.ktx.suspend
 import ring.protocol.BigDataClient
 import ring.protocol.RingClient
 import ring.protocol.Transport
 import ring.protocol.toHex
+import java.util.UUID
 
 private val SERVICE_V1 = UUID.fromString("6e40fff0-b5a3-f393-e0a9-e50e24dcca9e")
 private val RX_V1 = UUID.fromString("6e400002-b5a3-f393-e0a9-e50e24dcca9e")
@@ -20,7 +20,7 @@ private val SERVICE_V2 = UUID.fromString("de5bf728-d711-4e47-af26-65e3012a5dc7")
 private val WRITE_V2 = UUID.fromString("de5bf72a-d711-4e47-af26-65e3012a5dc7")
 private val NOTIFY_V2 = UUID.fromString("de5bf729-d711-4e47-af26-65e3012a5dc7")
 
-/** Connessione GATT al ring: canale comandi V1 (16 byte) e canale big-data V2. */
+/** GATT connection to the ring: V1 command channel (16-byte packets) and V2 big-data channel. */
 class RingBleManager(context: Context) : BleManager(context) {
     private var rx: BluetoothGattCharacteristic? = null
     private var tx: BluetoothGattCharacteristic? = null
@@ -60,7 +60,7 @@ class RingBleManager(context: Context) : BleManager(context) {
     }
 
     suspend fun connectTo(device: BluetoothDevice) {
-        connect(device).retry(3, 300).useAutoConnect(false).timeout(20_000).suspend()
+        connect(device).retry(CONNECT_RETRIES, CONNECT_RETRY_DELAY_MS).useAutoConnect(false).timeout(CONNECT_TIMEOUT_MS).suspend()
     }
 
     suspend fun writeV1(data: ByteArray) {
@@ -102,8 +102,12 @@ private class BigTransport(private val manager: RingBleManager) : Transport {
     }
 }
 
-/** I due client protocollari sopra la stessa connessione BLE. */
+/** The two protocol clients on top of the same BLE connection. */
 class RingSession(manager: RingBleManager) {
     val v1 = RingClient(V1Transport(manager))
     val big = BigDataClient(BigTransport(manager))
 }
+
+private const val CONNECT_RETRIES = 3
+private const val CONNECT_RETRY_DELAY_MS = 300
+private const val CONNECT_TIMEOUT_MS = 20_000L

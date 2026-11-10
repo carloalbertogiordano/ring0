@@ -75,13 +75,18 @@ fun IncidentEditor(incident: IncidentEntity, onSave: (IncidentEntity) -> Unit, o
                         cursorBrush = SolidColor(Term.accent),
                         modifier = Modifier.fillMaxWidth().heightIn(min = 96.dp).background(Term.bg).border(BorderStroke(1.dp, Term.line2)).padding(10.dp),
                         decorationBox = { inner ->
-                            Box { if (note.isEmpty()) T(stringResource(R.string.note_hint), size = 13.sp, color = Term.faint); inner() }
+                            Box {
+                                if (note.isEmpty()) T(stringResource(R.string.note_hint), size = 13.sp, color = Term.faint)
+                                inner()
+                            }
                         },
                     )
                     T("${note.length}/$MAX_NOTE", size = 10.sp, color = Term.faint)
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         TButton(stringResource(R.string.btn_cancel), onDismiss, Modifier.weight(1f), BtnKind.GHOST)
-                        TButton(stringResource(R.string.btn_save), { onSave(incident.copy(categories = categories.joinToString(",") { it.name }, note = note.trim())) }, Modifier.weight(1f))
+                        TButton(stringResource(R.string.btn_save), {
+                            onSave(incident.copy(categories = categories.joinToString(",") { it.name }, note = note.trim()))
+                        }, Modifier.weight(1f))
                     }
                     if (onDelete != null) TButton(stringResource(R.string.btn_delete), onDelete, Modifier.fillMaxWidth().padding(top = 2.dp), BtnKind.CRIT)
                 }

@@ -1,7 +1,5 @@
 package ring.app.ui
 
-import ring.app.R
-import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -24,6 +22,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontFamily
@@ -31,10 +30,11 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import ring.app.R
+import ring.app.data.Sample
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import ring.app.data.Sample
 
 private const val GRID_LINES = 3
 private const val TWO_DAYS = 2 * 86_400L
@@ -48,7 +48,9 @@ fun Sparkline(values: List<Double>, color: Color, modifier: Modifier = Modifier)
         val min = values.min()
         val span = (values.max() - min).coerceAtLeast(1e-6)
         val h = size.height - 4.dp.toPx()
+
         fun x(i: Int) = size.width * i / (values.size - 1)
+
         fun y(v: Double) = (h - h * ((v - min) / span)).toFloat() + 2.dp.toPx()
         val line = Path().apply { values.forEachIndexed { i, v -> if (i == 0) moveTo(x(i), y(v)) else lineTo(x(i), y(v)) } }
         val area = Path().apply {
@@ -79,7 +81,13 @@ fun TermChart(
     val measurer = rememberTextMeasurer()
     val noDataText = stringResource(R.string.no_data_period)
     val label = TextStyle(color = Term.dim, fontSize = 9.sp, fontFamily = FontFamily.Monospace)
-    val pattern = if (to - from > TWO_DAYS) "d MMM" else if (to - from >= DAY_MINUS) "d/M HH:mm" else "HH:mm"
+    val pattern = if (to - from > TWO_DAYS) {
+        "d MMM"
+    } else if (to - from >= DAY_MINUS) {
+        "d/M HH:mm"
+    } else {
+        "HH:mm"
+    }
     val fmt = DateTimeFormatter.ofPattern(pattern).withZone(ZoneId.systemDefault())
     Canvas(modifier.fillMaxWidth().height(height)) {
         val left = 34.dp.toPx()
@@ -94,7 +102,9 @@ fun TermChart(
         val mid = (values.max() + values.min()) / 2
         val span = maxOf(values.max() - values.min(), minSpan) * 1.15
         val yMin = mid - span / 2
+
         fun x(ts: Long) = left + w * ((ts - from).toFloat() / (to - from).coerceAtLeast(1))
+
         fun y(v: Double) = 4.dp.toPx() + (h - h * ((v - yMin) / span)).toFloat()
         for (i in 0..GRID_LINES) {
             val value = yMin + span * (GRID_LINES - i) / GRID_LINES
@@ -106,7 +116,13 @@ fun TermChart(
             val ts = from + (to - from) * i / 2
             val text = fmt.format(Instant.ofEpochSecond(ts))
             val width = measurer.measure(text, label).size.width
-            val px = x(ts) - if (i == 0) 0f else if (i == 2) width.toFloat() else width / 2f
+            val px = x(ts) - if (i == 0) {
+                0f
+            } else if (i == 2) {
+                width.toFloat()
+            } else {
+                width / 2f
+            }
             drawText(measurer, text, Offset(px, size.height - 13.dp.toPx()), label)
         }
         threshold?.let {
@@ -131,7 +147,20 @@ fun Ecg(modifier: Modifier = Modifier, active: Boolean = true) {
     val t = rememberInfiniteTransition(label = "ecg")
     val phase by t.animateFloat(0f, 1f, infiniteRepeatable(tween(2600, easing = LinearEasing), RepeatMode.Restart), label = "p")
     Canvas(modifier.fillMaxWidth().height(42.dp)) {
-        val pts = listOf(0f to 24f, 70f to 24f, 78f to 8f, 86f to 38f, 94f to 14f, 100f to 24f, 190f to 24f, 198f to 8f, 206f to 38f, 214f to 14f, 220f to 24f, 300f to 24f)
+        val pts = listOf(
+            0f to 24f,
+            70f to 24f,
+            78f to 8f,
+            86f to 38f,
+            94f to 14f,
+            100f to 24f,
+            190f to 24f,
+            198f to 8f,
+            206f to 38f,
+            214f to 14f,
+            220f to 24f,
+            300f to 24f,
+        )
         val path = Path().apply {
             pts.forEachIndexed { i, (px, py) ->
                 val x = size.width * px / 300f
@@ -141,7 +170,11 @@ fun Ecg(modifier: Modifier = Modifier, active: Boolean = true) {
         }
         val len = size.width * 1.4f
         val effect = if (active) PathEffect.dashPathEffect(floatArrayOf(len, len), len * (1 - phase)) else null
-        drawPath(path, if (active) Term.accent else Term.faint, style = Stroke(2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round, pathEffect = effect))
+        drawPath(
+            path,
+            if (active) Term.accent else Term.faint,
+            style = Stroke(2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round, pathEffect = effect),
+        )
     }
 }
 
@@ -158,7 +191,11 @@ fun Radar(size: Dp = 150.dp, found: Boolean = false, modifier: Modifier = Modifi
         rotate(angle, c) {
             drawArc(
                 Brush.sweepGradient(listOf(Color.Transparent, Term.accent.copy(alpha = 0.5f)), c),
-                startAngle = -70f, sweepAngle = 70f, useCenter = true, topLeft = Offset.Zero, size = this.size,
+                startAngle = -70f,
+                sweepAngle = 70f,
+                useCenter = true,
+                topLeft = Offset.Zero,
+                size = this.size,
             )
         }
         if (found) drawCircle(Term.accent, 4.dp.toPx(), Offset(c.x + r * 0.35f, c.y - r * 0.4f))

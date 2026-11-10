@@ -79,8 +79,18 @@ private fun CheckEditorHost(graph: Graph, incident: ring.app.data.IncidentEntity
     if (incident != null) {
         IncidentEditor(
             incident,
-            onSave = { scope.launch { graph.saveIncident(it); onDone() } },
-            onDelete = { scope.launch { graph.deleteIncident(incident.id); onDone() } },
+            onSave = {
+                scope.launch {
+                    graph.saveIncident(it)
+                    onDone()
+                }
+            },
+            onDelete = {
+                scope.launch {
+                    graph.deleteIncident(incident.id)
+                    onDone()
+                }
+            },
             onDismiss = onDone,
         )
     }
@@ -95,7 +105,10 @@ fun CheckScreen(graph: Graph, onClose: () -> Unit) {
     var symptoms by remember { mutableStateOf(emptySet<Symptom>()) }
     var editing by remember { mutableStateOf<ring.app.data.IncidentEntity?>(null) }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
-    val close = { graph.resetCheck(); onClose() }
+    val close = {
+        graph.resetCheck()
+        onClose()
+    }
     BackHandler(onBack = close)
     CheckEditorHost(graph, editing) { editing = null }
     Column(Modifier.fillMaxSize().background(Term.bg).statusBarsPadding().navigationBarsPadding().padding(16.dp)) {
@@ -115,46 +128,67 @@ fun CheckScreen(graph: Graph, onClose: () -> Unit) {
                     }
                     T(stringResource(R.string.not_medical), size = 10.sp, color = Term.faint)
                 }
-                CheckPhase.HEART -> TCard(hot = true) {
-                    T(
-                        if (status.liveBeats == 0) stringResource(R.string.check_step_heart_lock)
-                        else stringResource(R.string.check_step_heart, status.liveBeats, status.liveTarget),
-                        color = Term.accent,
-                    )
-                    Ecg(active = true)
-                }
-                CheckPhase.SPO2 -> TCard(hot = true) {
-                    T(stringResource(R.string.check_step_spo2), color = Term.accent)
-                    Ecg(active = true)
-                }
-                CheckPhase.FAILED -> Banner(stringResource(R.string.check_failed_title), stringResource(R.string.check_failed), Term.crit)
-                CheckPhase.DONE -> check.result?.let { r ->
-                    val color = levelColor(r.level)
-                    Banner(stringResource(levelTitleRes(r.level)), stringResource(R.string.check_saved), color)
-                    r.causes.forEach { T("• " + stringResource(causeRes(it)), size = 13.sp) }
-                    r.advice.forEach { T(stringResource(adviceRes(it)), size = 12.sp, color = color) }
-                    TCard {
-                        Label(stringResource(R.string.check_vitals))
-                        KeyValue(stringResource(R.string.tile_heart), check.bpm?.let { "$it bpm" } ?: "—")
-                        KeyValue(stringResource(R.string.hrv_rmssd), check.rmssd?.let { "%.0f ms".format(it) } ?: "—")
-                        KeyValue(stringResource(R.string.tile_spo2), check.spo2?.let { "$it %" } ?: "—")
-                        KeyValue(stringResource(R.string.tile_stress), check.stress?.toString() ?: "—")
-                        KeyValue(stringResource(R.string.tile_temp), check.skinTemp?.let { "%.1f °C".format(it) } ?: "—")
+
+                CheckPhase.HEART -> {
+                    TCard(hot = true) {
+                        T(
+                            if (status.liveBeats == 0) {
+                                stringResource(R.string.check_step_heart_lock)
+                            } else {
+                                stringResource(R.string.check_step_heart, status.liveBeats, status.liveTarget)
+                            },
+                            color = Term.accent,
+                        )
+                        Ecg(active = true)
                     }
-                    T(stringResource(R.string.not_medical), size = 10.sp, color = Term.faint)
+                }
+
+                CheckPhase.SPO2 -> {
+                    TCard(hot = true) {
+                        T(stringResource(R.string.check_step_spo2), color = Term.accent)
+                        Ecg(active = true)
+                    }
+                }
+
+                CheckPhase.FAILED -> {
+                    Banner(stringResource(R.string.check_failed_title), stringResource(R.string.check_failed), Term.crit)
+                }
+
+                CheckPhase.DONE -> {
+                    check.result?.let { r ->
+                        val color = levelColor(r.level)
+                        Banner(stringResource(levelTitleRes(r.level)), stringResource(R.string.check_saved), color)
+                        r.causes.forEach { T("• " + stringResource(causeRes(it)), size = 13.sp) }
+                        r.advice.forEach { T(stringResource(adviceRes(it)), size = 12.sp, color = color) }
+                        TCard {
+                            Label(stringResource(R.string.check_vitals))
+                            KeyValue(stringResource(R.string.tile_heart), check.bpm?.let { "$it bpm" } ?: "—")
+                            KeyValue(stringResource(R.string.hrv_rmssd), check.rmssd?.let { "%.0f ms".format(it) } ?: "—")
+                            KeyValue(stringResource(R.string.tile_spo2), check.spo2?.let { "$it %" } ?: "—")
+                            KeyValue(stringResource(R.string.tile_stress), check.stress?.toString() ?: "—")
+                            KeyValue(stringResource(R.string.tile_temp), check.skinTemp?.let { "%.1f °C".format(it) } ?: "—")
+                        }
+                        T(stringResource(R.string.not_medical), size = 10.sp, color = Term.faint)
+                    }
                 }
             }
         }
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             when (check.phase) {
-                CheckPhase.IDLE -> TButton(stringResource(R.string.btn_start_check), { graph.runCheck(symptoms) }, Modifier.fillMaxWidth())
+                CheckPhase.IDLE -> {
+                    TButton(stringResource(R.string.btn_start_check), { graph.runCheck(symptoms) }, Modifier.fillMaxWidth())
+                }
+
                 CheckPhase.DONE, CheckPhase.FAILED -> {
                     check.incidentId?.let { id ->
                         TButton(stringResource(R.string.btn_add_details), { scope.launch { editing = graph.incident(id) } }, Modifier.fillMaxWidth())
                     }
                     TButton(stringResource(R.string.btn_check_again), { graph.resetCheck() }, Modifier.fillMaxWidth(), BtnKind.GHOST)
                 }
-                else -> Unit
+
+                else -> {
+                    Unit
+                }
             }
             if (check.phase != CheckPhase.HEART && check.phase != CheckPhase.SPO2) {
                 TButton(stringResource(R.string.btn_close), close, Modifier.fillMaxWidth(), BtnKind.GHOST)
@@ -170,7 +204,13 @@ fun IncidentCard(incident: ring.app.data.IncidentEntity, onClick: () -> Unit) {
     TCard(accent = level?.let { levelColor(it).copy(alpha = 0.6f) }, modifier = Modifier.clickable(onClick = onClick)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             T(dayTime(incident.ts), size = 12.sp, weight = FontWeight.Bold)
-            if (level != null) TPill(stringResource(levelTitleRes(level)), levelColor(level)) else T(stringResource(R.string.incident_unchecked), size = 11.sp, color = Term.dim)
+            if (level !=
+                null
+            ) {
+                TPill(stringResource(levelTitleRes(level)), levelColor(level))
+            } else {
+                T(stringResource(R.string.incident_unchecked), size = 11.sp, color = Term.dim)
+            }
         }
         T(stringResource(incidentSourceRes(incident.source)), size = 12.sp)
         val causes = incident.causes.split(",").filter { it.isNotBlank() }.mapNotNull { runCatching { TriageCause.valueOf(it) }.getOrNull() }
@@ -181,10 +221,13 @@ fun IncidentCard(incident: ring.app.data.IncidentEntity, onClick: () -> Unit) {
         T(
             stringResource(
                 R.string.incident_vitals,
-                incident.bpm?.toString() ?: "—", incident.spo2?.toString() ?: "—",
-                incident.stress?.toInt()?.toString() ?: "—", incident.skinTemp?.let { "%.1f".format(it) } ?: "—",
+                incident.bpm?.toString() ?: "—",
+                incident.spo2?.toString() ?: "—",
+                incident.stress?.toInt()?.toString() ?: "—",
+                incident.skinTemp?.let { "%.1f".format(it) } ?: "—",
             ),
-            size = 10.sp, color = Term.dim,
+            size = 10.sp,
+            color = Term.dim,
         )
     }
 }

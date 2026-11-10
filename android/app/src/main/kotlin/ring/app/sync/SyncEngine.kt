@@ -1,9 +1,6 @@
 package ring.app.sync
 
 import android.util.Log
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneOffset
 import ring.app.ble.RingSession
 import ring.app.data.RingDao
 import ring.app.data.Sample
@@ -14,15 +11,19 @@ import ring.protocol.commands.BatteryCommand
 import ring.protocol.commands.Capabilities
 import ring.protocol.commands.Goals
 import ring.protocol.commands.GoalsCommand
-import ring.protocol.commands.StepsCommand
 import ring.protocol.commands.HrLogCommand
 import ring.protocol.commands.Reading
 import ring.protocol.commands.SetTimeCommand
 import ring.protocol.commands.SleepCommand
+import ring.protocol.commands.SleepSession
 import ring.protocol.commands.SleepStageType
 import ring.protocol.commands.SlotLogCommand
 import ring.protocol.commands.Spo2Command
+import ring.protocol.commands.StepsCommand
 import ring.protocol.commands.TemperatureCommand
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
 
 data class SyncReport(
     val battery: Battery?,
@@ -82,19 +83,26 @@ class SyncEngine(private val dao: RingDao) {
             }
         }
         step("sleep") {
-            val sessions = SleepCommand.read(session.big).map { s ->
-                val (start, end) = s.window(today.minusSeconds(s.daysAgo * SECONDS_PER_DAY))
-                fun minutes(t: SleepStageType) = s.stages.filter { it.type == t }.sumOf { it.minutes }
-                SleepEntity(
-                    start.epochSecond, end.epochSecond,
-                    minutes(SleepStageType.LIGHT), minutes(SleepStageType.DEEP), minutes(SleepStageType.REM), minutes(SleepStageType.AWAKE),
-                )
-            }
+            val sessions = SleepCommand.read(session.big).map { toEntity(it, today) }
             dao.upsertSleep(sessions)
             inserted += sessions.size
         }
         val goals = step("goals") { GoalsCommand.read(session.v1) }
         return SyncReport(battery, caps, goals, errors.none { it.startsWith("steps") }, inserted, errors)
+    }
+
+    private fun toEntity(s: SleepSession, today: Instant): SleepEntity {
+        val (start, end) = s.window(today.minusSeconds(s.daysAgo * SECONDS_PER_DAY))
+
+        fun minutes(t: SleepStageType) = s.stages.filter { it.type == t }.sumOf { it.minutes }
+        return SleepEntity(
+            start.epochSecond,
+            end.epochSecond,
+            minutes(SleepStageType.LIGHT),
+            minutes(SleepStageType.DEEP),
+            minutes(SleepStageType.REM),
+            minutes(SleepStageType.AWAKE),
+        )
     }
 
     /** Quick download of today's step slots (used right before a check, so the "moving?" context is fresh). */

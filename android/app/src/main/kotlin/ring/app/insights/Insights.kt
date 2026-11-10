@@ -1,12 +1,9 @@
 package ring.app.insights
 
-import java.time.Instant
-import java.time.LocalDate
-import java.time.LocalTime
-import java.time.ZoneId
 import ring.app.data.RingDao
 import ring.app.data.Sample
 import ring.app.data.SampleType
+import ring.domain.Baseline
 import ring.domain.IllnessAssessment
 import ring.domain.IllnessWarning
 import ring.domain.NightSignals
@@ -16,7 +13,10 @@ import ring.domain.ReadinessScore
 import ring.domain.RestingHr
 import ring.domain.Stats
 import ring.domain.TimedValue
-import ring.domain.Baseline
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
 
 data class ReadinessReport(val readiness: Readiness?, val baselineDays: Int)
 
@@ -94,6 +94,7 @@ class Insights(private val dao: RingDao, private val zone: ZoneId = ZoneId.syste
     /** Context for a check: resting HR, how HRV and skin temperature compare with the last two weeks, latest stress. */
     suspend fun checkContext(now: Long = Instant.now().epochSecond, stepsFresh: Boolean = false): CheckContext {
         val twoWeeks = now - 14 * DAY
+
         fun recent(samples: List<Sample>) = samples.lastOrNull()?.takeIf { now - it.ts <= RECENT_SECONDS }?.value
         val hrv = dao.range(SampleType.HRV, twoWeeks, now)
         val temp = dao.range(SampleType.TEMP, twoWeeks, now)

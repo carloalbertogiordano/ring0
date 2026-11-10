@@ -1,15 +1,15 @@
 package ring.app.ui
 
-import androidx.compose.runtime.Composable
-import ring.app.R
-import androidx.compose.ui.res.stringResource
 import android.Manifest
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.PowerManager
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
+import ring.app.R
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter

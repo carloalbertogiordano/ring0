@@ -1,5 +1,7 @@
 package ring.protocol
 
+import kotlinx.coroutines.test.runTest
+import ring.protocol.commands.*
 import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -8,11 +10,10 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import kotlinx.coroutines.test.runTest
-import ring.protocol.commands.*
 
 class CommandsTest {
     private val day = Instant.parse("2026-11-10T00:00:00Z")
+
     private fun at(h: Int, m: Int) = day.plusSeconds(h * 3600L + m * 60L)
 
     private val realLog = listOf(
@@ -112,7 +113,11 @@ class CommandsTest {
     }
 
     @Test fun `spo2 synthetic layout`() {
-        val block = ByteArray(49).also { it[0] = 0; it[1 + 2 * 3] = 95.toByte(); it[2 + 2 * 3] = 99.toByte() }
+        val block = ByteArray(49).also {
+            it[0] = 0
+            it[1 + 2 * 3] = 95.toByte()
+            it[2 + 2 * 3] = 99.toByte()
+        }
         val days = Spo2Command.decode(BigFrame(0x2A, block))
         assertEquals(97.0, days.single().readings(day).single().value)
         assertEquals(at(3, 0), days.single().readings(day).single().time)

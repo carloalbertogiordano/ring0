@@ -1,9 +1,9 @@
 package ring.protocol.commands
 
-import java.time.Instant
 import ring.protocol.BigDataClient
 import ring.protocol.BigFrame
 import ring.protocol.u8
+import java.time.Instant
 
 data class Spo2Hour(val hour: Int, val min: Int, val max: Int)
 

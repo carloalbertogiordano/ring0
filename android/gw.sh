@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Gradle senza daemon (vedi gradle.properties). Uso: ./gw.sh :app:assembleDebug
+# Gradle without a daemon (see gradle.properties). Usage: ./gw.sh :app:assembleDebug
 set -euo pipefail
 cd "$(dirname "$0")"
 export JAVA_HOME="${GW_JAVA_HOME:-$HOME/.jdks/jdk-21.0.13+9}"

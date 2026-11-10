@@ -1,10 +1,10 @@
 package ring.protocol.commands
 
-import java.time.Instant
-import java.time.ZoneOffset
 import ring.protocol.Packet
 import ring.protocol.RingClient
 import ring.protocol.u8
+import java.time.Instant
+import java.time.ZoneOffset
 
 /** Capabilities declared by the ring in its reply to set time. */
 data class Capabilities(

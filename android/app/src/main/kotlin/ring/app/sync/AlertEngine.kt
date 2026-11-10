@@ -3,15 +3,14 @@ package ring.app.sync
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.NotificationChannel
-import android.app.PendingIntent
-import android.content.Intent
-import ring.app.MainActivity
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
-import java.time.Instant
+import ring.app.MainActivity
 import ring.app.R
 import ring.app.alerts.AlertKind
 import ring.app.alerts.alertText
@@ -20,14 +19,21 @@ import ring.app.data.RingDao
 import ring.app.data.SampleType
 import ring.app.data.SettingsStore
 import ring.app.data.Thresholds
+import ring.app.insights.Insights
 import ring.domain.ContextAlerts
 import ring.domain.HrAlert
 import ring.domain.TimedValue
 import ring.domain.WarningLevel
-import ring.app.insights.Insights
+import java.time.Instant
 
 /** Checks thresholds on the latest measurements and notifies (with a cooldown per alert kind). */
-class AlertEngine(private val context: Context, private val dao: RingDao, private val settings: SettingsStore, private val insights: Insights, private val incidents: IncidentRecorder) {
+class AlertEngine(
+    private val context: Context,
+    private val dao: RingDao,
+    private val settings: SettingsStore,
+    private val insights: Insights,
+    private val incidents: IncidentRecorder,
+) {
     init {
         val channel = NotificationChannel(CHANNEL, context.getString(R.string.notif_channel_alerts), NotificationManager.IMPORTANCE_HIGH)
         context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
@@ -37,15 +43,7 @@ class AlertEngine(private val context: Context, private val dao: RingDao, privat
         if (!settings.alertsEnabled) return
         val t = settings.thresholds.value
         val hr = dao.lastN(SampleType.HR, 2).map { TimedValue(it.ts, it.value) }
-        // resting context from the step slots; unknown (null) when the steps were not downloaded after that sample
-        val nowEpoch = Instant.now().epochSecond
-        val steps = dao.range(SampleType.STEPS, nowEpoch - STEP_LOOKBACK, nowEpoch)
-        val stepsSyncedAt = settings.lastStepsSyncEpoch
-        val isResting = { ts: Long ->
-            if (stepsSyncedAt < ts + STEP_SLOT) null
-            else steps.filter { it.ts in (ts - STEP_SLOT)..ts }.sumOf { it.value } < RESTING_STEPS
-        }
-        when (ContextAlerts.heartRate(hr, t.hrHigh.toDouble(), t.hrLow.toDouble(), isResting)) {
+        when (ContextAlerts.heartRate(hr, t.hrHigh.toDouble(), t.hrLow.toDouble(), restingContext())) {
             HrAlert.HIGH -> fire(AlertKind.HR_HIGH, hr.maxOf { it.value }, t.hrHigh.toDouble())
             HrAlert.LOW -> fire(AlertKind.HR_LOW, hr.minOf { it.value }, t.hrLow.toDouble())
             null -> Unit
@@ -55,6 +53,25 @@ class AlertEngine(private val context: Context, private val dao: RingDao, privat
         val now = Instant.now().epochSecond
         val spo2 = dao.range(SampleType.SPO2, now - SPO2_LOOKBACK, now).map { TimedValue(it.ts, it.value) }
         if (ContextAlerts.spo2(spo2, t.spo2Low.toDouble(), now)) fire(AlertKind.SPO2_LOW, spo2.minOf { it.value }, t.spo2Low.toDouble())
+        fireIllness()
+        if (batteryLevel != null && !charging && batteryLevel <= t.batteryLow) fire(AlertKind.BATTERY_LOW, batteryLevel.toDouble(), t.batteryLow.toDouble())
+    }
+
+    /** Resting context from the step slots; unknown (null) when the steps were not downloaded after that sample. */
+    private suspend fun restingContext(): (Long) -> Boolean? {
+        val nowEpoch = Instant.now().epochSecond
+        val steps = dao.range(SampleType.STEPS, nowEpoch - STEP_LOOKBACK, nowEpoch)
+        val stepsSyncedAt = settings.lastStepsSyncEpoch
+        return { ts ->
+            if (stepsSyncedAt < ts + STEP_SLOT) {
+                null
+            } else {
+                steps.filter { it.ts in (ts - STEP_SLOT)..ts }.sumOf { it.value } < RESTING_STEPS
+            }
+        }
+    }
+
+    private suspend fun fireIllness() {
         val illness = insights.illness()
         val detail = illness.reasons.joinToString(",") { it.name }
         when (illness.level) {
@@ -62,7 +79,6 @@ class AlertEngine(private val context: Context, private val dao: RingDao, privat
             WarningLevel.WATCH -> fire(AlertKind.ILLNESS_WATCH, 0.0, 0.0, detail)
             WarningLevel.NONE -> Unit
         }
-        if (batteryLevel != null && !charging && batteryLevel <= t.batteryLow) fire(AlertKind.BATTERY_LOW, batteryLevel.toDouble(), t.batteryLow.toDouble())
     }
 
     suspend fun staleSync(hours: Long) = fire(AlertKind.STALE, hours.toDouble(), 0.0)

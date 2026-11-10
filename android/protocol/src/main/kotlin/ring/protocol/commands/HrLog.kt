@@ -1,10 +1,10 @@
 package ring.protocol.commands
 
-import java.time.Instant
 import ring.protocol.Packet
 import ring.protocol.RingClient
 import ring.protocol.u32le
 import ring.protocol.u8
+import java.time.Instant
 
 data class HeartRateLog(val dayStart: Instant, val intervalMinutes: Int, val samples: List<Int>) {
     /** Slots with a valid measurement (0 = no measurement). */

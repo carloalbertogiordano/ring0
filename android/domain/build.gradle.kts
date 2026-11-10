@@ -20,16 +20,17 @@ tasks.test {
     useJUnitPlatform()
 }
 
-// Come nel modulo protocol: i worker di test Gradle usano TCP loopback, rifiutato su questa macchina.
+// Same as the protocol module: Gradle test workers use TCP loopback, which is refused on this machine.
 tasks.register<JavaExec>("runTests") {
     group = "verification"
-    description = "Esegue i test JUnit senza i worker TCP di Gradle"
+    description = "Runs the JUnit tests without Gradle TCP workers"
     dependsOn("testClasses")
     classpath = sourceSets["test"].runtimeClasspath + consoleLauncher
     mainClass.set("org.junit.platform.console.ConsoleLauncher")
     args(
         "execute",
-        "--scan-classpath", sourceSets["test"].output.classesDirs.asPath,
+        "--scan-classpath",
+        sourceSets["test"].output.classesDirs.asPath,
         "--fail-if-no-tests",
         "--details=tree",
         "--disable-banner",

@@ -1,9 +1,9 @@
 package ring.protocol.commands
 
-import java.time.Instant
 import ring.protocol.BigDataClient
 import ring.protocol.BigFrame
 import ring.protocol.u8
+import java.time.Instant
 
 data class TemperatureDay(val daysAgo: Int, val intervalMinutes: Int, val samples: List<Int>) {
     /** °C = raw / 10 + 20; raw 0 = no measurement. `dayStart` = UTC midnight of that day. */

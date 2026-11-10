@@ -1,12 +1,12 @@
 package ring.domain
 
+import ring.protocol.commands.SleepStage
+import ring.protocol.commands.SleepStageType
 import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
-import ring.protocol.commands.SleepStage
-import ring.protocol.commands.SleepStageType
 
 data class SleepNight(val startEpoch: Long, val endEpoch: Long, val stages: List<SleepStage>)
 
@@ -24,6 +24,7 @@ data class SleepSummary(
 /** Sleep metrics from a session and its stages (light, deep, REM, awake). */
 object SleepMetrics {
     private const val SECONDS_PER_MINUTE = 60
+    private const val PERCENT = 100.0
 
     fun summarize(night: SleepNight): SleepSummary {
         fun minutes(t: SleepStageType) = night.stages.filter { it.type == t }.sumOf { it.minutes }
@@ -48,9 +49,9 @@ object SleepMetrics {
         )
     }
 
-    private fun pct(part: Int, total: Int) = if (total > 0) 100.0 * part / total else 0.0
+    private fun pct(part: Int, total: Int) = if (total > 0) PERCENT * part / total else 0.0
 
-    /** Debito di sonno: minuti mancanti rispetto all'obiettivo, sommati sulle ultime notti (surplus ignorato). */
+    /** Sleep debt: minutes missing against the target, summed over the last nights (surplus ignored). */
     fun sleepDebtMin(totalSleepPerNight: List<Int>, targetMin: Int = 480, nights: Int = 7): Int =
         totalSleepPerNight.takeLast(nights).sumOf { (targetMin - it).coerceAtLeast(0) }
 }
@@ -59,6 +60,8 @@ object SleepMetrics {
 object SleepRegularity {
     private const val MINUTES_PER_DAY = 1440.0
     private const val ZERO_SCORE_SD_MIN = 90.0
+    private const val PERCENT = 100.0
+    private const val LOG_FACTOR = -2.0
 
     /** Circular standard deviation (minutes) of the times of day at which sleep starts. */
     fun onsetSdMinutes(onsetMinuteOfDay: List<Int>): Double? {
@@ -67,12 +70,12 @@ object SleepRegularity {
         val c = angles.sumOf { cos(it) } / angles.size
         val s = angles.sumOf { sin(it) } / angles.size
         val r = sqrt(c * c + s * s).coerceIn(1e-12, 1.0)
-        return sqrt(-2 * kotlin.math.ln(r)) * MINUTES_PER_DAY / (2 * PI)
+        return sqrt(LOG_FACTOR * kotlin.math.ln(r)) * MINUTES_PER_DAY / (2 * PI)
     }
 
     /** 100 = identical onset times, 0 = a spread of 90 minutes or more. */
     fun score(onsetMinuteOfDay: List<Int>): Int? =
-        onsetSdMinutes(onsetMinuteOfDay)?.let { Stats.clamp(100 * (1 - it / ZERO_SCORE_SD_MIN)).toInt() }
+        onsetSdMinutes(onsetMinuteOfDay)?.let { Stats.clamp(PERCENT * (1 - it / ZERO_SCORE_SD_MIN)).toInt() }
 
     /** Circular mean time of day (minutes since midnight, 0..1439). */
     fun meanOnsetMinute(onsetMinuteOfDay: List<Int>): Int {

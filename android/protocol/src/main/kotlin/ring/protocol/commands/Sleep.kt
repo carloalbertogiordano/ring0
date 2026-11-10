@@ -1,10 +1,10 @@
 package ring.protocol.commands
 
-import java.time.Instant
 import ring.protocol.BigDataClient
 import ring.protocol.BigFrame
 import ring.protocol.u16le
 import ring.protocol.u8
+import java.time.Instant
 
 enum class SleepStageType(val code: Int) {
     LIGHT(2),
@@ -22,7 +22,7 @@ enum class SleepStageType(val code: Int) {
 data class SleepStage(val type: SleepStageType, val minutes: Int)
 
 data class SleepSession(val daysAgo: Int, val startMinute: Int, val endMinute: Int, val stages: List<SleepStage>) {
-    /** Inizio e fine in UTC; se l'inizio e' dopo la fine l'addormentamento e' avvenuto il giorno prima. */
+    /** Start and end in UTC; if the start is after the end, the user fell asleep the previous day. */
     fun window(dayStart: Instant): Pair<Instant, Instant> {
         val start = if (startMinute > endMinute) startMinute - MINUTES_PER_DAY else startMinute
         return dayStart.plusMinutes(start) to dayStart.plusMinutes(endMinute)

@@ -1,0 +1,40 @@
+# Defaults plus the adjustments Compose code needs.
+style:
+  WildcardImport:
+    excludes: ['**/test/**']
+  MagicNumber:
+    excludes: ['**/test/**', '**/protocol/src/main/**', '**/insights/DemoData.kt']
+    ignoreAnnotated: ['Composable']
+    ignorePropertyDeclaration: true
+    ignoreCompanionObjectPropertyDeclaration: true
+    ignoreNamedArgument: true
+    ignoreExtensionFunctions: true
+  MaxLineLength:
+    maxLineLength: 160
+  ReturnCount:
+    max: 4
+complexity:
+  LongMethod:
+    ignoreAnnotated: ['Composable']
+  CyclomaticComplexMethod:
+    ignoreAnnotated: ['Composable']
+    excludes: ['**/insights/DemoData.kt']
+  NestedBlockDepth:
+    ignoreAnnotated: ['Composable']
+  LongParameterList:
+    allowedFunctionParameters: 8
+    ignoreDefaultParameters: true
+  TooManyFunctions:
+    allowedFunctionsPerFile: 25
+    allowedFunctionsPerClass: 25
+    allowedFunctionsPerObject: 25
+    allowedFunctionsPerInterface: 25
+naming:
+  MatchingDeclarationName:
+    active: false
+  FunctionNaming:
+    ignoreAnnotated: ['Composable']
+    functionPattern: '[a-zA-Z][a-zA-Z0-9]*'
+exceptions:
+  TooGenericExceptionCaught:
+    active: false

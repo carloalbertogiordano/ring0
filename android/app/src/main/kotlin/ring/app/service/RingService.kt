@@ -7,7 +7,6 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
-import java.time.Instant
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
@@ -15,6 +14,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import ring.app.R
 import ring.app.RingApp
+import java.time.Instant
 
 /** Servizio in primo piano: tiene la connessione col ring, sincronizza periodicamente e genera gli alert. */
 class RingService : Service() {

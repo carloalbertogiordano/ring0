@@ -11,14 +11,21 @@ import ring.domain.TriageResult
 class IncidentRecorder(private val dao: RingDao) {
     /** Alert kinds worth a snapshot of the surrounding context. */
     val incidentKinds = setOf(
-        AlertKind.HR_HIGH, AlertKind.HR_LOW, AlertKind.SPO2_LOW, AlertKind.TEMP_HIGH, AlertKind.STRESS_HIGH, AlertKind.ILLNESS,
+        AlertKind.HR_HIGH,
+        AlertKind.HR_LOW,
+        AlertKind.SPO2_LOW,
+        AlertKind.TEMP_HIGH,
+        AlertKind.STRESS_HIGH,
+        AlertKind.ILLNESS,
     )
 
     suspend fun recordAlert(kind: String, value: Double, now: Long): Long {
         val hr = dao.range(SampleType.HR, now - HOUR, now)
         return dao.insertIncident(
             IncidentEntity(
-                ts = now, source = kind, triggerValue = value,
+                ts = now,
+                source = kind,
+                triggerValue = value,
                 hrTrend = hr.joinToString(";") { "${it.ts}:${it.value.toInt()}" },
                 bpm = hr.lastOrNull()?.value?.toInt(),
                 spo2 = latest(SampleType.SPO2)?.toInt(),
@@ -32,7 +39,8 @@ class IncidentRecorder(private val dao: RingDao) {
     suspend fun manualDraft(now: Long): IncidentEntity {
         val hr = dao.range(SampleType.HR, now - HOUR, now)
         return IncidentEntity(
-            ts = now, source = MANUAL_ENTRY,
+            ts = now,
+            source = MANUAL_ENTRY,
             hrTrend = hr.joinToString(";") { "${it.ts}:${it.value.toInt()}" },
             bpm = hr.lastOrNull()?.value?.toInt(),
             spo2 = latest(SampleType.SPO2)?.toInt(),
@@ -51,7 +59,8 @@ class IncidentRecorder(private val dao: RingDao) {
     suspend fun saveCheck(now: Long, input: TriageInput, rmssd: Double?, result: TriageResult): Long {
         val open = dao.latestUnchecked(now - HOUR)
         val base = open ?: IncidentEntity(
-            ts = now, source = MANUAL,
+            ts = now,
+            source = MANUAL,
             hrTrend = dao.range(SampleType.HR, now - HOUR, now).joinToString(";") { "${it.ts}:${it.value.toInt()}" },
         )
         val filled = base.copy(

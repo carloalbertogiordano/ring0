@@ -4,7 +4,6 @@ import android.app.Application
 import android.bluetooth.BluetoothManager
 import android.content.Context
 import androidx.room.Room
-import java.time.Instant
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -27,15 +26,15 @@ import ring.app.data.Sample
 import ring.app.data.SampleType
 import ring.app.data.SettingsStore
 import ring.app.insights.Insights
+import ring.app.insights.ReadinessReport
+import ring.app.sync.AlertEngine
 import ring.app.sync.IncidentRecorder
+import ring.app.sync.SyncEngine
+import ring.domain.RespirationRate
 import ring.domain.Symptom
 import ring.domain.Triage
 import ring.domain.TriageInput
 import ring.domain.TriageResult
-import ring.app.insights.ReadinessReport
-import ring.domain.RespirationRate
-import ring.app.sync.AlertEngine
-import ring.app.sync.SyncEngine
 import ring.protocol.commands.AutoMonitorCommand
 import ring.protocol.commands.Battery
 import ring.protocol.commands.Capabilities
@@ -45,12 +44,13 @@ import ring.protocol.commands.HeartRateSettings
 import ring.protocol.commands.HrSettingsCommand
 import ring.protocol.commands.Hrv
 import ring.protocol.commands.RealTimeCommand
+import java.time.Instant
 
 class RingApp : Application() {
     val graph: Graph by lazy { Graph(this) }
 }
 
-/** Risultato di una misura live: bpm e HRV calcolata dai battiti RR. */
+/** Result of a live measurement: bpm and HRV computed from the RR beats. */
 data class LiveResult(
     val bpm: Int?,
     val rmssd: Double?,
@@ -101,7 +101,11 @@ data class Status(
 /** Oggetti condivisi tra UI e servizio: database, connessione BLE, sync, alert. */
 class Graph(private val context: Context) {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    val dao = Room.databaseBuilder(context, RingDb::class.java, "ring.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7).build().dao()
+    val dao = Room.databaseBuilder(
+        context,
+        RingDb::class.java,
+        "ring.db",
+    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7).build().dao()
     val settings = SettingsStore(context)
     private val manager = RingBleManager(context)
     val session = RingSession(manager)
@@ -335,8 +339,15 @@ class Graph(private val context: Context) {
             val now = Instant.now().epochSecond
             val ctx = insights.checkContext(now, stepsFresh)
             val input = TriageInput(
-                bpm = live.bpm, restingHr = ctx.restingHr, spo2 = spo2, stress = ctx.stress, hrvZ = ctx.hrvZ,
-                skinTemp = ctx.skinTemp, tempZ = ctx.tempZ, moving = ctx.moving, symptoms = symptoms,
+                bpm = live.bpm,
+                restingHr = ctx.restingHr,
+                spo2 = spo2,
+                stress = ctx.stress,
+                hrvZ = ctx.hrvZ,
+                skinTemp = ctx.skinTemp,
+                tempZ = ctx.tempZ,
+                moving = ctx.moving,
+                symptoms = symptoms,
             )
             val result = Triage.assess(input)
             val incidentId = incidents.saveCheck(now, input, live.rmssd, result)

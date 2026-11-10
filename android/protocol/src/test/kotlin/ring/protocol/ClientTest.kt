@@ -1,11 +1,11 @@
 package ring.protocol
 
+import kotlinx.coroutines.async
+import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlinx.coroutines.async
-import kotlinx.coroutines.test.runTest
 
 class ClientTest {
     private val batteryRsp = "0307000000000000000000000000000a".hexToBytes()
@@ -22,7 +22,10 @@ class ClientTest {
     }
 
     @Test fun `request raises on error flag`() = runTest {
-        val err = Packet.build(0x03).also { it[0] = 0x83.toByte(); it[15] = (Packet.checksum(it, 15)).toByte() }
+        val err = Packet.build(0x03).also {
+            it[0] = 0x83.toByte()
+            it[15] = (Packet.checksum(it, 15)).toByte()
+        }
         val tr = FakeTransport().apply { responses[0x03] = listOf(err) }
         assertFailsWith<RingCommandException> { RingClient(tr).request(0x03) }
     }

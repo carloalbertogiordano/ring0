@@ -1,12 +1,12 @@
 package ring.protocol.commands
 
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneOffset
 import ring.protocol.Packet
 import ring.protocol.RingClient
 import ring.protocol.u16le
 import ring.protocol.u8
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
 
 /** Activity of one 15-minute slot (the ring clock is UTC). */
 data class StepSlot(val time: Instant, val steps: Int, val calories: Int, val distanceM: Int)

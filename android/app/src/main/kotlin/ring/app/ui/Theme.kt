@@ -1,5 +1,10 @@
 package ring.app.ui
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -20,11 +25,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -62,9 +62,17 @@ private val Mono = FontFamily.Monospace
 fun RingTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = darkColorScheme(
-            primary = Term.accent, onPrimary = Term.accentInk, background = Term.bg, onBackground = Term.text,
-            surface = Term.panel, onSurface = Term.text, error = Term.crit, outline = Term.line2,
-            surfaceVariant = Term.panel2, onSurfaceVariant = Term.dim, secondary = Term.accentDim,
+            primary = Term.accent,
+            onPrimary = Term.accentInk,
+            background = Term.bg,
+            onBackground = Term.text,
+            surface = Term.panel,
+            onSurface = Term.text,
+            error = Term.crit,
+            outline = Term.line2,
+            surfaceVariant = Term.panel2,
+            onSurfaceVariant = Term.dim,
+            secondary = Term.accentDim,
         ),
         content = content,
     )
@@ -82,8 +90,16 @@ fun T(
     spacing: TextUnit = TextUnit.Unspecified,
     maxLines: Int = Int.MAX_VALUE,
 ) = Text(
-    text, modifier, color = color, fontSize = size, fontWeight = weight, fontFamily = Mono, textAlign = align,
-    letterSpacing = spacing, maxLines = maxLines, lineHeight = size * 1.4f,
+    text,
+    modifier,
+    color = color,
+    fontSize = size,
+    fontWeight = weight,
+    fontFamily = Mono,
+    textAlign = align,
+    letterSpacing = spacing,
+    maxLines = maxLines,
+    lineHeight = size * 1.4f,
 )
 
 @Composable
@@ -180,7 +196,9 @@ fun Banner(title: String, body: String, color: Color = Term.warn) = Column(
 
 @Composable
 fun Stepper(label: String, value: String, onMinus: () -> Unit, onPlus: () -> Unit) = Row(
-    Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically,
+    Modifier.fillMaxWidth(),
+    horizontalArrangement = Arrangement.SpaceBetween,
+    verticalAlignment = Alignment.CenterVertically,
 ) {
     T(label, size = 12.sp)
     Row(Modifier.border(BorderStroke(1.dp, Term.line2)), verticalAlignment = Alignment.CenterVertically) {

@@ -33,6 +33,7 @@ object ReadinessScore {
     private const val W_HRV = 0.45
     private const val W_RHR = 0.25
     private const val W_SLEEP = 0.30
+    private const val NEUTRAL_SCORE = 50.0
     private const val Z_TO_POINTS = 25.0
     private const val MIN_SPREAD_LN = 0.10
     private const val MIN_SPREAD_RHR = 1.5
@@ -48,13 +49,13 @@ object ReadinessScore {
         val hrvBase = Baseline.of(input.rmssdHistory.filter { it > 0 }.map(::ln), minSpread = MIN_SPREAD_LN)
         val hrvZ = input.rmssdToday?.takeIf { it > 0 }?.let { hrvBase?.z(ln(it)) }
         if (hrvZ != null) {
-            parts[ReadinessComponent.HRV] = Stats.clamp(50 + Z_TO_POINTS * hrvZ) to W_HRV
+            parts[ReadinessComponent.HRV] = Stats.clamp(NEUTRAL_SCORE + Z_TO_POINTS * hrvZ) to W_HRV
             days = maxOf(days, hrvBase!!.days)
         }
         val rhrBase = Baseline.of(input.restingHrHistory, minSpread = MIN_SPREAD_RHR)
         val rhrZ = input.restingHrToday?.let { rhrBase?.z(it) }
         if (rhrZ != null) {
-            parts[ReadinessComponent.RESTING_HR] = Stats.clamp(50 - Z_TO_POINTS * rhrZ) to W_RHR
+            parts[ReadinessComponent.RESTING_HR] = Stats.clamp(NEUTRAL_SCORE - Z_TO_POINTS * rhrZ) to W_RHR
             days = maxOf(days, rhrBase!!.days)
         }
         input.sleepMinutes?.let { minutes ->
