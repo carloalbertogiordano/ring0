@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+*.db
+# catture grezze possono contenere MAC/dati personali: tracciale solo se anonimizzate
+captures/*.btsnap
+captures/*.cfa
+captures/*.pcap*
+android/build/
+android/.gradle/
