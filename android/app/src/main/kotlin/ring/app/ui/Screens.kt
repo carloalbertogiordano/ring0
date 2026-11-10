@@ -335,6 +335,16 @@ private fun HistoryScreen(graph: Graph) {
     val from = to - PERIODS[period].second
     val sleep by remember(period) { graph.dao.observeSleep(from) }.collectAsStateWithLifecycle(emptyList())
     val incidents by graph.dao.observeIncidents().collectAsStateWithLifecycle(emptyList())
+    var editing by remember { mutableStateOf<ring.app.data.IncidentEntity?>(null) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    editing?.let { current ->
+        IncidentEditor(
+            current,
+            onSave = { scope.launch { graph.saveIncident(it); editing = null } },
+            onDelete = if (current.id != 0L) ({ scope.launch { graph.deleteIncident(current.id); editing = null } }) else null,
+            onDismiss = { editing = null },
+        )
+    }
     LazyColumn(contentPadding = PAD, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -349,10 +359,13 @@ private fun HistoryScreen(graph: Graph) {
         item { HistoryPanel(graph, stringResource(R.string.chart_hrv_live), SampleType.HRV_LIVE, " ms", from, to, Term.rem, 20.0, 0, null) }
         item { HistoryPanel(graph, stringResource(R.string.chart_resp), SampleType.RESP, " /min", from, to, Term.info, 4.0, 0, null) }
         item { HistoryPanel(graph, stringResource(R.string.chart_spo2), SampleType.SPO2, " %", from, to, Term.accent, 4.0, 0, thresholds.spo2Low.toDouble()) }
-        if (incidents.isNotEmpty()) {
-            item { Label(stringResource(R.string.incidents_title)) }
-            items(incidents) { IncidentCard(it) }
+        item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Label(stringResource(R.string.incidents_title))
+                TButton(stringResource(R.string.btn_add_incident), { scope.launch { editing = graph.manualIncidentDraft() } }, kind = BtnKind.GHOST)
+            }
         }
+        items(incidents) { IncidentCard(it) { editing = it } }
         if (sleep.isNotEmpty()) {
             item { Label(stringResource(R.string.sleep_label)) }
             items(sleep) { s -> SleepCard(s.start, s.end, s.lightMin, s.deepMin, s.remMin, s.awakeMin) }

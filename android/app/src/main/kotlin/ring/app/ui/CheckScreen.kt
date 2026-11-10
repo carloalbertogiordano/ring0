@@ -2,6 +2,7 @@ package ring.app.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -26,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.launch
 import ring.app.CheckPhase
 import ring.app.Graph
 import ring.app.R
@@ -71,6 +73,19 @@ fun levelColor(l: TriageLevel): Color = when (l) {
     TriageLevel.URGENT -> Term.crit
 }
 
+@androidx.compose.runtime.Composable
+private fun CheckEditorHost(graph: Graph, incident: ring.app.data.IncidentEntity?, onDone: () -> Unit) {
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    if (incident != null) {
+        IncidentEditor(
+            incident,
+            onSave = { scope.launch { graph.saveIncident(it); onDone() } },
+            onDelete = { scope.launch { graph.deleteIncident(incident.id); onDone() } },
+            onDismiss = onDone,
+        )
+    }
+}
+
 /** "Why is my heart rate up?": symptoms, heart + SpO2 measurement, then the triage result. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -78,8 +93,11 @@ fun CheckScreen(graph: Graph, onClose: () -> Unit) {
     val status by graph.status.collectAsStateWithLifecycle()
     val check = status.check
     var symptoms by remember { mutableStateOf(emptySet<Symptom>()) }
+    var editing by remember { mutableStateOf<ring.app.data.IncidentEntity?>(null) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
     val close = { graph.resetCheck(); onClose() }
     BackHandler(onBack = close)
+    CheckEditorHost(graph, editing) { editing = null }
     Column(Modifier.fillMaxSize().background(Term.bg).statusBarsPadding().navigationBarsPadding().padding(16.dp)) {
         T(stringResource(R.string.check_title), size = 15.sp, weight = FontWeight.Bold, spacing = 3.sp)
         Column(
@@ -130,7 +148,12 @@ fun CheckScreen(graph: Graph, onClose: () -> Unit) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             when (check.phase) {
                 CheckPhase.IDLE -> TButton(stringResource(R.string.btn_start_check), { graph.runCheck(symptoms) }, Modifier.fillMaxWidth())
-                CheckPhase.DONE, CheckPhase.FAILED -> TButton(stringResource(R.string.btn_check_again), { graph.resetCheck() }, Modifier.fillMaxWidth(), BtnKind.GHOST)
+                CheckPhase.DONE, CheckPhase.FAILED -> {
+                    check.incidentId?.let { id ->
+                        TButton(stringResource(R.string.btn_add_details), { scope.launch { editing = graph.incident(id) } }, Modifier.fillMaxWidth())
+                    }
+                    TButton(stringResource(R.string.btn_check_again), { graph.resetCheck() }, Modifier.fillMaxWidth(), BtnKind.GHOST)
+                }
                 else -> Unit
             }
             if (check.phase != CheckPhase.HEART && check.phase != CheckPhase.SPO2) {
@@ -142,9 +165,9 @@ fun CheckScreen(graph: Graph, onClose: () -> Unit) {
 
 /** One incident of the log. */
 @Composable
-fun IncidentCard(incident: ring.app.data.IncidentEntity) {
+fun IncidentCard(incident: ring.app.data.IncidentEntity, onClick: () -> Unit) {
     val level = runCatching { TriageLevel.valueOf(incident.level) }.getOrNull()
-    TCard(accent = level?.let { levelColor(it).copy(alpha = 0.6f) }) {
+    TCard(accent = level?.let { levelColor(it).copy(alpha = 0.6f) }, modifier = Modifier.clickable(onClick = onClick)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             T(dayTime(incident.ts), size = 12.sp, weight = FontWeight.Bold)
             if (level != null) TPill(stringResource(levelTitleRes(level)), levelColor(level)) else T(stringResource(R.string.incident_unchecked), size = 11.sp, color = Term.dim)
@@ -152,6 +175,9 @@ fun IncidentCard(incident: ring.app.data.IncidentEntity) {
         T(stringResource(incidentSourceRes(incident.source)), size = 12.sp)
         val causes = incident.causes.split(",").filter { it.isNotBlank() }.mapNotNull { runCatching { TriageCause.valueOf(it) }.getOrNull() }
         if (causes.isNotEmpty()) T(causes.map { stringResource(causeRes(it)) }.joinToString(" · "), size = 11.sp, color = Term.dim)
+        val cats = parseCategories(incident.categories).map { stringResource(categoryRes(it)) }
+        if (cats.isNotEmpty()) T(cats.joinToString(" · "), size = 11.sp, color = Term.info)
+        if (incident.note.isNotBlank()) T(incident.note, size = 12.sp)
         T(
             stringResource(
                 R.string.incident_vitals,
@@ -170,5 +196,6 @@ fun incidentSourceRes(source: String): Int = when (source) {
     "temp_high" -> R.string.source_temp_high
     "stress_high" -> R.string.source_stress_high
     "illness" -> R.string.source_illness
+    "manual_entry" -> R.string.source_manual_entry
     else -> R.string.source_manual
 }

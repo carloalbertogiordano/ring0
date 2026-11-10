@@ -234,4 +234,21 @@ Check that the ring is charged, out of its case and not connected to anything el
     <string name="btn_stress">Measure stress (experimental)</string>
     <string name="stress_result">Stress: %1$d</string>
     <string name="stress_failed">Stress measurement is not available on this ring</string>
+    <string name="incident_details">Incident details</string>
+    <string name="categories_title">What was going on?</string>
+    <string name="cat_exercise">Exercise or effort</string>
+    <string name="cat_stress_emotion">Stress or emotions</string>
+    <string name="cat_illness">Illness or fever</string>
+    <string name="cat_substances">Caffeine, alcohol or medication</string>
+    <string name="cat_sleep_fatigue">Poor sleep or fatigue</string>
+    <string name="cat_environment">Heat, cold or altitude</string>
+    <string name="cat_other">Other</string>
+    <string name="note_title">Note</string>
+    <string name="note_hint">Write something (optional)</string>
+    <string name="btn_save">Save</string>
+    <string name="btn_cancel">Cancel</string>
+    <string name="btn_delete">Delete incident</string>
+    <string name="btn_add_incident">Add</string>
+    <string name="btn_add_details">Add details</string>
+    <string name="source_manual_entry">Manual entry</string>
 </resources>

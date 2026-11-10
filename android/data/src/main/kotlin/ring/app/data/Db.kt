@@ -81,7 +81,14 @@ data class IncidentEntity(
     /** Heart rate of the previous hour as "ts:bpm;ts:bpm". */
     val hrTrend: String = "",
     val checked: Boolean = false,
+    /** Comma-separated [IncidentCategory] names chosen by the user. */
+    val categories: String = "",
+    /** Free text written by the user. */
+    val note: String = "",
 )
+
+/** Broad, fixed categories the user can tag an incident with. */
+enum class IncidentCategory { EXERCISE, STRESS_EMOTION, ILLNESS, SUBSTANCES, SLEEP_FATIGUE, ENVIRONMENT, OTHER }
 
 @Dao
 interface RingDao {
@@ -130,11 +137,17 @@ interface RingDao {
     @Query("SELECT * FROM incidents ORDER BY ts DESC LIMIT 50")
     fun observeIncidents(): Flow<List<IncidentEntity>>
 
+    @Query("SELECT * FROM incidents WHERE id = :id")
+    suspend fun incidentById(id: Long): IncidentEntity?
+
     @Query("SELECT * FROM incidents WHERE ts >= :since AND checked = 0 ORDER BY ts DESC LIMIT 1")
     suspend fun latestUnchecked(since: Long): IncidentEntity?
 
     @Query("DELETE FROM incidents")
     suspend fun clearIncidents()
+
+    @Query("DELETE FROM incidents WHERE id = :id")
+    suspend fun deleteIncident(id: Long)
 
     @Query("DELETE FROM samples WHERE demo = 1")
     suspend fun deleteDemoSamples()
@@ -143,7 +156,7 @@ interface RingDao {
     suspend fun deleteDemoSleep()
 }
 
-@Database(entities = [Sample::class, SleepEntity::class, AlertEntity::class, IncidentEntity::class], version = 4, exportSchema = false)
+@Database(entities = [Sample::class, SleepEntity::class, AlertEntity::class, IncidentEntity::class], version = 5, exportSchema = false)
 abstract class RingDb : RoomDatabase() {
     abstract fun dao(): RingDao
 }
@@ -174,5 +187,13 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
                 "advice TEXT NOT NULL, symptoms TEXT NOT NULL, bpm INTEGER, rmssd REAL, spo2 INTEGER, stress REAL, " +
                 "skinTemp REAL, hrTrend TEXT NOT NULL, checked INTEGER NOT NULL)",
         )
+    }
+}
+
+/** v4 -> v5: user categories and note on incidents. */
+val MIGRATION_4_5 = object : Migration(4, 5) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE incidents ADD COLUMN categories TEXT NOT NULL DEFAULT ''")
+        db.execSQL("ALTER TABLE incidents ADD COLUMN note TEXT NOT NULL DEFAULT ''")
     }
 }

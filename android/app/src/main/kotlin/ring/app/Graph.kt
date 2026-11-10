@@ -19,6 +19,7 @@ import ring.app.ble.RingSession
 import ring.app.data.MIGRATION_1_2
 import ring.app.data.MIGRATION_2_3
 import ring.app.data.MIGRATION_3_4
+import ring.app.data.MIGRATION_4_5
 import ring.app.data.RingDb
 import ring.app.data.Sample
 import ring.app.data.SampleType
@@ -69,6 +70,7 @@ data class CheckState(
     val stress: Int? = null,
     val skinTemp: Double? = null,
     val rmssd: Double? = null,
+    val incidentId: Long? = null,
 )
 
 data class Status(
@@ -97,7 +99,7 @@ data class Status(
 /** Oggetti condivisi tra UI e servizio: database, connessione BLE, sync, alert. */
 class Graph(private val context: Context) {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    val dao = Room.databaseBuilder(context, RingDb::class.java, "ring.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).build().dao()
+    val dao = Room.databaseBuilder(context, RingDb::class.java, "ring.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5).build().dao()
     val settings = SettingsStore(context)
     private val manager = RingBleManager(context)
     val session = RingSession(manager)
@@ -284,6 +286,14 @@ class Graph(private val context: Context) {
         scope.launch { stressMeasure() }
     }
 
+    suspend fun incident(id: Long): ring.app.data.IncidentEntity? = dao.incidentById(id)
+
+    suspend fun manualIncidentDraft(): ring.app.data.IncidentEntity = incidents.manualDraft(Instant.now().epochSecond)
+
+    suspend fun saveIncident(incident: ring.app.data.IncidentEntity) = incidents.save(incident)
+
+    suspend fun deleteIncident(id: Long) = incidents.delete(id)
+
     /** Asks the UI to open the check screen (from a notification). */
     fun requestCheck() {
         _checkRequested.value = true
@@ -318,9 +328,9 @@ class Graph(private val context: Context) {
                 skinTemp = ctx.skinTemp, tempZ = ctx.tempZ, moving = null, symptoms = symptoms,
             )
             val result = Triage.assess(input)
-            incidents.saveCheck(now, input, live.rmssd, result)
+            val incidentId = incidents.saveCheck(now, input, live.rmssd, result)
             _status.update {
-                it.copy(check = CheckState(CheckPhase.DONE, result, live.bpm, spo2, ctx.stress, ctx.skinTemp, rmssd = live.rmssd))
+                it.copy(check = CheckState(CheckPhase.DONE, result, live.bpm, spo2, ctx.stress, ctx.skinTemp, rmssd = live.rmssd, incidentId = incidentId))
             }
         }
     }

@@ -234,4 +234,21 @@ Controlla che l\'anello sia carico, fuori dalla custodia e non collegato ad altr
     <string name="btn_stress">Misura stress (sperimentale)</string>
     <string name="stress_result">Stress: %1$d</string>
     <string name="stress_failed">La misura dello stress non è disponibile su questo anello</string>
+    <string name="incident_details">Dettagli incidente</string>
+    <string name="categories_title">Cosa stava succedendo?</string>
+    <string name="cat_exercise">Sforzo fisico</string>
+    <string name="cat_stress_emotion">Stress o emozioni</string>
+    <string name="cat_illness">Malessere o febbre</string>
+    <string name="cat_substances">Caffeina, alcol o farmaci</string>
+    <string name="cat_sleep_fatigue">Poco sonno o stanchezza</string>
+    <string name="cat_environment">Caldo, freddo o quota</string>
+    <string name="cat_other">Altro</string>
+    <string name="note_title">Nota</string>
+    <string name="note_hint">Scrivi qualcosa (facoltativo)</string>
+    <string name="btn_save">Salva</string>
+    <string name="btn_cancel">Annulla</string>
+    <string name="btn_delete">Elimina incidente</string>
+    <string name="btn_add_incident">Aggiungi</string>
+    <string name="btn_add_details">Aggiungi dettagli</string>
+    <string name="source_manual_entry">Inserimento manuale</string>
 </resources>
