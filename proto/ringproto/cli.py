@@ -4,7 +4,7 @@ import argparse
 import asyncio
 import logging
 from collections.abc import Awaitable, Callable
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 
 from ringproto.client import RingClient
 from ringproto.commands.auto_monitor import Feature, read_enabled, write_enabled
@@ -13,7 +13,8 @@ from ringproto.commands.hr_log import read_hr_log
 from ringproto.commands.hr_settings import HeartRateSettings, read_hr_settings, write_hr_settings
 from ringproto.commands.set_time import set_time
 from ringproto.commands.slot_log import SlotLog, read_hrv_log, read_stress_log
-from ringproto.connect import connect_ring
+from ringproto.commands.temperature import read_temperature
+from ringproto.connect import RingSession, connect_ring
 
 Handler = Callable[[RingClient, argparse.Namespace], Awaitable[object]]
 
@@ -93,8 +94,20 @@ COMMANDS: dict[str, Handler] = {
 }
 
 
+async def _temperature(session: RingSession, args: argparse.Namespace) -> str:
+    today = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
+    lines: list[str] = []
+    for day in await read_temperature(session.bigdata, args.days):
+        start = today - timedelta(days=day.days_ago)
+        lines += [f"{when.isoformat()} {celsius:.1f}C" for when, celsius in day.readings(start)]
+    return "\n".join([*lines, f"{len(lines)} readings"])
+
+
 async def _run(args: argparse.Namespace) -> None:
     async with connect_ring(args.address) as session:
+        if args.command == "temperature":
+            print(await _temperature(session, args))
+            return
         if args.command == "bigdata":
             frame = await session.bigdata.request(args.type, bytes.fromhex(args.payload))
             print(f"type={frame.type_id:#04x} len={len(frame.payload)}")
@@ -107,13 +120,14 @@ def main() -> None:
     """Entry point della CLI."""
     parser = argparse.ArgumentParser(prog="ringproto")
     parser.add_argument("-v", "--verbose", action="store_true", help="log dei pacchetti raw")
-    parser.add_argument("command", choices=[*sorted(COMMANDS), "bigdata"])
+    parser.add_argument("command", choices=[*sorted(COMMANDS), "bigdata", "temperature"])
     parser.add_argument("address")
     parser.add_argument("--interval", type=int, help="hr-settings: abilita e imposta i minuti")
     parser.add_argument("--enable", nargs="+", help="monitors: spo2 stress hrv temperature")
     parser.add_argument("--cmd", type=lambda v: int(v, 0), help="raw: id comando V1")
     parser.add_argument("--count", type=int, default=1, help="raw: pacchetti da attendere")
     parser.add_argument("--days-ago", type=int, default=0, help="hrv-log: giorni fa")
+    parser.add_argument("--days", type=int, default=2, help="temperature: giorni richiesti")
     parser.add_argument("--disable", action="store_true", help="hr-settings: disabilita")
     parser.add_argument("--date", type=date.fromisoformat, help="hr-log: giorno YYYY-MM-DD (UTC)")
     parser.add_argument("--type", type=lambda v: int(v, 0), help="bigdata: tipo (es. 0x25)")

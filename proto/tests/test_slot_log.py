@@ -124,3 +124,21 @@ async def test_read_hrv_log_sends_days_ago() -> None:
 
 def test_decode_header_only_returns_none() -> None:
     assert decode(pkts(header(CMD_STRESS, total=1))) is None
+
+
+# Log stress reale del R09 (2026-11-10): una sola misura, 35 nello slot 29 (14:30 UTC).
+REAL_STRESS = (
+    "3700051e00000000000000000000005a",
+    "37010000000000000000000000000038",
+    "37020000000000000000000000000039",
+    "3703000000002300000000000000005d",
+    "3704000000000000000000000000003b",
+)
+
+
+def test_decode_real_r09_stress_log() -> None:
+    log = decode([parse(bytes.fromhex(h)) for h in REAL_STRESS])
+
+    assert log is not None
+    assert log.interval_minutes == 30
+    assert log.readings(DAY) == [(DAY + timedelta(hours=14, minutes=30), 35)]

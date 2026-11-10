@@ -91,3 +91,17 @@ Stato di fabbrica del tuo R09: **tutti e 4 disattivi** (anche l'HR automatico). 
 
 Notifica non richiesta osservata: `73 0c <%>` = livello batteria (0x0c), es. `73 0c 1d…` = 29%.
 Codice: `proto/ringproto/commands/auto_monitor.py`.
+
+## 0x37 Stress / 0x39 HRV (log a slot da 30 min) - VERIFICATO (stress)
+Stress: req `37 00…` (nessun argomento). HRV: req `39 <giorni fa u32 LE>` (come Gadgetbridge; il ring risponde `ff` = nessun dato).
+Risposta a 5 pacchetti: `[0]` header `37 00 <5 pacchetti> <30 min>`, `[1]` `<?> + 12 valori`, `[2..4]` 13 valori ciascuno
+(12+13*3 = 51, troncati a 48 slot). Valore 0 = nessuna misura. Slot 0 = 00:00 **UTC**.
+Reale: stress 35 nello slot 29 = 14:30 UTC (pacchetto 3, valore a offset 4: 12 + 13 + 4 = 29).
+HRV: formato assunto uguale (stesso codice), ancora senza dati reali.
+Codice: `proto/ringproto/commands/slot_log.py`.
+
+## Big-data 0x25 Temperatura - VERIFICATO
+Req `bc 25 01 00 3e 81 02`. Risposta = blocchi da 50 byte `[giorni fa][passo=0x1e][48 valori]`, °C = valore/10 + 20, 0 = nessun dato.
+Reale: `a9` (169) nello slot 29 -> 36.9 C alle 14:30 UTC (pelle del dito). Con payload di richiesta `07` risponde uguale (un solo
+giorno, nessuno storico ancora): il significato del byte di richiesta resta da chiarire. Risposta senza storico: `00 1e`.
+Codice: `proto/ringproto/commands/temperature.py`. CLI: `python -m ringproto.cli temperature <MAC> --days N`.
