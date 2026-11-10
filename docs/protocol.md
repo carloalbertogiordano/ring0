@@ -105,3 +105,8 @@ Req `bc 25 01 00 3e 81 02`. Risposta = blocchi da 50 byte `[giorni fa][passo=0x1
 Reale: `a9` (169) nello slot 29 -> 36.9 C alle 14:30 UTC (pelle del dito). Con payload di richiesta `07` risponde uguale (un solo
 giorno, nessuno storico ancora): il significato del byte di richiesta resta da chiarire. Risposta senza storico: `00 1e`.
 Codice: `proto/ringproto/commands/temperature.py`. CLI: `python -m ringproto.cli temperature <MAC> --days N`.
+
+## 0x69 / 0x6A Real-time (HR) - parzialmente verificato
+Start: `69 01 01 00…` (tipo 1 = HR, azione 1 = start). Risposte: `69 01 <errore> <bpm> 00…` ripetute; nei primi secondi
+`bpm = 0` (sensore in avvio), errore 0. Stop: `6a 01 00 00 00…` (il ring non risponde allo stop). Da verificare: tempo al
+primo valore non nullo e uso con dito fermo. Nota: il flag "manual HR" di set-time e' 0, ma il comando risponde comunque.
