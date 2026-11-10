@@ -2,7 +2,7 @@ package ring.protocol
 
 import kotlinx.coroutines.delay
 
-/** Trasporto finto: registra le scritture e risponde con notifiche predefinite per chiave (cmd o type id). */
+/** Fake transport: records writes and answers with canned notifications keyed by cmd or type id. */
 class FakeTransport(private val keyIndex: Int = 0, private val delayMs: Long = 0) : Transport {
     val sent = mutableListOf<ByteArray>()
     val events = mutableListOf<String>()

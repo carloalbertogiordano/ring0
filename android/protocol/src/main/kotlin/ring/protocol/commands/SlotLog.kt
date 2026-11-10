@@ -10,7 +10,7 @@ data class SlotLog(val intervalMinutes: Int, val samples: List<Int>) {
         samples.mapIndexedNotNull { i, v -> if (v > 0) Reading(dayStart.plusMinutes(i * intervalMinutes), v.toDouble()) else null }
 }
 
-/** CMD 0x37 (stress, nessun argomento) e 0x39 (HRV, [giorni fa u32 LE]): un valore ogni 30 minuti. */
+/** CMD 0x37 (stress, no arguments) and 0x39 (HRV, [days ago u32 LE]): one value every 30 minutes. */
 object SlotLogCommand {
     const val CMD_STRESS = 0x37
     const val CMD_HRV = 0x39

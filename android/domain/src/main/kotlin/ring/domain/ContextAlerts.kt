@@ -2,14 +2,14 @@ package ring.domain
 
 enum class HrAlert { HIGH, LOW }
 
-/** Stima della frequenza a riposo. */
+/** Resting heart rate estimation. */
 object RestingHr {
     private const val MIN_SAMPLES = 6
     private const val LOW_QUANTILE = 25.0
     private const val DAY_QUANTILE = 10.0
     private const val MIN_DAY_SAMPLES = 24
 
-    /** Con una finestra di sonno: mediana del quartile piu' basso nella finestra; altrimenti decimo percentile del giorno. */
+    /** With a sleep window: median of the lowest quartile inside it; otherwise the 10th percentile of the day. */
     fun estimate(hr: List<TimedValue>, sleepStart: Long? = null, sleepEnd: Long? = null): Double? {
         val valid = hr.filter { it.value > 0 }
         if (sleepStart != null && sleepEnd != null) {
@@ -23,7 +23,7 @@ object RestingHr {
     }
 }
 
-/** Alert che tengono conto del contesto (a riposo o in attivita') per evitare falsi allarmi da sforzo fisico. */
+/** Alerts that take context (resting or active) into account to avoid false alarms from exercise. */
 object ContextAlerts {
     private const val CONSECUTIVE = 2
     private const val UNKNOWN_CONTEXT_MARGIN = 10.0
@@ -32,7 +32,7 @@ object ContextAlerts {
 
     /**
      * FC alta: ultimi 2 campioni oltre soglia e il contesto non e' "in movimento". Se il contesto e' ignoto
-     * (nessun dato passi) la soglia sale di un margine. FC bassa: 2 campioni sotto soglia.
+     * (no step data) the threshold is raised by a margin. Low HR: 2 samples below the threshold.
      */
     fun heartRate(recent: List<TimedValue>, high: Double, low: Double, isResting: (Long) -> Boolean?): HrAlert? {
         val last = recent.sortedBy { it.ts }.takeLast(CONSECUTIVE).filter { it.value > 0 }
@@ -44,7 +44,7 @@ object ContextAlerts {
         return if (last.all { it.value > limit }) HrAlert.HIGH else null
     }
 
-    /** SpO2 bassa: due campioni sotto soglia nelle ultime 3 ore, oppure un calo severo isolato. */
+    /** Low SpO2: two samples under the threshold within the last 3 hours, or one isolated severe drop. */
     fun spo2(samples: List<TimedValue>, low: Double, now: Long): Boolean {
         val recent = samples.filter { now - it.ts in 0..SPO2_WINDOW_SECONDS }
         return recent.count { it.value < low } >= CONSECUTIVE || recent.any { it.value < low - SPO2_SEVERE_DROP }

@@ -1,5 +1,7 @@
 package ring.app.ui
 
+import ring.app.R
+import androidx.compose.ui.res.stringResource
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
@@ -84,15 +86,15 @@ private fun Welcome(onNext: () -> Unit) = OnboardingFrame(
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
             LauncherMark(120.dp)
             T("RING", size = 30.sp, weight = FontWeight.Bold, spacing = 8.sp)
-            T("> il tuo anello, i tuoi dati", color = Term.accent)
+            T(stringResource(R.string.ob_tagline), color = Term.accent)
             TCard {
-                KeyValue("Account", "nessuno")
-                KeyValue("Cloud", "nessuno")
-                KeyValue("Permesso internet", "non richiesto", Term.accent)
+                KeyValue(stringResource(R.string.ob_account), stringResource(R.string.value_none))
+                KeyValue(stringResource(R.string.ob_cloud), stringResource(R.string.value_none))
+                KeyValue(stringResource(R.string.ob_internet), stringResource(R.string.value_not_requested), Term.accent)
             }
         }
     },
-    footer = { TButton("Inizia", onNext, Modifier.fillMaxWidth()) },
+    footer = { TButton(stringResource(R.string.btn_start), onNext, Modifier.fillMaxWidth()) },
 )
 
 @Composable
@@ -113,27 +115,27 @@ private fun PermissionsStep(onBack: () -> Unit, onNext: () -> Unit) {
     val battery = remember(tick) { Perms.batteryUnrestricted(ctx) }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { tick++ }
     OnboardingFrame(
-        1, "PERMESSI",
+        1, stringResource(R.string.ob_perm_title),
         content = {
-            T("Servono tre cose. Senza i dispositivi vicini l'app non può parlare con l'anello.", size = 12.sp, color = Term.dim)
-            PermCard("Dispositivi nelle vicinanze", "Per cercare e collegare l'anello via Bluetooth. Non serve la posizione.", nearby, required = true)
-            PermCard("Notifiche", "Per avvisarti se frequenza, temperatura o batteria escono dalle soglie.", notif)
-            PermCard("Batteria: senza restrizioni", "Così il sistema non ferma la sincronizzazione quando lo schermo è spento.", battery)
+            T(stringResource(R.string.ob_perm_intro), size = 12.sp, color = Term.dim)
+            PermCard(stringResource(R.string.perm_nearby), stringResource(R.string.perm_nearby_why), nearby, required = true)
+            PermCard(stringResource(R.string.perm_notif), stringResource(R.string.perm_notif_why), notif)
+            PermCard(stringResource(R.string.perm_battery), stringResource(R.string.perm_battery_why), battery)
         },
         footer = {
             if (!nearby || !notif) {
-                TButton("Concedi i permessi", {
+                TButton(stringResource(R.string.btn_grant), {
                     launcher.launch(buildList { if (!nearby) addAll(Perms.nearby); if (!notif) add(Perms.NOTIFICATIONS) }.toTypedArray())
                 }, Modifier.fillMaxWidth())
             }
             if (!battery) {
-                TButton("Batteria senza restrizioni", {
+                TButton(stringResource(R.string.btn_battery_unrestricted), {
                     ctx.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                 }, Modifier.fillMaxWidth(), BtnKind.GHOST)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TButton("Indietro", onBack, Modifier.weight(1f), BtnKind.GHOST)
-                TButton("Avanti", onNext, Modifier.weight(1f), enabled = nearby)
+                TButton(stringResource(R.string.btn_back), onBack, Modifier.weight(1f), BtnKind.GHOST)
+                TButton(stringResource(R.string.btn_next), onNext, Modifier.weight(1f), enabled = nearby)
             }
         },
     )
@@ -143,7 +145,7 @@ private fun PermissionsStep(onBack: () -> Unit, onNext: () -> Unit) {
 private fun PermCard(title: String, why: String, ok: Boolean, required: Boolean = false) = TCard(hot = ok) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
         T(title, weight = FontWeight.Bold, modifier = Modifier.weight(1f))
-        TPill(if (ok) "concesso" else if (required) "necessario" else "da concedere", if (ok) Term.accent else Term.warn)
+        TPill(if (ok) stringResource(R.string.perm_state_granted) else if (required) stringResource(R.string.perm_state_required) else stringResource(R.string.perm_state_to_grant), if (ok) Term.accent else Term.warn)
     }
     T(why, size = 12.sp, color = Term.dim)
 }
@@ -154,12 +156,13 @@ private fun looksLikeRing(d: FoundDevice) = d.name.contains("ring", ignoreCase =
 @Composable
 fun RingPicker(onPick: (FoundDevice) -> Unit) {
     val ctx = LocalContext.current
+    val scanFailedDefault = stringResource(R.string.scan_failed_default)
     val found = remember { mutableStateListOf<FoundDevice>() }
     var showAll by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var seconds by remember { mutableIntStateOf(0) }
     LaunchedEffect(Unit) {
-        scanDevices(ctx).catch { error = it.message ?: "scansione non riuscita" }.collect { d ->
+        scanDevices(ctx).catch { error = it.message ?: scanFailedDefault }.collect { d ->
             val i = found.indexOfFirst { it.address == d.address }
             if (i >= 0) found[i] = d else found += d
         }
@@ -168,17 +171,17 @@ fun RingPicker(onPick: (FoundDevice) -> Unit) {
     val rings = found.filter(::looksLikeRing).sortedByDescending { it.rssi }
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Radar(150.dp, found = rings.isNotEmpty())
-        T(if (rings.isEmpty()) "> scansione in corso… ${seconds}s" else "> trovato", color = Term.accent)
-        error?.let { Banner("Scansione non riuscita", it, Term.crit) }
+        T(if (rings.isEmpty()) stringResource(R.string.scan_in_progress, seconds) else stringResource(R.string.scan_found), color = Term.accent)
+        error?.let { Banner(stringResource(R.string.scan_failed_title), it, Term.crit) }
         rings.forEach { d -> DeviceCard(d, onPick) }
         if (rings.isEmpty() && seconds >= 10) {
             Banner(
-                "Non lo trovi?",
-                "Tira fuori l'anello dalla custodia, tienilo vicino al telefono e chiudi l'app QRing o altri telefoni collegati.",
+                stringResource(R.string.scan_help_title),
+                stringResource(R.string.scan_help_body),
                 Term.dim,
             )
         }
-        TButton(if (showAll) "Nascondi altri dispositivi" else "Mostra tutti i dispositivi", { showAll = !showAll }, kind = BtnKind.GHOST)
+        TButton(if (showAll) stringResource(R.string.scan_hide_others) else stringResource(R.string.scan_show_all), { showAll = !showAll }, kind = BtnKind.GHOST)
         if (showAll) found.filterNot(::looksLikeRing).sortedByDescending { it.rssi }.forEach { d -> DeviceCard(d, onPick) }
     }
 }
@@ -190,12 +193,12 @@ private fun DeviceCard(d: FoundDevice, onPick: (FoundDevice) -> Unit) = TCard(ho
         T("${d.rssi} dBm", size = 11.sp, color = Term.accent)
     }
     T(d.address, size = 11.sp, color = Term.dim)
-    TButton("Collega", { onPick(d) }, Modifier.fillMaxWidth())
+    TButton(stringResource(R.string.btn_connect), { onPick(d) }, Modifier.fillMaxWidth())
 }
 
 @Composable
 private fun ScanStep(graph: Graph, onBack: () -> Unit, onNext: () -> Unit) = OnboardingFrame(
-    2, "CERCA ANELLO",
+    2, stringResource(R.string.ob_scan_title),
     content = { RingPicker { d -> graph.settings.deviceAddress = d.address; onNext() } },
     footer = { TButton("Indietro", onBack, Modifier.fillMaxWidth(), BtnKind.GHOST) },
 )
@@ -218,12 +221,12 @@ private fun ConnectStep(graph: Graph, onBack: () -> Unit, onNext: () -> Unit) {
     val failed = !status.syncing && status.lastError != null && started
     val finished = !status.syncing && status.lastError == null && monitorsDone
     OnboardingFrame(
-        3, "COLLEGAMENTO",
+        3, stringResource(R.string.ob_connect_title),
         content = {
             TCard {
-                StepRow(if (status.connected) "ok" else if (failed) "x" else "wait", "Connesso", status.capabilities?.let { "temperatura · SpO2 · HRV · stress" } ?: "COLMI Ring")
-                StepRow(if (status.capabilities != null) "ok" else "wait", "Orologio sincronizzato", "UTC")
-                StepRow(if (finished) "ok" else if (failed) "x" else "wait", "Scarico lo storico", status.syncStep.ifEmpty { "in attesa" })
+                StepRow(if (status.connected) "ok" else if (failed) "x" else "wait", stringResource(R.string.step_connected), status.capabilities?.let { stringResource(R.string.step_caps) } ?: "COLMI Ring")
+                StepRow(if (status.capabilities != null) "ok" else "wait", stringResource(R.string.step_clock), "UTC")
+                StepRow(if (finished) "ok" else if (failed) "x" else "wait", stringResource(R.string.step_history), status.syncStep.ifEmpty { stringResource(R.string.step_waiting) })
                 if (status.syncing || finished) {
                     Box(Modifier.fillMaxWidth().height(6.dp).background(Term.bg).border(BorderStroke(1.dp, Term.line2))) {
                         Box(Modifier.fillMaxWidth(if (finished) 1f else status.syncProgress.coerceIn(0.03f, 1f)).height(6.dp).background(Term.accent))
@@ -232,19 +235,19 @@ private fun ConnectStep(graph: Graph, onBack: () -> Unit, onNext: () -> Unit) {
             }
             if (finished) {
                 TCard {
-                    Label("Misure automatiche attivate")
-                    T("Cuore ogni 5 min · SpO2 · stress · HRV · temperatura. Consumano batteria: l'anello dura circa 2 giorni. Le cambi in Impostazioni.", size = 12.sp, color = Term.dim)
+                    Label(stringResource(R.string.auto_on_title))
+                    T(stringResource(R.string.auto_on_body), size = 12.sp, color = Term.dim)
                 }
             }
             status.lastError?.takeIf { failed }?.let {
-                Banner("Collegamento non riuscito", "$it\nControlla che l'anello sia carico, fuori dalla custodia e non collegato ad altri.", Term.crit)
+                Banner(stringResource(R.string.connect_failed_title), stringResource(R.string.connect_failed_body, it), Term.crit)
             }
         },
         footer = {
-            if (failed) TButton("Riprova", { started = false; monitorsDone = false }, Modifier.fillMaxWidth())
+            if (failed) TButton(stringResource(R.string.btn_retry), { started = false; monitorsDone = false }, Modifier.fillMaxWidth())
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TButton("Indietro", onBack, Modifier.weight(1f), BtnKind.GHOST)
-                TButton("Continua", onNext, Modifier.weight(1f), enabled = finished)
+                TButton(stringResource(R.string.btn_back), onBack, Modifier.weight(1f), BtnKind.GHOST)
+                TButton(stringResource(R.string.btn_continue), onNext, Modifier.weight(1f), enabled = finished)
             }
         },
     )
@@ -259,14 +262,14 @@ private fun StepRow(state: String, title: String, sub: String) = Row(Modifier.pa
 
 @Composable
 private fun DoneStep(graph: Graph, onDone: () -> Unit) = OnboardingFrame(
-    4, "FATTO",
+    4, stringResource(R.string.ob_done_title),
     content = {
         Box(Modifier.height(40.dp))
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(Modifier.size(64.dp).border(BorderStroke(1.dp, Term.accent)), contentAlignment = Alignment.Center) { T("✓", size = 30.sp, color = Term.accent) }
-            T("Tutto pronto", size = 24.sp, weight = FontWeight.Bold)
-            T("L'anello è configurato. Lo trovi nella Home e si sincronizza da solo ogni ${graph.settings.syncIntervalMin} minuti.", size = 12.sp, color = Term.dim, align = TextAlign.Center)
+            T(stringResource(R.string.all_set), size = 24.sp, weight = FontWeight.Bold)
+            T(stringResource(R.string.all_set_body, graph.settings.syncIntervalMin), size = 12.sp, color = Term.dim, align = TextAlign.Center)
         }
     },
-    footer = { TButton("Apri Ring", onDone, Modifier.fillMaxWidth()) },
+    footer = { TButton(stringResource(R.string.btn_open_app), onDone, Modifier.fillMaxWidth()) },
 )

@@ -3,7 +3,7 @@ package ring.protocol
 /** Pacchetto malformato (lunghezza o checksum errati). */
 class PacketException(message: String) : IllegalArgumentException(message)
 
-/** Frame V1 a 16 byte: [cmd][14 byte dati][crc]; crc = somma dei primi 15 byte & 0xFF; bit 7 di cmd = errore. */
+/** 16-byte V1 frame: [cmd][14 data bytes][crc]; crc = sum of the first 15 bytes & 0xFF; bit 7 of cmd = error. */
 class Packet(val cmd: Int, val payload: ByteArray, val isError: Boolean = false) {
     override fun equals(other: Any?): Boolean =
         other is Packet && cmd == other.cmd && isError == other.isError && payload.contentEquals(other.payload)

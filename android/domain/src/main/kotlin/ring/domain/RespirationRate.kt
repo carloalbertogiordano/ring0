@@ -9,10 +9,10 @@ import ring.protocol.commands.Hrv
 data class RespirationEstimate(val breathsPerMinute: Double, val confidence: Double)
 
 /**
- * Frequenza respiratoria dagli intervalli RR sfruttando l'aritmia sinusale respiratoria (RSA): il respiro
- * modula l'RR a 0,1-0,5 Hz (6-30 respiri/min). Passi: pulizia artefatti, tempi dei battiti, risampling a 4 Hz,
- * rimozione del trend lento, finestra di Hann, spettro di potenza nella banda respiratoria, picco con
- * interpolazione parabolica. Servono almeno ~45 s di battiti puliti.
+ * Breathing rate from RR intervals using respiratory sinus arrhythmia (RSA): breathing modulates the RR
+ * series at 0.1-0.5 Hz (6-30 breaths/min). Steps: artifact cleaning, beat times, resampling at 4 Hz, slow
+ * trend removal, Hann window, power spectrum in the respiratory band, peak with parabolic interpolation.
+ * Needs at least ~45 s of clean beats.
  */
 object RespirationRate {
     private const val FS = 4.0
@@ -82,7 +82,7 @@ object RespirationRate {
         }
     }
 
-    /** Interpolazione parabolica del picco sui due punti vicini. */
+    /** Parabolic interpolation of the peak using its two neighbours. */
     private fun refine(freqs: List<Double>, power: DoubleArray, peak: Int): Double {
         if (peak == 0 || peak == freqs.size - 1) return freqs[peak]
         val a = power[peak - 1]

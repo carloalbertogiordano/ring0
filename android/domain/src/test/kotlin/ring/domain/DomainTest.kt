@@ -12,7 +12,7 @@ import kotlin.test.assertTrue
 import ring.protocol.commands.SleepStage
 import ring.protocol.commands.SleepStageType
 
-/** RR sintetici: base 800 ms modulata dal respiro a `freq` Hz (RSA) con un rumore deterministico. */
+/** Synthetic RR series: 800 ms base modulated by breathing at `freq` Hz (RSA) plus deterministic noise. */
 private fun synthRr(freq: Double, seconds: Double, amp: Double = 50.0, base: Double = 800.0, noise: Double = 6.0): List<Int> {
     val out = mutableListOf<Int>()
     var t = 0.0
@@ -88,7 +88,7 @@ class ReadinessTest {
         val r = assertNotNull(ReadinessScore.compute(ReadinessInput(55.0, rmssdHistory, 54.0, rhrHistory, 490, 0.93)))
         assertTrue(r.score >= 75, "score ${r.score}")
         assertEquals(ReadinessLevel.HIGH, r.level)
-        assertEquals(setOf("hrv", "fc_riposo", "sonno"), r.components.keys)
+        assertEquals(setOf(ReadinessComponent.HRV, ReadinessComponent.RESTING_HR, ReadinessComponent.SLEEP), r.components.keys)
         assertEquals(1.0, r.confidence)
     }
 
@@ -111,7 +111,7 @@ class ReadinessTest {
 
     @Test fun `short baseline excludes hrv and lowers confidence`() {
         val r = assertNotNull(ReadinessScore.compute(ReadinessInput(55.0, listOf(40.0, 41.0, 39.0), null, emptyList(), 480, 0.9)))
-        assertTrue("hrv" !in r.components)
+        assertTrue(ReadinessComponent.HRV !in r.components)
     }
 }
 

@@ -23,12 +23,12 @@ class RingService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val channel = NotificationChannel(CHANNEL, "Connessione ring", NotificationManager.IMPORTANCE_LOW)
+        val channel = NotificationChannel(CHANNEL, getString(R.string.notif_channel_connection), NotificationManager.IMPORTANCE_LOW)
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         val notification = NotificationCompat.Builder(this, CHANNEL)
             .setSmallIcon(R.drawable.ic_stat_ring)
-            .setContentTitle("Ring")
-            .setContentText("Monitoraggio attivo")
+            .setContentTitle(getString(R.string.notif_title))
+            .setContentText(getString(R.string.notif_service_text))
             .setOngoing(true)
             .build()
         startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)

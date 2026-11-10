@@ -7,12 +7,12 @@ import ring.protocol.u32le
 import ring.protocol.u8
 
 data class HeartRateLog(val dayStart: Instant, val intervalMinutes: Int, val samples: List<Int>) {
-    /** Slot con una misura valida (0 = nessuna misura). */
+    /** Slots with a valid measurement (0 = no measurement). */
     fun readings(): List<Reading> =
         samples.mapIndexedNotNull { i, bpm -> if (bpm > 0) Reading(dayStart.plusMinutes(i * intervalMinutes), bpm.toDouble()) else null }
 }
 
-/** CMD 0x15: richiesta [unix ts LE u32 mezzanotte UTC]; risposta a piu' pacchetti (header, 9 valori, poi 13 per blocco). */
+/** CMD 0x15: request [unix ts LE u32, UTC midnight]; multi-packet response (header, 9 values, then 13 per block). */
 object HrLogCommand {
     const val CMD = 0x15
     private const val SUB_FIRST = 1

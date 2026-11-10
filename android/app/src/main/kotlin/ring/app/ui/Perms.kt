@@ -1,5 +1,8 @@
 package ring.app.ui
 
+import androidx.compose.runtime.Composable
+import ring.app.R
+import androidx.compose.ui.res.stringResource
 import android.Manifest
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
@@ -33,14 +36,15 @@ private val CLOCK = DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemD
 
 fun clock(epoch: Long): String = CLOCK.format(Instant.ofEpochSecond(epoch))
 
-/** "41 min fa" / "2 h fa" / "mai". */
+/** "41 min ago" / "2 h ago" / "never", localized. */
+@Composable
 fun ago(epoch: Long): String {
-    if (epoch == 0L) return "mai"
+    if (epoch == 0L) return stringResource(R.string.ago_never)
     val min = (Instant.now().epochSecond - epoch) / 60
     return when {
-        min < 1 -> "adesso"
-        min < 60 -> "$min min fa"
-        min < 60 * 48 -> "${min / 60} h fa"
-        else -> "${min / (60 * 24)} gg fa"
+        min < 1 -> stringResource(R.string.ago_now)
+        min < 60 -> stringResource(R.string.ago_min, min.toInt())
+        min < 60 * 48 -> stringResource(R.string.ago_hours, (min / 60).toInt())
+        else -> stringResource(R.string.ago_days, (min / (60 * 24)).toInt())
     }
 }

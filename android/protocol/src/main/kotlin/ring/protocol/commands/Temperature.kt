@@ -6,7 +6,7 @@ import ring.protocol.BigFrame
 import ring.protocol.u8
 
 data class TemperatureDay(val daysAgo: Int, val intervalMinutes: Int, val samples: List<Int>) {
-    /** °C = raw / 10 + 20; raw 0 = nessuna misura. `dayStart` = mezzanotte UTC di quel giorno. */
+    /** °C = raw / 10 + 20; raw 0 = no measurement. `dayStart` = UTC midnight of that day. */
     fun readings(dayStart: Instant): List<Reading> =
         samples.mapIndexedNotNull { i, raw ->
             if (raw > 0) Reading(dayStart.plusMinutes(i * intervalMinutes), raw * CELSIUS_PER_UNIT + BASE_CELSIUS) else null
@@ -18,7 +18,7 @@ data class TemperatureDay(val daysAgo: Int, val intervalMinutes: Int, val sample
     }
 }
 
-/** Big-data 0x25: blocchi da 50 byte [giorni fa][passo min][48 valori], dal piu' vecchio a oggi. */
+/** Big-data 0x25: 50-byte blocks [days ago][step min][48 values], oldest first up to today. */
 object TemperatureCommand {
     const val TYPE = 0x25
     private const val SLOTS = 48

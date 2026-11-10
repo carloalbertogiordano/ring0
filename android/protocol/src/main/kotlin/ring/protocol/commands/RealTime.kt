@@ -11,12 +11,12 @@ import ring.protocol.u8
 /** Pacchetto real-time: bpm (0 finche' il sensore non si e' agganciato) e, dopo ~30 s, intervallo RR in ms (0 se assente). */
 data class RealTimeReading(val kind: Int, val errorCode: Int, val value: Int, val rrMs: Int = 0)
 
-/** Esito di una misura live: bpm e battiti RR raccolti (consecutivi duplicati scartati). */
+/** Result of a live measurement: bpm and collected RR beats (consecutive duplicates dropped). */
 data class LiveMeasurement(val bpm: Int?, val rr: List<Int>)
 
 /**
  * CMD 0x69 start real-time [tipo][1], 0x6A stop [tipo][0][0]; pacchetti: 0x69 [tipo][errore][bpm][?][?][RR u16 LE].
- * Osservato sul R09: i primi ~30 pacchetti hanno tutto a 0, poi compare l'RR in ms (byte 5-6 del payload).
+ * Observed on the R09: the first ~30 packets are all zero, then the RR in ms appears (payload bytes 5-6).
  */
 object RealTimeCommand {
     const val CMD_START = 0x69
@@ -44,8 +44,8 @@ object RealTimeCommand {
     }
 
     /**
-     * Misura live finche' ci sono `targetBeats` battiti RR (o errore / `maxPackets`). `onProgress` riceve il numero
-     * di battiti raccolti. Restituisce null in caso di errore del ring o timeout.
+     * Live measurement until `targetBeats` RR beats are collected (or error / `maxPackets`). `onProgress` receives
+     * the number of beats so far. Returns null on a ring error or timeout without enough beats.
      */
     suspend fun measure(
         client: RingClient,
@@ -63,17 +63,17 @@ object RealTimeCommand {
                 val decoded = received.map(::decode)
                 val count = beats(decoded).size
                 onProgress(count)
-                // il bpm del ring da solo ferma la misura solo se non arrivano RR (altrimenti servono i battiti)
+                // the ring bpm alone stops the measurement only when no RR arrives (otherwise we need the beats)
                 val firstBpm = decoded.indexOfFirst { it.value > 0 }
                 val bpmOnly = count == 0 && firstBpm >= 0 && decoded.size - firstBpm >= STABLE_PACKETS
                 decoded.last().errorCode != 0 || count >= targetBeats || bpmOnly || received.size >= maxPackets
             }
             return summarize(packets.map(::decode))
         } catch (_: RingTimeoutException) {
-            // flusso interrotto: usa quanto raccolto se basta per un bpm/HRV, altrimenti niente
+            // stream interrupted: use what was collected if enough for a bpm/HRV, otherwise nothing
             return summarize(latest.map(::decode))?.takeIf { it.rr.size >= MIN_PARTIAL_BEATS }
         } finally {
-            // lo stop e' best effort e deve partire anche se il chiamante viene cancellato
+            // the stop is best effort and must go out even if the caller is cancelled
             withContext(NonCancellable) { runCatching { client.send(CMD_STOP, byteArrayOf(kind.toByte(), 0, 0)) } }
         }
     }

@@ -12,7 +12,7 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.flow.Flow
 
-/** Tipi di misura salvati nella tabella `samples`. */
+/** Measurement types stored in the `samples` table. */
 object SampleType {
     const val HR = "hr"
     const val TEMP = "temp"
@@ -24,7 +24,7 @@ object SampleType {
     const val BATTERY = "battery"
 }
 
-/** Una misura: istante (epoch secondi, UTC) e valore. Chiave (type, ts): le risincronizzazioni sono idempotenti. */
+/** One measurement: instant (epoch seconds, UTC) and value. Key (type, ts): re-syncs are idempotent. */
 @Entity(tableName = "samples", primaryKeys = ["type", "ts"])
 data class Sample(val type: String, val ts: Long, val value: Double, val demo: Boolean = false)
 
@@ -39,8 +39,20 @@ data class SleepEntity(
     val demo: Boolean = false,
 )
 
+/**
+ * A fired alert. Only the kind and the numbers are stored so the text can be shown in the current language;
+ * `message` is kept for alerts created by older versions.
+ */
 @Entity(tableName = "alerts")
-data class AlertEntity(@PrimaryKey(autoGenerate = true) val id: Long = 0, val ts: Long, val kind: String, val message: String)
+data class AlertEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val ts: Long,
+    val kind: String,
+    val message: String = "",
+    val value: Double = 0.0,
+    val threshold: Double = 0.0,
+    val detail: String = "",
+)
 
 @Dao
 interface RingDao {
@@ -87,15 +99,24 @@ interface RingDao {
     suspend fun deleteDemoSleep()
 }
 
-@Database(entities = [Sample::class, SleepEntity::class, AlertEntity::class], version = 2, exportSchema = false)
+@Database(entities = [Sample::class, SleepEntity::class, AlertEntity::class], version = 3, exportSchema = false)
 abstract class RingDb : RoomDatabase() {
     abstract fun dao(): RingDao
 }
 
-/** v1 -> v2: marcatura dei dati demo. */
+/** v1 -> v2: demo-data flag. */
 val MIGRATION_1_2 = object : Migration(1, 2) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("ALTER TABLE samples ADD COLUMN demo INTEGER NOT NULL DEFAULT 0")
         db.execSQL("ALTER TABLE sleep_sessions ADD COLUMN demo INTEGER NOT NULL DEFAULT 0")
+    }
+}
+
+/** v2 -> v3: alerts store kind and numbers instead of localized text. */
+val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE alerts ADD COLUMN value REAL NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE alerts ADD COLUMN threshold REAL NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE alerts ADD COLUMN detail TEXT NOT NULL DEFAULT ''")
     }
 }

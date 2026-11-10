@@ -2,7 +2,7 @@ package ring.protocol.commands
 
 import java.time.Instant
 
-/** Misura con istante (UTC) e valore. */
+/** A measurement: UTC instant and value. */
 data class Reading(val time: Instant, val value: Double)
 
 internal const val MINUTES_PER_DAY = 24 * 60

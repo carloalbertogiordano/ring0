@@ -6,7 +6,7 @@ import ring.protocol.Packet
 import ring.protocol.RingClient
 import ring.protocol.u8
 
-/** Capability dichiarate dal ring nella risposta a set time. */
+/** Capabilities declared by the ring in its reply to set time. */
 data class Capabilities(
     val temperature: Boolean,
     val bloodOxygen: Boolean,

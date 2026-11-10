@@ -12,7 +12,7 @@ enum class Feature(val cmd: Int, val prefix: ByteArray) {
     TEMPERATURE(0x3A, byteArrayOf(0x03)),
 }
 
-/** Lettura [cmd][prefisso][01]; scrittura [cmd][prefisso][02][0|1]. La risposta alla scrittura non e' affidabile. */
+/** Read [cmd][prefix][01]; write [cmd][prefix][02][0|1]. The reply to a write is unreliable. */
 object AutoMonitorCommand {
     private const val SUB_READ = 1
     private const val SUB_WRITE = 2

@@ -1,5 +1,7 @@
 package ring.app.ui
 
+import ring.app.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -75,6 +77,7 @@ fun TermChart(
     format: (Double) -> String = { "%.0f".format(it) },
 ) {
     val measurer = rememberTextMeasurer()
+    val noDataText = stringResource(R.string.no_data_period)
     val label = TextStyle(color = Term.dim, fontSize = 9.sp, fontFamily = FontFamily.Monospace)
     val pattern = if (to - from > TWO_DAYS) "d MMM" else if (to - from >= DAY_MINUS) "d/M HH:mm" else "HH:mm"
     val fmt = DateTimeFormatter.ofPattern(pattern).withZone(ZoneId.systemDefault())
@@ -84,7 +87,7 @@ fun TermChart(
         val w = size.width - left - 4.dp.toPx()
         val h = size.height - bottom - 4.dp.toPx()
         if (samples.isEmpty()) {
-            drawText(measurer, "nessun dato nel periodo", Offset(left + 8.dp.toPx(), h / 2), label)
+            drawText(measurer, noDataText, Offset(left + 8.dp.toPx(), h / 2), label)
             return@Canvas
         }
         val values = samples.map { it.value } + listOfNotNull(threshold)

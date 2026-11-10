@@ -6,7 +6,7 @@ import ring.protocol.u8
 
 data class HeartRateSettings(val enabled: Boolean, val intervalMinutes: Int)
 
-/** CMD 0x16: lettura [01]; scrittura [02][1=si|2=no][min]. La risposta alla scrittura non e' affidabile. */
+/** CMD 0x16: read [01]; write [02][1=yes|2=no][min]. The reply to a write is unreliable. */
 object HrSettingsCommand {
     const val CMD = 0x16
     private const val SUB_READ = 1

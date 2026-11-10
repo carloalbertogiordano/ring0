@@ -30,8 +30,8 @@ data class SleepSession(val daysAgo: Int, val startMinute: Int, val endMinute: I
 }
 
 /**
- * Big-data 0x27: [n giorni] poi per giorno [giorni fa][dayBytes][inizio u16][fine u16] + coppie [fase][minuti].
- * Layout da Gadgetbridge: NON ancora verificato con dati reali (serve una notte).
+ * Big-data 0x27: [n days] then, per day, [days ago][dayBytes][start u16][end u16] + [stage][minutes] pairs.
+ * Layout taken from Gadgetbridge: NOT yet verified with real data (needs a recorded night).
  */
 object SleepCommand {
     const val TYPE = 0x27

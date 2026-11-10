@@ -17,6 +17,7 @@ import kotlinx.coroutines.sync.withLock
 import ring.app.ble.RingBleManager
 import ring.app.ble.RingSession
 import ring.app.data.MIGRATION_1_2
+import ring.app.data.MIGRATION_2_3
 import ring.app.data.RingDb
 import ring.app.data.Sample
 import ring.app.data.SampleType
@@ -52,7 +53,6 @@ data class LiveResult(
 /** Stato osservabile dalla UI. */
 data class Status(
     val connected: Boolean = false,
-    val connectionText: String = "Non connesso",
     val battery: Battery? = null,
     val capabilities: Capabilities? = null,
     val syncing: Boolean = false,
@@ -72,7 +72,7 @@ data class Status(
 /** Oggetti condivisi tra UI e servizio: database, connessione BLE, sync, alert. */
 class Graph(private val context: Context) {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    val dao = Room.databaseBuilder(context, RingDb::class.java, "ring.db").addMigrations(MIGRATION_1_2).build().dao()
+    val dao = Room.databaseBuilder(context, RingDb::class.java, "ring.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3).build().dao()
     val settings = SettingsStore(context)
     private val manager = RingBleManager(context)
     val session = RingSession(manager)
@@ -89,8 +89,7 @@ class Graph(private val context: Context) {
 
     private suspend fun ensureConnected() {
         if (manager.isConnected) return
-        val address = settings.deviceAddress ?: error("Nessun ring selezionato")
-        _status.update { it.copy(connectionText = "Connessione…") }
+        val address = settings.deviceAddress ?: error(context.getString(R.string.no_ring_selected))
         val adapter = context.getSystemService(BluetoothManager::class.java).adapter
         try {
             manager.connectTo(adapter.getRemoteDevice(address))
@@ -98,7 +97,7 @@ class Graph(private val context: Context) {
             _status.update { it.copy(connectFailures = it.connectFailures + 1) }
             throw e
         }
-        _status.update { it.copy(connected = true, connectionText = "Connesso", connectFailures = 0) }
+        _status.update { it.copy(connected = true, connectFailures = 0) }
         // un real-time rimasto attivo consuma batteria: stop di sicurezza a ogni connessione
         runCatching { session.v1.send(RealTimeCommand.CMD_STOP, byteArrayOf(RealTimeCommand.KIND_HEART_RATE.toByte(), 0, 0)) }
     }
@@ -122,7 +121,7 @@ class Graph(private val context: Context) {
             refreshReadiness()
             alerts.evaluate(report.battery?.level, report.battery?.charging ?: false)
         } catch (e: Exception) {
-            _status.update { it.copy(connected = manager.isConnected, connectionText = if (manager.isConnected) "Connesso" else "Non connesso", lastError = e.message ?: e.javaClass.simpleName) }
+            _status.update { it.copy(connected = manager.isConnected, lastError = e.message ?: e.javaClass.simpleName) }
         } finally {
             _status.update { it.copy(syncing = false, syncProgress = 1f) }
         }
@@ -179,7 +178,7 @@ class Graph(private val context: Context) {
                     _status.update { it.copy(liveBeats = n) }
                 }
                 if (m == null) {
-                    _status.update { it.copy(lastError = "Misura live non riuscita: dito ben aderente? riprova") }
+                    _status.update { it.copy(lastError = context.getString(R.string.measure_failed)) }
                 } else {
                     val rr = Hrv.clean(m.rr)
                     val breath = if (withRespiration) RespirationRate.fromRr(m.rr) else null

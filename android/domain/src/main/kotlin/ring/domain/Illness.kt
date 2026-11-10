@@ -2,27 +2,30 @@ package ring.domain
 
 enum class WarningLevel { NONE, WATCH, ALERT }
 
-/** Scostamenti notturni dalla baseline personale, in z-score (null = dato mancante). */
+/** Why a night was flagged; the UI turns these into localized text. */
+enum class IllnessReason { SKIN_TEMP_HIGH, RESTING_HR_HIGH, HRV_LOW }
+
+/** Nightly deviations from the personal baseline, as z-scores (null = missing data). */
 data class NightSignals(val skinTempZ: Double?, val restingHrZ: Double?, val hrvZ: Double?)
 
-data class IllnessAssessment(val level: WarningLevel, val reasons: List<String>)
+data class IllnessAssessment(val level: WarningLevel, val reasons: List<IllnessReason>)
 
 /**
- * Allarme precoce di malessere: scatta solo se piu' segnali sono concordi (temperatura cutanea notturna su,
- * frequenza a riposo su, HRV giu') e per piu' notti, per ridurre i falsi allarmi della singola soglia.
- * Non e' una diagnosi.
+ * Early illness warning: fires only when several signals agree (higher nocturnal skin temperature, higher
+ * resting heart rate, lower HRV) and over more than one night, to cut the false alarms of a single threshold.
+ * Not a diagnosis.
  */
 object IllnessWarning {
     private const val Z_LIMIT = 1.5
     private const val SIGNALS_NEEDED = 2
 
-    private fun reasons(n: NightSignals): List<String> = buildList {
-        if ((n.skinTempZ ?: 0.0) >= Z_LIMIT) add("temperatura notturna sopra la tua norma")
-        if ((n.restingHrZ ?: 0.0) >= Z_LIMIT) add("frequenza a riposo piu' alta del solito")
-        if ((n.hrvZ ?: 0.0) <= -Z_LIMIT) add("HRV piu' bassa del solito")
+    private fun reasons(n: NightSignals): List<IllnessReason> = buildList {
+        if ((n.skinTempZ ?: 0.0) >= Z_LIMIT) add(IllnessReason.SKIN_TEMP_HIGH)
+        if ((n.restingHrZ ?: 0.0) >= Z_LIMIT) add(IllnessReason.RESTING_HR_HIGH)
+        if ((n.hrvZ ?: 0.0) <= -Z_LIMIT) add(IllnessReason.HRV_LOW)
     }
 
-    /** `nights` in ordine cronologico, l'ultima e' la piu' recente. */
+    /** `nights` in chronological order, the last one being the most recent. */
     fun assess(nights: List<NightSignals>): IllnessAssessment {
         val recent = nights.takeLast(2).map(::reasons)
         val last = recent.lastOrNull().orEmpty()

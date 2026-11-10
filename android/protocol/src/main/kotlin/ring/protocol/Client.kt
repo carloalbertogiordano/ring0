@@ -6,7 +6,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
 
-/** Canale di basso livello verso il ring (BLE reale o finto nei test). */
+/** Low-level channel to the ring (real BLE, or a fake in tests). */
 interface Transport {
     suspend fun write(data: ByteArray)
 
@@ -19,7 +19,7 @@ class RingCommandException(message: String) : RuntimeException(message)
 
 const val DEFAULT_TIMEOUT_MS = 5_000L
 
-/** Client del canale V1: un comando alla volta, timeout e routing delle notifiche. */
+/** V1 channel client: one command at a time, with timeouts and notification routing. */
 class RingClient(
     private val transport: Transport,
     private val defaultTimeoutMs: Long = DEFAULT_TIMEOUT_MS,
@@ -36,7 +36,7 @@ class RingClient(
     suspend fun request(cmd: Int, payload: ByteArray = ByteArray(0), timeoutMs: Long? = null): Packet =
         requestMany(cmd, payload, timeoutMs) { true }.first()
 
-    /** Raccoglie le risposte finche' `isLast(pacchetti_finora)` e' vero; il timeout vale per ogni pacchetto. */
+    /** Collects responses until `isLast(packetsSoFar)` is true; the timeout applies to each packet. */
     suspend fun requestMany(
         cmd: Int,
         payload: ByteArray = ByteArray(0),
@@ -57,7 +57,7 @@ class RingClient(
         }
     }
 
-    /** Scrive un comando senza attendere risposta (es. stop del real-time). */
+    /** Writes a command without waiting for a reply (e.g. real-time stop). */
     suspend fun send(cmd: Int, payload: ByteArray = ByteArray(0)) {
         mutex.withLock { transport.write(Packet.build(cmd, payload)) }
     }
@@ -83,7 +83,7 @@ class RingClient(
     }
 }
 
-/** Client del canale big-data V2: una richiesta alla volta, risposta ricomposta e validata. */
+/** Big-data V2 channel client: one request at a time, reassembled and validated response. */
 class BigDataClient(
     private val transport: Transport,
     private val defaultTimeoutMs: Long = DEFAULT_TIMEOUT_MS,

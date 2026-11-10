@@ -2,7 +2,9 @@ package ring.domain
 
 import kotlin.math.ln
 
-enum class ReadinessLevel(val label: String) { HIGH("ottimo"), GOOD("buono"), MODERATE("moderato"), LOW("basso") }
+enum class ReadinessLevel { HIGH, GOOD, MODERATE, LOW }
+
+enum class ReadinessComponent { HRV, RESTING_HR, SLEEP }
 
 data class ReadinessInput(
     val rmssdToday: Double?,
@@ -17,15 +19,15 @@ data class ReadinessInput(
 data class Readiness(
     val score: Int,
     val level: ReadinessLevel,
-    /** Contributo dei singoli segnali (0-100) con cio' che e' disponibile. */
-    val components: Map<String, Int>,
-    /** 0..1: quanto la baseline e' consolidata (giorni di storico / 14). */
+    /** Contribution of each available signal (0-100). */
+    val components: Map<ReadinessComponent, Int>,
+    /** 0..1: how established the baseline is (days of history / 14). */
     val confidence: Double,
 )
 
 /**
- * Punteggio di recupero: ln(RMSSD) di oggi contro la tua baseline mobile (z-score), frequenza a riposo
- * (piu' bassa = meglio) e sonno (durata e efficienza). Se manca un segnale, i pesi si rinormalizzano.
+ * Recovery score: last night's ln(RMSSD) against your moving baseline (z-score), resting heart rate
+ * (lower is better) and sleep (duration and efficiency). Missing signals are dropped and the weights renormalized.
  */
 object ReadinessScore {
     private const val W_HRV = 0.45
@@ -41,25 +43,25 @@ object ReadinessScore {
     private const val LEVEL_MODERATE = 35
 
     fun compute(input: ReadinessInput): Readiness? {
-        val parts = mutableMapOf<String, Pair<Double, Double>>() // nome -> (punteggio, peso)
+        val parts = mutableMapOf<ReadinessComponent, Pair<Double, Double>>() // component -> (score, weight)
         var days = 0
         val hrvBase = Baseline.of(input.rmssdHistory.filter { it > 0 }.map(::ln), minSpread = MIN_SPREAD_LN)
         val hrvZ = input.rmssdToday?.takeIf { it > 0 }?.let { hrvBase?.z(ln(it)) }
         if (hrvZ != null) {
-            parts["hrv"] = Stats.clamp(50 + Z_TO_POINTS * hrvZ) to W_HRV
+            parts[ReadinessComponent.HRV] = Stats.clamp(50 + Z_TO_POINTS * hrvZ) to W_HRV
             days = maxOf(days, hrvBase!!.days)
         }
         val rhrBase = Baseline.of(input.restingHrHistory, minSpread = MIN_SPREAD_RHR)
         val rhrZ = input.restingHrToday?.let { rhrBase?.z(it) }
         if (rhrZ != null) {
-            parts["fc_riposo"] = Stats.clamp(50 - Z_TO_POINTS * rhrZ) to W_RHR
+            parts[ReadinessComponent.RESTING_HR] = Stats.clamp(50 - Z_TO_POINTS * rhrZ) to W_RHR
             days = maxOf(days, rhrBase!!.days)
         }
         input.sleepMinutes?.let { minutes ->
             val duration = Stats.clamp(100.0 * minutes / input.sleepTargetMinutes)
             val efficiency = input.sleepEfficiency?.let { Stats.clamp(it * 100) }
             val score = if (efficiency == null) duration else SLEEP_DURATION_WEIGHT * duration + (1 - SLEEP_DURATION_WEIGHT) * efficiency
-            parts["sonno"] = score to W_SLEEP
+            parts[ReadinessComponent.SLEEP] = score to W_SLEEP
         }
         if (parts.isEmpty()) return null
         val weight = parts.values.sumOf { it.second }

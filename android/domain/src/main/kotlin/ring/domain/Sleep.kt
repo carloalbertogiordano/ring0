@@ -21,7 +21,7 @@ data class SleepSummary(
     val remPct: Double,
 )
 
-/** Metriche del sonno da una sessione con le sue fasi (leggero, profondo, REM, sveglio). */
+/** Sleep metrics from a session and its stages (light, deep, REM, awake). */
 object SleepMetrics {
     private const val SECONDS_PER_MINUTE = 60
 
@@ -55,12 +55,12 @@ object SleepMetrics {
         totalSleepPerNight.takeLast(nights).sumOf { (targetMin - it).coerceAtLeast(0) }
 }
 
-/** Regolarita': quanto sono costanti gli orari di addormentamento (statistica circolare, a cavallo della mezzanotte). */
+/** Regularity: how consistent the sleep onset times are (circular statistics, handles midnight wraparound). */
 object SleepRegularity {
     private const val MINUTES_PER_DAY = 1440.0
     private const val ZERO_SCORE_SD_MIN = 90.0
 
-    /** Deviazione standard circolare (minuti) degli istanti del giorno in cui si inizia a dormire. */
+    /** Circular standard deviation (minutes) of the times of day at which sleep starts. */
     fun onsetSdMinutes(onsetMinuteOfDay: List<Int>): Double? {
         if (onsetMinuteOfDay.size < 2) return null
         val angles = onsetMinuteOfDay.map { 2 * PI * it / MINUTES_PER_DAY }
@@ -70,11 +70,11 @@ object SleepRegularity {
         return sqrt(-2 * kotlin.math.ln(r)) * MINUTES_PER_DAY / (2 * PI)
     }
 
-    /** 100 = orari identici, 0 = dispersione di 90 minuti o piu'. */
+    /** 100 = identical onset times, 0 = a spread of 90 minutes or more. */
     fun score(onsetMinuteOfDay: List<Int>): Int? =
         onsetSdMinutes(onsetMinuteOfDay)?.let { Stats.clamp(100 * (1 - it / ZERO_SCORE_SD_MIN)).toInt() }
 
-    /** Ora media circolare (minuti dal mezzogiorno... dalla mezzanotte, 0..1439). */
+    /** Circular mean time of day (minutes since midnight, 0..1439). */
     fun meanOnsetMinute(onsetMinuteOfDay: List<Int>): Int {
         val angles = onsetMinuteOfDay.map { 2 * PI * it / MINUTES_PER_DAY }
         val mean = atan2(angles.sumOf { sin(it) }, angles.sumOf { cos(it) })

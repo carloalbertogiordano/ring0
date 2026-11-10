@@ -1,6 +1,6 @@
 package ring.protocol
 
-/** Frame big-data V2: [0xBC][id][len LE u16][crc16 LE u16][payload]; crc = CRC-16/MODBUS del payload. */
+/** Frame big-data V2: [0xBC][id][len LE u16][crc16 LE u16][payload]; crc = CRC-16/MODBUS of the payload. */
 class BigFrame(val typeId: Int, val payload: ByteArray) {
     override fun equals(other: Any?): Boolean =
         other is BigFrame && typeId == other.typeId && payload.contentEquals(other.payload)
@@ -53,7 +53,7 @@ class FrameAssembler {
 
     private class Step(val frame: BigFrame?)
 
-    /** null = servono altri dati; altrimenti un passo di parsing (con frame valido oppure scartato). */
+    /** null = more data needed; otherwise one parsing step (with a valid frame, or a discarded one). */
     private fun step(): Step? {
         val start = buffer.indexOfFirst { it.toInt() and 0xFF == BigData.MAGIC }
         if (start < 0) {

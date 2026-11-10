@@ -8,7 +8,7 @@ import ring.protocol.u8
 data class Spo2Hour(val hour: Int, val min: Int, val max: Int)
 
 data class Spo2Day(val daysAgo: Int, val hours: List<Spo2Hour>) {
-    /** Una lettura per ora con valori validi: media di min e max. */
+    /** One reading per hour with valid values: the mean of min and max. */
     fun readings(dayStart: Instant): List<Reading> =
         hours.map { Reading(dayStart.plusMinutes(it.hour * MINUTES_PER_HOUR), (it.min + it.max) / 2.0) }
 
@@ -18,8 +18,8 @@ data class Spo2Day(val daysAgo: Int, val hours: List<Spo2Hour>) {
 }
 
 /**
- * Big-data 0x2A: blocchi da 49 byte [giorni fa][24 x (min,max)] orari. Layout da Gadgetbridge: NON ancora
- * verificato con dati reali (il ring ha restituito solo risposte vuote).
+ * Big-data 0x2A: 49-byte blocks [days ago][24 x (min,max)] hourly. Layout from Gadgetbridge; verified
+ * on the R09 with real data (96% SpO2 received).
  */
 object Spo2Command {
     const val TYPE = 0x2A
