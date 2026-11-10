@@ -32,6 +32,7 @@ import ring.app.insights.TrainingReport
 import ring.app.sync.AlertEngine
 import ring.app.sync.IncidentRecorder
 import ring.app.sync.SyncEngine
+import ring.domain.BatteryEstimate
 import ring.domain.RespirationRate
 import ring.domain.Symptom
 import ring.domain.Triage
@@ -93,6 +94,7 @@ data class Status(
     val monitors: Map<String, Boolean> = emptyMap(),
     val readiness: ReadinessReport? = null,
     val training: TrainingReport? = null,
+    val batteryEstimate: BatteryEstimate? = null,
     val liveTarget: Int = 12,
     val spo2Measuring: Boolean = false,
     val liveSpo2: Int? = null,
@@ -200,6 +202,8 @@ class Graph(private val context: Context) {
     suspend fun refreshInsights() {
         refreshReadiness()
         refreshTraining()
+        val battery = runCatching { insights.batteryForecast() }.getOrNull()
+        _status.update { it.copy(batteryEstimate = battery) }
     }
 
     /** Turns on the default automatic measurements (heart every 5 min, SpO2, stress, HRV, temperature). */

@@ -64,6 +64,7 @@ private fun TrainingBody(report: TrainingReport) {
         }
     T(zoneLegend.joinToString("  ·  "), size = 10.sp, color = Term.dim)
     val kcalActive = today.activeKcal.roundToInt()
+    KeyValue(stringResource(R.string.training_worn), "${durationText(report.wornSeconds)} / ${durationText(report.elapsedSeconds)}")
     KeyValue(
         stringResource(R.string.training_kcal_total),
         stringResource(R.string.training_kcal_value, (report.basalSoFarKcal + today.activeKcal).roundToInt()),
@@ -94,4 +95,13 @@ private fun ZoneBar(minutes: Map<HrZone, Int>) {
             }
         }
     }
+}
+
+private const val SECONDS_PER_MINUTE = 60
+private const val MINUTES_PER_HOUR = 60
+
+@Composable
+private fun durationText(seconds: Long): String {
+    val minutes = (seconds / SECONDS_PER_MINUTE).toInt()
+    return stringResource(R.string.duration_h_m, minutes / MINUTES_PER_HOUR, minutes % MINUTES_PER_HOUR)
 }

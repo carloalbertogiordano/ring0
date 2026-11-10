@@ -605,6 +605,9 @@ private fun SettingsScreen(graph: Graph, onForget: () -> Unit) {
                 status.battery?.let {
                     KeyValue(stringResource(R.string.battery_label), if (it.charging) stringResource(R.string.battery_charging, it.level) else "${it.level}%")
                 }
+                status.batteryEstimate?.takeIf { status.battery?.charging != true }?.let {
+                    KeyValue(stringResource(R.string.battery_forecast_label), batteryLeftText(it.hoursLeft))
+                }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TButton(stringResource(R.string.btn_change_ring), { picking = !picking }, Modifier.weight(1f), BtnKind.GHOST)
                     TButton(stringResource(R.string.btn_find_ring), { graph.findRing() }, Modifier.weight(1f), BtnKind.GHOST, enabled = status.connected)
@@ -770,3 +773,13 @@ private fun CheckCard(onOpen: () -> Unit) = TCard {
     T(stringResource(R.string.home_check_body), size = 12.sp, color = Term.dim)
     TButton(stringResource(R.string.btn_check_now), onOpen, Modifier.fillMaxWidth())
 }
+
+private const val HOURS_PER_DAY = 24
+
+@Composable
+private fun batteryLeftText(hoursLeft: Double): String =
+    if (hoursLeft >= 2 * HOURS_PER_DAY) {
+        stringResource(R.string.battery_left_days, hoursLeft / HOURS_PER_DAY)
+    } else {
+        stringResource(R.string.battery_left_hours, hoursLeft.toInt())
+    }

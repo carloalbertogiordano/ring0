@@ -279,4 +279,9 @@ Check that the ring is charged, out of its case and not connected to anything el
     <string name="training_trend_high">higher</string>
     <string name="training_trend_unknown">A trend needs about two weeks of heart rate data.</string>
     <string name="training_hint">Estimates from heart rate and your profile (Banister TRIMP, Keytel, Mifflin-St Jeor). Calories can be far off; the trend is not an injury predictor.</string>
+    <string name="battery_forecast_label">Battery left (est.)</string>
+    <string name="battery_left_hours">~%1$d h</string>
+    <string name="battery_left_days">~%1$.1f days</string>
+    <string name="training_worn">Worn today</string>
+    <string name="duration_h_m">%1$d h %2$d min</string>
 </resources>

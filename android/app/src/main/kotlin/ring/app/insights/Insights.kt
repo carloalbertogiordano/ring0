@@ -4,6 +4,8 @@ import ring.app.data.RingDao
 import ring.app.data.Sample
 import ring.app.data.SampleType
 import ring.domain.Baseline
+import ring.domain.BatteryEstimate
+import ring.domain.BatteryForecast
 import ring.domain.Energy
 import ring.domain.HeartRateModel
 import ring.domain.IllnessAssessment
@@ -20,6 +22,7 @@ import ring.domain.Stats
 import ring.domain.TimedValue
 import ring.domain.TrainingDay
 import ring.domain.TrainingSummary
+import ring.domain.Wear
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -35,6 +38,9 @@ data class TrainingReport(
     val load: LoadTrendResult?,
     val hrRest: Int,
     val hrMax: Int,
+    /** Seconds of today (so far) with heart rate readings, and the seconds elapsed since local midnight. */
+    val wornSeconds: Long,
+    val elapsedSeconds: Long,
 )
 
 /** Recent context used by the check: baselines and the latest values. */
@@ -121,8 +127,14 @@ class Insights(private val dao: RingDao, private val zone: ZoneId = ZoneId.syste
             load = LoadTrend.compute(dailyLoad),
             hrRest = hrRest,
             hrMax = HeartRateModel.hrMax(profile),
+            wornSeconds = Wear.wornSeconds(dayStart, now, Wear.gaps(samplesToday, dayStart, now)),
+            elapsedSeconds = now - dayStart,
         )
     }
+
+    /** Hours of battery left at the recent discharge rate, from the battery readings of the last week. */
+    suspend fun batteryForecast(now: Long = Instant.now().epochSecond): BatteryEstimate? =
+        BatteryForecast.estimate(dao.range(SampleType.BATTERY, now - BATTERY_WINDOW_DAYS * DAY, now).timed())
 
     /** Early warning: the last two nights against the baseline of earlier nights. */
     suspend fun illness(now: Long = Instant.now().epochSecond): IllnessAssessment {
@@ -165,6 +177,7 @@ class Insights(private val dao: RingDao, private val zone: ZoneId = ZoneId.syste
         const val HISTORY_NIGHTS = 28
         const val REST_NIGHTS = 14
         const val LOAD_DAYS = 28
+        const val BATTERY_WINDOW_DAYS = 7
         const val HR_SAMPLE_MINUTES = 5
         const val MIN_SAMPLES_PER_DAY = 144
         const val ILLNESS_NIGHTS = 9
