@@ -289,4 +289,52 @@ class CommandsTest {
         assertEquals(5000, goals.steps)
         assertEquals(300000, goals.calories)
     }
+
+    @Test fun `alarm write payload and read decode roundtrip`() {
+        val alarms = listOf(RingAlarm(true, 6 * 60, 0b0111110, "Work"), RingAlarm(false, 23 * 60 + 30, 0, ""))
+        val payload = AlarmCommand.encodeWritePayload(alarms)
+        assertEquals(2, payload[0].toInt())
+        assertEquals(2, payload[1].toInt())
+        // reply to a read has the same list preceded by op 1
+        val reply = BigFrame(AlarmCommand.TYPE, byteArrayOf(1) + payload.copyOfRange(1, payload.size))
+        assertEquals(alarms, AlarmCommand.decode(reply))
+    }
+
+    @Test fun `alarm record layout matches gadgetbridge`() {
+        val payload = AlarmCommand.encodeWritePayload(listOf(RingAlarm(true, 7 * 60, 0b0000010, "A")))
+        // [op][count][len=5][flags=0x80|0x02][minutes lo/hi = 420][name]
+        assertContentEquals(byteArrayOf(2, 1, 5, 0x82.toByte(), 0xA4.toByte(), 0x01, 'A'.code.toByte()), payload)
+    }
+
+    @Test fun `alarm ack has no list and bad values are rejected`() {
+        assertNull(AlarmCommand.decode(BigFrame(AlarmCommand.TYPE, byteArrayOf(2))))
+        assertContentEquals(byteArrayOf(1), AlarmCommand.encodeReadRequest())
+        assertFailsWith<IllegalArgumentException> { AlarmCommand.encodeWritePayload(listOf(RingAlarm(true, 1440, 0))) }
+        assertFailsWith<IllegalArgumentException> { AlarmCommand.encodeWritePayload(listOf(RingAlarm(true, 10, 0x80))) }
+        assertFailsWith<IllegalArgumentException> { AlarmCommand.decode(BigFrame(AlarmCommand.TYPE, byteArrayOf(1, 1, 9, 0))) }
+    }
+
+    @Test fun `alarm names are truncated on a character boundary`() {
+        val long = "é".repeat(20) // 40 bytes
+        val payload = AlarmCommand.encodeWritePayload(listOf(RingAlarm(true, 0, 0, long)))
+        assertEquals(2 + 4 + 28, payload.size)
+        val decoded = AlarmCommand.decode(BigFrame(AlarmCommand.TYPE, byteArrayOf(1) + payload.copyOfRange(1, payload.size)))
+        assertEquals("é".repeat(14), decoded!!.single().name)
+    }
+
+    @Test fun `push message is chunked in 11 byte pieces`() {
+        assertEquals(1, PushMessageCommand.encode(1, "Hi").size)
+        val chunks = PushMessageCommand.encode(1, "A".repeat(25))
+        assertEquals(3, chunks.size)
+        assertContentEquals(byteArrayOf(1, 3, 1) + "A".repeat(11).toByteArray(), chunks[0])
+        assertContentEquals(byteArrayOf(1, 3, 3) + "A".repeat(3).toByteArray(), chunks[2])
+        assertEquals(4, PushMessageCommand.encode(1, "B".repeat(200)).size)
+    }
+
+    @Test fun `push message goes out as v1 packets`() = runTest {
+        val tr = FakeTransport()
+        PushMessageCommand.send(RingClient(tr), "Hello ring now!!")
+        assertEquals(2, tr.sent.size)
+        assertEquals(0x72, tr.sent[0][0].toInt())
+    }
 }

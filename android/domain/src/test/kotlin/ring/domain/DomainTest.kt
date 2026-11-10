@@ -313,3 +313,34 @@ class TriageTest {
         assertEquals(TriageLevel.NORMAL, empty.level)
     }
 }
+
+class AlarmTimeTest {
+    @Test fun `local alarm in winter time converts to utc minus one hour`() {
+        val mondayToFriday = 0b0011111
+        val ring = AlarmTime.toRing(LocalAlarm(7, 0, mondayToFriday), offsetMinutes = 60)
+        assertEquals(6 * 60, ring.minutes)
+        assertEquals(0b0111110, ring.weekdays) // Mon..Fri in Sunday-based bits 1..5
+    }
+
+    @Test fun `an alarm just after local midnight moves to the previous utc day`() {
+        val monday = 0b0000001
+        val ring = AlarmTime.toRing(LocalAlarm(0, 30, monday), offsetMinutes = 60)
+        assertEquals(23 * 60 + 30, ring.minutes)
+        assertEquals(1 shl 0, ring.weekdays) // Sunday in UTC
+    }
+
+    @Test fun `an alarm late in the evening can move to the next utc day`() {
+        val sunday = 0b1000000
+        val ring = AlarmTime.toRing(LocalAlarm(23, 30, sunday), offsetMinutes = -120)
+        assertEquals(1 * 60 + 30, ring.minutes)
+        assertEquals(1 shl 1, ring.weekdays) // Monday in UTC
+    }
+
+    @Test fun `round trip local to ring and back`() {
+        for (offset in listOf(0, 60, 120, -300, 330)) {
+            for (alarm in listOf(LocalAlarm(7, 0, 0b0011111), LocalAlarm(0, 15, 0b1000001), LocalAlarm(23, 45, 0b0101010), LocalAlarm(12, 0, 0))) {
+                assertEquals(alarm, AlarmTime.toLocal(AlarmTime.toRing(alarm, offset), offset), "offset $offset $alarm")
+            }
+        }
+    }
+}
