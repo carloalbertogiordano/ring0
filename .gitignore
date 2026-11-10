@@ -8,3 +8,4 @@ captures/*.cfa
 captures/*.pcap*
 android/build/
 android/.gradle/
+captures/*.btsnoop
