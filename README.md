@@ -1,6 +1,6 @@
 # Ring0
 
-Local-only health monitoring for the **Colmi R09 smart ring**: sleep, heart rate, HRV, stress, SpO2, skin temperature, steps and
+Local-only health monitoring for the **Colmi R09 smart ring**: sleep, heart rate, HRV, stress, SpO2, skin temperature and
 estimates derived from them. No cloud, no account, no subscription: the Android app talks to the ring directly over Bluetooth LE
 and keeps everything on the phone (the app does not even request the INTERNET permission).
 
@@ -8,7 +8,7 @@ and keeps everything on the phone (the app does not even request the INTERNET pe
 > every number is a consumer-grade estimate. If you feel unwell, talk to a doctor.
 
 ## What it does
-- Reverse-engineered BLE protocol for the R09 (HR log, HRV, stress, SpO2, temperature, steps, goals, real-time RR and SpO2, find ring).
+- Reverse-engineered BLE protocol for the R09 (HR log, HRV, stress, SpO2, temperature, real-time RR and SpO2, find ring).
   Every command is documented with real hex examples in [`docs/protocol.md`](docs/protocol.md).
 - Android app (Kotlin, Compose, Room, foreground service): live values, history charts, alerts with context, recovery score,
   illness early warning, incident log with triage, guided checks, English and Italian UI.

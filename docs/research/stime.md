@@ -4,8 +4,7 @@ Data: 2026-11-10. Ricerca web su paper e fonti prima di implementare. Per ogni s
 mostriamo nell'app. Regola generale: ogni numero stimato porta l'etichetta "stima" e, dove l'evidenza e' debole, "indicativo".
 Non e' un dispositivo medico.
 
-Segnali disponibili dall'anello: HR ogni 5 min, HRV e stress ogni 30 min, SpO2 oraria (min/max), temperatura cutanea, passi/calorie/
-distanza per slot da 15 min, fasi del sonno, batteria; **RR battito per battito solo durante le misure live** (non in continuo).
+Segnali disponibili dall'anello: HR ogni 5 min, HRV e stress ogni 30 min, SpO2 oraria (min/max), temperatura cutanea, fasi del sonno, batteria; **RR battito per battito solo durante le misure live** (non in continuo).
 
 ## 0. Profilo utente (prerequisito)
 Eta', sesso, peso, altezza, HR max opzionale, scritti nelle Impostazioni, solo in locale (SharedPreferences, mai nel DB di export
@@ -45,7 +44,7 @@ singolo giorno, minimo 3 misure valide a settimana). Va dichiarato come "stima e
   fino a 4 giorni per 1 ora persa); non e' chiaro se dormire di piu' nel weekend compensi davvero.
 - Pisolini: la HR cala e l'HRV sale all'addormentamento; la sola attivita' sbaglia le fasi di veglia quieta. Metodo con HR normalizzata
   sulla distribuzione giornaliera della persona (Sci Rep 2022). Con HR ogni 5 min: pisolino = finestra >= 20 min con HR sotto la
-  tua soglia personale e zero passi. Stima, con falsi positivi (lettura da fermo).
+  tua soglia personale e variabilita' bassa. Stima, con falsi positivi (lettura da fermo).
 - Fabbisogno personale: non c'e' un metodo validato dai soli dati dell'anello; mostrare il debito rispetto a un obiettivo scelto
   dall'utente (default 8 h) e la relazione notte-lunga -> HRV del giorno dopo come correlazione, non come "fabbisogno".
 
@@ -58,7 +57,7 @@ accelerazione danno 99%/97% ([Sensors 2022](https://www.ncbi.nlm.nih.gov/pmc/art
 validazioni, solo brevetti. Decisione: regola prudente (HR 0 per piu' slot consecutivi e temperatura cutanea vicina all'ambiente se
 disponibile), usata solo per escludere dati da medie e alert.
 
-## 7. Inattivita'
+## 7. Inattivita' (ANNULLATA: i passi dell'anello non sono affidabili e sono stati tolti dall'app)
 Le linee guida dicono di interrompere il tempo seduto ma **senza soglie numeriche supportate**; una recensione BJSM 2018 sostiene che
 l'evidenza non regge numeri precisi. Un crossover (Duran 2024) trova benefici con 1-5 min di camminata ogni 30-60 min. Decisione:
 promemoria configurabile (default dopo 60 min senza passi in orario di veglia), presentato come abitudine, non come soglia clinica.
@@ -82,7 +81,7 @@ Massimo volume di ossigeno che il corpo usa in un minuto per kg (ml/kg/min): il 
   di 50 anni sani). La stima si riduce a una funzione di eta' e HR a riposo: nessuna misura di ossigeno.
   [Uth 2004](https://pubmed.ncbi.nlm.nih.gov/14624296/), [adulti medio-anziani](https://www.researchgate.net/publication/354447939_Efficacy_of_estimating_VO2max_with_the_Heart_Rate_Ratio_Method_in_middle-aged_and_older_adults).
 - Decisione: mostrare un intervallo (valore +/- errore) con etichetta "indicativo", utile come **tendenza** nel tempo (HR a riposo che
-  scende = forma che migliora), non come numero assoluto. Possibile affinamento con la relazione HR-passi in cammino/corsa.
+  scende = forma che migliora), non come numero assoluto. 
 
 ## 12. Notti sospette per apnea
 Gli anelli con SpO2 continua (Circul) con ODI 3% distinguono AHI >= 5 con sens. 87,8% / spec. 93,8% (piccoli studi). Il numero di

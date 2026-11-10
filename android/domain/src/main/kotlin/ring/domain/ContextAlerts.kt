@@ -26,22 +26,19 @@ object RestingHr {
 /** Alerts that take context (resting or active) into account to avoid false alarms from exercise. */
 object ContextAlerts {
     private const val CONSECUTIVE = 2
-    private const val UNKNOWN_CONTEXT_MARGIN = 10.0
+    private const val EXERCISE_MARGIN = 10.0
     private const val SPO2_WINDOW_SECONDS = 3 * 3600L
     private const val SPO2_SEVERE_DROP = 4.0
 
     /**
-     * High HR: the last 2 samples above the threshold and the context is not "moving". If the context is unknown
-     * (no step data) the threshold is raised by a margin. Low HR: 2 samples below the threshold.
+     * High HR: the last 2 samples above the threshold plus a margin, because exercise cannot be ruled out from the heart
+     * rate alone. Low HR: 2 samples below the threshold.
      */
-    fun heartRate(recent: List<TimedValue>, high: Double, low: Double, isResting: (Long) -> Boolean?): HrAlert? {
+    fun heartRate(recent: List<TimedValue>, high: Double, low: Double): HrAlert? {
         val last = recent.sortedBy { it.ts }.takeLast(CONSECUTIVE).filter { it.value > 0 }
         if (last.size < CONSECUTIVE) return null
         if (last.all { it.value < low }) return HrAlert.LOW
-        val contexts = last.map { isResting(it.ts) }
-        if (contexts.any { it == false }) return null
-        val limit = if (contexts.all { it == true }) high else high + UNKNOWN_CONTEXT_MARGIN
-        return if (last.all { it.value > limit }) HrAlert.HIGH else null
+        return if (last.all { it.value > high + EXERCISE_MARGIN }) HrAlert.HIGH else null
     }
 
     /** Low SpO2: two samples under the threshold within the last 3 hours, or one isolated severe drop. */

@@ -215,20 +215,16 @@ class IllnessTest {
 class ContextAlertsTest {
     private fun hr(vararg v: Double) = v.mapIndexed { i, x -> TimedValue(i * 300L, x) }
 
-    @Test fun `high hr at rest alerts, while moving it does not`() {
-        assertEquals(HrAlert.HIGH, ContextAlerts.heartRate(hr(140.0, 142.0), 130.0, 40.0) { true })
-        assertNull(ContextAlerts.heartRate(hr(140.0, 142.0), 130.0, 40.0) { false })
-    }
-
-    @Test fun `unknown context needs a margin above the threshold`() {
-        assertNull(ContextAlerts.heartRate(hr(135.0, 136.0), 130.0, 40.0) { null })
-        assertEquals(HrAlert.HIGH, ContextAlerts.heartRate(hr(150.0, 152.0), 130.0, 40.0) { null })
+    @Test fun `high hr needs a margin above the threshold because exercise cannot be ruled out`() {
+        assertNull(ContextAlerts.heartRate(hr(135.0, 136.0), 130.0, 40.0))
+        assertNull(ContextAlerts.heartRate(hr(140.0, 142.0), 130.0, 40.0))
+        assertEquals(HrAlert.HIGH, ContextAlerts.heartRate(hr(150.0, 152.0), 130.0, 40.0))
     }
 
     @Test fun `needs two consecutive samples and low hr alerts`() {
-        assertNull(ContextAlerts.heartRate(hr(150.0, 80.0), 130.0, 40.0) { true })
-        assertNull(ContextAlerts.heartRate(hr(150.0), 130.0, 40.0) { true })
-        assertEquals(HrAlert.LOW, ContextAlerts.heartRate(hr(35.0, 36.0), 130.0, 40.0) { true })
+        assertNull(ContextAlerts.heartRate(hr(150.0, 80.0), 130.0, 40.0))
+        assertNull(ContextAlerts.heartRate(hr(150.0), 130.0, 40.0))
+        assertEquals(HrAlert.LOW, ContextAlerts.heartRate(hr(35.0, 36.0), 130.0, 40.0))
     }
 
     @Test fun `spo2 needs two low samples or one severe drop`() {
@@ -266,12 +262,11 @@ class TriageTest {
         hrvZ: Double? = 0.0,
         skinTemp: Double? = 36.6,
         tempZ: Double? = 0.0,
-        moving: Boolean? = null,
         symptoms: Set<Symptom> = emptySet(),
-    ) = TriageInput(bpm, restingHr, spo2, stress, hrvZ, skinTemp, tempZ, moving, symptoms)
+    ) = TriageInput(bpm, restingHr, spo2, stress, hrvZ, skinTemp, tempZ, symptoms)
 
     @Test fun `exercise explains a high heart rate`() {
-        val r = Triage.assess(input(moving = true))
+        val r = Triage.assess(input(symptoms = setOf(Symptom.EXERCISED)))
         assertEquals(listOf(TriageCause.ACTIVITY), r.causes)
         assertEquals(TriageLevel.NORMAL, r.level)
         assertEquals(listOf(TriageAdvice.REST_AND_RECHECK), r.advice)
@@ -302,7 +297,7 @@ class TriageTest {
 
     @Test fun `red flag symptoms are always urgent`() {
         for (s in listOf(Symptom.CHEST_PAIN, Symptom.SHORTNESS_OF_BREATH, Symptom.DIZZINESS_OR_FAINTING)) {
-            assertEquals(TriageLevel.URGENT, Triage.assess(input(moving = true, symptoms = setOf(s))).level, "$s")
+            assertEquals(TriageLevel.URGENT, Triage.assess(input(symptoms = setOf(s))).level, "$s")
         }
     }
 
@@ -322,7 +317,7 @@ class TriageTest {
 
     @Test fun `stimulants and missing data are handled`() {
         assertEquals(listOf(TriageCause.STIMULANT), Triage.assess(input(symptoms = setOf(Symptom.CAFFEINE_OR_STIMULANT))).causes)
-        val empty = Triage.assess(TriageInput(null, null, null, null, null, null, null, null, emptySet()))
+        val empty = Triage.assess(TriageInput(null, null, null, null, null, null, null, emptySet()))
         assertEquals(TriageLevel.NORMAL, empty.level)
     }
 }

@@ -21,8 +21,6 @@ object SampleType {
     const val HRV_LIVE = "hrv_live"
     const val RESP = "resp"
 
-    /** Steps in one 15-minute slot (timestamp = slot start). */
-    const val STEPS = "steps"
     const val SPO2 = "spo2"
     const val BATTERY = "battery"
 }
@@ -159,7 +157,7 @@ interface RingDao {
     suspend fun deleteDemoSleep()
 }
 
-@Database(entities = [Sample::class, SleepEntity::class, AlertEntity::class, IncidentEntity::class], version = 7, exportSchema = false)
+@Database(entities = [Sample::class, SleepEntity::class, AlertEntity::class, IncidentEntity::class], version = 8, exportSchema = false)
 abstract class RingDb : RoomDatabase() {
     abstract fun dao(): RingDao
 }
@@ -215,5 +213,12 @@ val MIGRATION_5_6 = object : Migration(5, 6) {
 val MIGRATION_6_7 = object : Migration(6, 7) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("DROP TABLE IF EXISTS alarms")
+    }
+}
+
+/** v7 -> v8: step counting was removed (the ring's step data is unreliable), so its samples are dropped. */
+val MIGRATION_7_8 = object : Migration(7, 8) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("DELETE FROM samples WHERE type = 'steps'")
     }
 }

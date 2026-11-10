@@ -43,7 +43,7 @@ class AlertEngine(
         if (!settings.alertsEnabled) return
         val t = settings.thresholds.value
         val hr = dao.lastN(SampleType.HR, 2).map { TimedValue(it.ts, it.value) }
-        when (ContextAlerts.heartRate(hr, t.hrHigh.toDouble(), t.hrLow.toDouble(), restingContext())) {
+        when (ContextAlerts.heartRate(hr, t.hrHigh.toDouble(), t.hrLow.toDouble())) {
             HrAlert.HIGH -> fire(AlertKind.HR_HIGH, hr.maxOf { it.value }, t.hrHigh.toDouble())
             HrAlert.LOW -> fire(AlertKind.HR_LOW, hr.minOf { it.value }, t.hrLow.toDouble())
             null -> Unit
@@ -55,20 +55,6 @@ class AlertEngine(
         if (ContextAlerts.spo2(spo2, t.spo2Low.toDouble(), now)) fire(AlertKind.SPO2_LOW, spo2.minOf { it.value }, t.spo2Low.toDouble())
         fireIllness()
         if (batteryLevel != null && !charging && batteryLevel <= t.batteryLow) fire(AlertKind.BATTERY_LOW, batteryLevel.toDouble(), t.batteryLow.toDouble())
-    }
-
-    /** Resting context from the step slots; unknown (null) when the steps were not downloaded after that sample. */
-    private suspend fun restingContext(): (Long) -> Boolean? {
-        val nowEpoch = Instant.now().epochSecond
-        val steps = dao.range(SampleType.STEPS, nowEpoch - STEP_LOOKBACK, nowEpoch)
-        val stepsSyncedAt = settings.lastStepsSyncEpoch
-        return { ts ->
-            if (stepsSyncedAt < ts + STEP_SLOT) {
-                null
-            } else {
-                steps.filter { it.ts in (ts - STEP_SLOT)..ts }.sumOf { it.value } < RESTING_STEPS
-            }
-        }
     }
 
     private suspend fun fireIllness() {
@@ -121,8 +107,5 @@ class AlertEngine(
         const val CHANNEL = "alerts"
         const val COOLDOWN_SECONDS = 60 * 60L
         const val SPO2_LOOKBACK = 4 * 3600L
-        const val STEP_LOOKBACK = 2 * 3600L
-        const val STEP_SLOT = 900L
-        const val RESTING_STEPS = 40
     }
 }

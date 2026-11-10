@@ -276,7 +276,6 @@ private fun HomeScreen(graph: Graph, onOpenCheck: () -> Unit) {
                 }
             }
         }
-        item { StepsTile(graph) }
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 T(stringResource(R.string.sync_last, ago(status.lastSyncEpoch)), size = 11.sp, color = Term.dim)
@@ -513,7 +512,6 @@ private fun HistoryScreen(graph: Graph) {
         item { HistoryPanel(graph, stringResource(R.string.chart_hrv_ring), SampleType.HRV, " ms", from, to, Term.info, 20.0, 0, null) }
         item { HistoryPanel(graph, stringResource(R.string.chart_hrv_live), SampleType.HRV_LIVE, " ms", from, to, Term.rem, 20.0, 0, null) }
         item { HistoryPanel(graph, stringResource(R.string.chart_resp), SampleType.RESP, " /min", from, to, Term.info, 4.0, 0, null) }
-        item { HistoryPanel(graph, stringResource(R.string.chart_steps), SampleType.STEPS, "", from, to, Term.accent, 50.0, 0, null) }
         item { HistoryPanel(graph, stringResource(R.string.chart_spo2), SampleType.SPO2, " %", from, to, Term.accent, 4.0, 0, thresholds.spo2Low.toDouble()) }
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -771,28 +769,4 @@ private fun CheckCard(onOpen: () -> Unit) = TCard {
     Label(stringResource(R.string.home_check_title))
     T(stringResource(R.string.home_check_body), size = 12.sp, color = Term.dim)
     TButton(stringResource(R.string.btn_check_now), onOpen, Modifier.fillMaxWidth())
-}
-
-private const val DEFAULT_STEP_GOAL = 10_000
-
-/** Steps since local midnight, with progress toward the goal read from the ring. */
-@Composable
-private fun StepsTile(graph: Graph) {
-    val zone = ZoneId.systemDefault()
-    val now = remember { Instant.now().epochSecond }
-    val midnight = remember { java.time.LocalDate.now(zone).atStartOfDay(zone).toEpochSecond() }
-    val samples by remember { graph.dao.observe(SampleType.STEPS, midnight, now + 3600) }.collectAsStateWithLifecycle(emptyList())
-    val total = samples.sumOf { it.value }.toInt()
-    val goal = graph.settings.stepGoal.takeIf { it > 0 } ?: DEFAULT_STEP_GOAL
-    TCard {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Label(stringResource(R.string.tile_steps))
-            T(stringResource(R.string.steps_of_goal, goal), size = 11.sp, color = Term.dim)
-        }
-        Num("%,d".format(total), "", 26.sp)
-        Box(Modifier.fillMaxWidth().height(6.dp).background(Term.bg).border(BorderStroke(1.dp, Term.line2))) {
-            Box(Modifier.fillMaxWidth((total.toFloat() / goal).coerceIn(0f, 1f)).height(6.dp).background(Term.accent.copy(alpha = 0.85f)))
-        }
-        samples.lastOrNull()?.let { T("${clock(it.ts)} · ${ago(it.ts)}", size = 10.sp, color = Term.dim) }
-    }
 }

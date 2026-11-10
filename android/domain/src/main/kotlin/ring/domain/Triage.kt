@@ -20,8 +20,6 @@ data class TriageInput(
     val skinTemp: Double?,
     /** z-score of the skin temperature against the personal baseline. */
     val tempZ: Double?,
-    /** True/false when step data says so; null when unknown. */
-    val moving: Boolean?,
     val symptoms: Set<Symptom>,
 )
 
@@ -67,7 +65,7 @@ object Triage {
             ((input.tempZ ?: 0.0) >= Z_LIMIT && (input.hrvZ ?: 0.0) <= -Z_SOFT)
 
     private fun causesOf(input: TriageInput): List<TriageCause> = buildList {
-        if (input.moving == true || Symptom.EXERCISED in input.symptoms) add(TriageCause.ACTIVITY)
+        if (Symptom.EXERCISED in input.symptoms) add(TriageCause.ACTIVITY)
         if ((input.stress ?: 0) >= STRESS_HIGH || (input.hrvZ ?: 0.0) <= -Z_LIMIT) add(TriageCause.STRESS)
         if (isFeverish(input)) add(TriageCause.POSSIBLE_ILLNESS)
         if (input.spo2 != null && input.spo2 in SPO2_URGENT until SPO2_LOW) add(TriageCause.LOW_OXYGEN)

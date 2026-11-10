@@ -21,6 +21,7 @@ import ring.app.data.MIGRATION_3_4
 import ring.app.data.MIGRATION_4_5
 import ring.app.data.MIGRATION_5_6
 import ring.app.data.MIGRATION_6_7
+import ring.app.data.MIGRATION_7_8
 import ring.app.data.RingDb
 import ring.app.data.Sample
 import ring.app.data.SampleType
@@ -107,7 +108,7 @@ class Graph(private val context: Context) {
         context,
         RingDb::class.java,
         "ring.db",
-    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7).build().dao()
+    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8).build().dao()
     val settings = SettingsStore(context)
     private val manager = RingBleManager(context)
     val session = RingSession(manager)
@@ -148,8 +149,6 @@ class Graph(private val context: Context) {
             val days = if (settings.lastSyncEpoch == 0L) FIRST_SYNC_DAYS else REGULAR_SYNC_DAYS
             val report = sync.sync(session, days) { step, fraction -> _status.update { it.copy(syncStep = step, syncProgress = fraction) } }
             if (report.errors.isEmpty()) settings.lastSyncEpoch = Instant.now().epochSecond
-            if (report.stepsSynced) settings.lastStepsSyncEpoch = Instant.now().epochSecond
-            report.goals?.steps?.takeIf { it > 0 }?.let { settings.stepGoal = it }
             _status.update {
                 it.copy(
                     battery = report.battery ?: it.battery,
@@ -328,13 +327,6 @@ class Graph(private val context: Context) {
     fun runCheck(symptoms: Set<Symptom>) {
         scope.launch {
             _status.update { it.copy(check = CheckState(phase = CheckPhase.HEART)) }
-            // fresh steps first, so "are you moving?" is based on current data
-            val stepsFresh = try {
-                ensureConnected()
-                sync.syncSteps(session).also { if (it) settings.lastStepsSyncEpoch = Instant.now().epochSecond }
-            } catch (_: Exception) {
-                false
-            }
             val live = heartMeasure(false)
             if (live == null) {
                 _status.update { it.copy(check = CheckState(phase = CheckPhase.FAILED)) }
@@ -343,7 +335,7 @@ class Graph(private val context: Context) {
             _status.update { it.copy(check = it.check.copy(phase = CheckPhase.SPO2, bpm = live.bpm)) }
             val spo2 = spo2Measure()
             val now = Instant.now().epochSecond
-            val ctx = insights.checkContext(now, stepsFresh)
+            val ctx = insights.checkContext(now)
             val input = TriageInput(
                 bpm = live.bpm,
                 restingHr = ctx.restingHr,
@@ -352,7 +344,6 @@ class Graph(private val context: Context) {
                 hrvZ = ctx.hrvZ,
                 skinTemp = ctx.skinTemp,
                 tempZ = ctx.tempZ,
-                moving = ctx.moving,
                 symptoms = symptoms,
             )
             val result = Triage.assess(input)

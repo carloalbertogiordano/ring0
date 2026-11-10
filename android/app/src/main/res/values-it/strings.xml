@@ -251,9 +251,6 @@ Controlla che l\'anello sia carico, fuori dalla custodia e non collegato ad altr
     <string name="btn_add_incident">Aggiungi</string>
     <string name="btn_add_details">Aggiungi dettagli</string>
     <string name="source_manual_entry">Inserimento manuale</string>
-    <string name="tile_steps">Passi</string>
-    <string name="steps_of_goal">su %1$d</string>
-    <string name="chart_steps">Passi (ogni 15 min)</string>
     <string name="profile_title">Il tuo profilo</string>
     <string name="profile_not_set">Non impostato: calorie, carico di allenamento e stime di forma restano spente finché non scegli il sesso e regoli i valori. Salvato solo su questo telefono.</string>
     <string name="profile_hint">Usato per calorie, carico di allenamento e stime di forma. Salvato solo su questo telefono.</string>

@@ -126,7 +126,9 @@ then values like 96, 97, 97, 99 (error byte 0). The app takes the median of 5 co
 The ring has a single PPG sensor, so SpO2 and the heart/RR measurement (kind 1) must be run one after the other.
 Stress (kind 8) is untested on the R09.
 
-## 0x43 Steps and 0x21 Goals - VERIFIED (2026-11-10, Android app)
+## 0x43 Steps and 0x21 Goals - VERIFIED (2026-11-10), NOT USED by the app
+The app no longer syncs or shows steps: the ring's step counting was judged unreliable, so the Kotlin code and its tests were
+removed (see git history). The protocol notes below stay as reference.
 Steps request `43 <day offset> 0f 00 5f 01` (0 = today). Reply: header `43 f0 <n packets> 01` (the last byte = new calorie
 protocol, calories x10), then one packet per active 15-minute slot:
 `43 <yy bcd> <mm bcd> <dd bcd> <slot 0..95> <idx> <total> <cal lo> <cal hi> <steps lo> <steps hi> <dist lo> <dist hi>`.

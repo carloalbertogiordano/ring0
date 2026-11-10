@@ -11,7 +11,7 @@ Legenda dipendenze: [dati] serve una notte/giorni di dati reali, [hw] serve capi
 1. Punteggio di recupero: ln(RMSSD) vs baseline mobile 14-28 gg (z-score) + FC a riposo + sonno  [ok per HRV/FC, sonno dopo [dati]]
 2. Frequenza respiratoria da RR (RSA, spettro 0,1-0,5 Hz) sulla misura live  [ok]
 3. Allarme precoce malessere: temperatura notturna vs baseline + FC a riposo + HRV, avviso solo se concordi  [dati: serve qualche giorno]
-4. Alert con contesto (FC alta solo da fermo, SpO2 bassa ripetuta/notturna), ODI notturno  [passi: Fase E; SpO2 ok]
+4. Alert con contesto (FC alta con margine, SpO2 bassa ripetuta/notturna), ODI notturno  [fatto; senza passi, il contesto 'da fermo' e' stato tolto]
 5. Analisi sonno: durata, efficienza, latenza, risvegli, regolarita'  [dati]
 
 ## Fase B2 - Stime dai dati (prima di widget/export; ognuna dopo ricerca su paper e fonti, vedi docs/research/)
@@ -19,14 +19,14 @@ Prerequisito: profilo utente nelle Impostazioni (eta', sesso, peso, altezza, HR 
 14. Carico di allenamento (strain): minuti per zona HR, TRIMP giornaliero, rapporto acuto/cronico 7/28 gg  [ok]
 15. Calorie totali e attive: metabolismo basale (Mifflin-St Jeor) + calorie da HR (Keytel) vs stima dell'anello  [ok]
 16. "Batteria corporea" 0-100: sale con riposo/sonno, scende con stress e attivita'  [ok]
-17. Sonno esteso: punteggio, orario ideale di letto, pisolini (HR bassa + zero passi), fabbisogno stimato  [ok]
+17. Sonno esteso: punteggio, orario ideale di letto, pisolini (solo HR bassa e stabile), fabbisogno stimato  [ok]
 18. Autonomia batteria: ore residue dal log batteria  [ok]
 19. Anello non indossato: buchi nei dati esclusi da medie e alert  [ok]
-20. Promemoria di inattivita' come notifica sul telefono  [ok]
+20. Promemoria di inattivita' come notifica sul telefono  [ANNULLATO: servivano i passi, tolti perche' poco affidabili]
 21. Correlazioni con gli incidenti/categorie (caffe', alcol, esercizio, malessere vs HRV, FC, sonno)  [dati]
 22. Recupero HR dopo sforzo (HRR) dal log a 5 minuti, indicativo  [ok]
 23. Riepilogo mattutino e serale (notifica con recupero, sonno, consigli)  [ok]
-24. VO2max stimato (indicativo): HR max / HR a riposo, affinato con HR-passi  [ok, indicativo]
+24. VO2max stimato (indicativo): HR max / HR a riposo, [ok, indicativo]
 25. Notti sospette per apnea (SpO2 oraria + ODI), solo indicatore  [ok, indicativo]
 26. Fase del ciclo dalla temperatura cutanea notturna, opzionale  [dati, indicativo]
 27. Irregolarita' del ritmo dagli RR (screening, non diagnosi, con avvisi chiari)  [ok, indicativo]
@@ -45,4 +45,4 @@ Non previsto: pressione arteriosa (PPG senza calibrazione non e' affidabile).
 12. Export verso homelab (MQTT/InfluxDB) in modulo separato, dietro interruttore; l'app base resta senza INTERNET
 
 ## Fase E - Ricerca sul ring
-13. Passi/attivita' (0x43), obiettivi (0x21); PPG grezzo ad alta frequenza (firmware / stream modificato); firmware OTA in Ghidra  [hw]
+13. PPG grezzo ad alta frequenza (firmware / stream modificato); firmware OTA in Ghidra  [hw]
