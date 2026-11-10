@@ -9,6 +9,8 @@ kotlin {
 val consoleLauncher: Configuration by configurations.creating
 
 dependencies {
+    api(libs.kotlinx.coroutines.core)
+    testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(kotlin("test"))
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
