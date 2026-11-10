@@ -6,7 +6,7 @@
 - Adv: service `0xFEE7`, manufacturer data company id 0x1234 (4660) = `fee7` + MAC reversed
 - HW revision: `RT09CR2_V3.0` (0x2A27) -> R09 confermato
 - FW revision: `RT09CR2_3.00.03_260929` (0x2A26)
-- System ID: `REDACTED` (= MAC reversed + 00 00 47 31 30...)
+- System ID: `REDACTED` (derived from the MAC address)
 - Serial (0x2A25): stringa vuota
 - Device Name (0x2A00): `COLMI Ring 2`
 - Batteria misurata alla prima prova: 7% (CMD 0x03, non in carica)
