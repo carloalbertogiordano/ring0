@@ -15,7 +15,7 @@ data class RealTimeReading(val kind: Int, val errorCode: Int, val value: Int, va
 data class LiveMeasurement(val bpm: Int?, val rr: List<Int>)
 
 /**
- * CMD 0x69 start real-time [tipo][1], 0x6A stop [tipo][0][0]; pacchetti: 0x69 [tipo][errore][bpm][?][?][RR u16 LE].
+ * CMD 0x69 start real-time [kind][1], 0x6A stop [kind][0][0]; packets: 0x69 [kind][error][bpm][?][?][RR u16 LE].
  * Observed on the R09: the first ~30 packets are all zero, then the RR in ms appears (payload bytes 5-6).
  */
 object RealTimeCommand {
@@ -51,13 +51,14 @@ object RealTimeCommand {
 
     /**
      * Live measurement until `targetBeats` RR beats are collected (or error / `maxPackets`). `onProgress` receives
-     * the number of beats so far. Returns null on a ring error or timeout without enough beats.
+     * the number of beats so far and `onPacket` every packet as it arrives (for diagnostics). Returns null on a ring error or timeout without enough beats.
      */
     suspend fun measure(
         client: RingClient,
         kind: Int = KIND_HEART_RATE,
         maxPackets: Int = DEFAULT_MAX_PACKETS,
         targetBeats: Int = DEFAULT_TARGET_BEATS,
+        onPacket: (RealTimeReading) -> Unit = {},
         onProgress: (Int) -> Unit = {},
     ): LiveMeasurement? {
         var latest: List<Packet> = emptyList()
@@ -69,6 +70,7 @@ object RealTimeCommand {
             ) { received ->
                 latest = received
                 val decoded = received.map(::decode)
+                onPacket(decoded.last())
                 val count = beats(decoded).size
                 onProgress(count)
                 // the ring bpm alone stops the measurement only when no RR arrives (otherwise we need the beats)

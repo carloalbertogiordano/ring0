@@ -325,13 +325,13 @@ Check that the ring is charged, out of its case and not connected to anything el
     <string name="summary_kcal">%1$d kcal</string>
     <string name="summary_bedtime">Aim to be asleep by %1$s</string>
     <string name="rhythm_title">Rhythm check (experimental)</string>
-    <string name="rhythm_intro">Sit still for about two minutes, hand resting, no talking. It checks whether your pulse is regular.</string>
-    <string name="rhythm_measuring">Measuring... %1$d / %2$d beats</string>
-    <string name="rhythm_start">Check rhythm · 2 min</string>
+    <string name="rhythm_intro">Sit still for about three minutes, hand resting, no talking. The ring streams only 30 seconds at a time, so the check restarts it several times and looks at whether your pulse is regular.</string>
+    <string name="rhythm_measuring">Measuring... part %1$d of %2$d (about 30 s each)</string>
+    <string name="rhythm_start">Check rhythm · 3 min</string>
     <string name="rhythm_regular">Pulse regular.</string>
     <string name="rhythm_irregular">Pulse irregular in this check. Repeat it while sitting calmly.</string>
     <string name="rhythm_inconclusive">Not enough clean beats. Keep your hand still and try again.</string>
     <string name="rhythm_advice_recheck">One irregular result this week: repeat the check in a few hours.</string>
     <string name="rhythm_advice_doctor">Irregular results at different times this week. This is not a diagnosis, but it is worth an ECG: talk to a doctor, and seek help right away with chest pain, breathlessness or fainting.</string>
-    <string name="rhythm_disclaimer">Screening only, never a diagnosis. Tuned on public ECG data (sensitivity about 87%, specificity about 99%) but not validated on real atrial fibrillation with this ring. Extra beats and movement can look irregular.</string>
+    <string name="rhythm_disclaimer">Screening only, never a diagnosis. Tuned on public ECG data from atrial fibrillation patients (sensitivity about 70%, specificity about 95%) and not validated on real atrial fibrillation with this ring. Extra beats and movement can look irregular, so repeat it before drawing conclusions.</string>
 </resources>

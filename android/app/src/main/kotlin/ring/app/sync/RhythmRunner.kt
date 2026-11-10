@@ -1,6 +1,7 @@
 package ring.app.sync
 
 import android.content.pm.ApplicationInfo
+import android.os.SystemClock
 import android.util.Log
 import ring.app.ble.RingSession
 import ring.app.data.RingDao
@@ -16,15 +17,37 @@ import java.time.Instant
 
 data class RhythmOutcome(val result: RhythmResult, val advice: RhythmAdvice)
 
-/** Runs a rhythm check: about two minutes of live RR intervals, analysed and stored (regular/irregular only). */
+/**
+ * Runs a rhythm check: the ring streams RR intervals for only about 30 seconds per session (14 s to lock on, then 17-20
+ * beats), so the stream is restarted up to eight times to collect six usable sessions, about three minutes in all.
+ */
 class RhythmRunner(private val dao: RingDao, private val debuggable: Boolean) {
-    /** Null when the ring gave no usable measurement. `onProgress` receives the number of beats so far. */
-    suspend fun run(session: RingSession, onProgress: (Int) -> Unit): RhythmOutcome? {
-        val measurement = RealTimeCommand.measure(session.v1, maxPackets = TARGET_BEATS * PACKETS_PER_BEAT, targetBeats = TARGET_BEATS, onProgress = onProgress)
-            ?: return null
+    /** Null when the ring gave nothing usable. `onSession` receives the number of the session that is starting. */
+    suspend fun run(session: RingSession, onSession: (Int) -> Unit): RhythmOutcome? {
+        val started = SystemClock.elapsedRealtime()
+        val sessions = mutableListOf<List<Int>>()
+        var attempts = 0
+        while (RhythmCheck.analyze(sessions).segments < TARGET_SEGMENTS && attempts < MAX_ATTEMPTS) {
+            attempts++
+            onSession(attempts)
+            val measurement = RealTimeCommand.measure(
+                session.v1,
+                maxPackets = MAX_PACKETS,
+                targetBeats = MAX_BEATS,
+                onPacket = {
+                    if (debuggable) {
+                        Log.i(
+                            TAG,
+                            "pkt s=$attempts t=${SystemClock.elapsedRealtime() - started}ms err=${it.errorCode} bpm=${it.value} rr=${it.rrMs}",
+                        )
+                    }
+                },
+            )
+            measurement?.let { sessions += it.rr }
+        }
         // the raw intervals are kept out of release logs: they are health data
-        if (debuggable) Log.i(TAG, "rr=" + measurement.rr.joinToString(","))
-        val result = RhythmCheck.analyze(measurement.rr)
+        if (debuggable) Log.i(TAG, "sessions=" + sessions.joinToString(";") { it.joinToString(",") })
+        val result = RhythmCheck.analyze(sessions)
         val now = Instant.now().epochSecond
         if (result.level != RhythmLevel.INCONCLUSIVE) {
             dao.upsertSamples(listOf(Sample(SampleType.RHYTHM, now, if (result.level == RhythmLevel.IRREGULAR) 1.0 else 0.0)))
@@ -34,8 +57,10 @@ class RhythmRunner(private val dao: RingDao, private val debuggable: Boolean) {
     }
 
     companion object {
-        const val TARGET_BEATS = 130
-        private const val PACKETS_PER_BEAT = 4
+        const val TARGET_SEGMENTS = 6
+        const val MAX_ATTEMPTS = 8
+        private const val MAX_BEATS = 60
+        private const val MAX_PACKETS = 400
         private const val WEEK = 7 * 86_400L
         private const val TAG = "Rhythm"
 

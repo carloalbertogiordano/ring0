@@ -98,7 +98,7 @@ data class Status(
     val monitors: Map<String, Boolean> = emptyMap(),
     val insights: InsightsSnapshot = InsightsSnapshot(),
     val rhythmMeasuring: Boolean = false,
-    val rhythmBeats: Int = 0,
+    val rhythmSession: Int = 0,
     val rhythm: RhythmOutcome? = null,
     val liveTarget: Int = 12,
     val spo2Measuring: Boolean = false,
@@ -198,10 +198,10 @@ class Graph(private val context: Context) {
     /** Rhythm check: about two minutes of RR intervals at rest, screened for pulse irregularity (not a diagnosis). */
     fun rhythmCheck() {
         scope.launch {
-            _status.update { it.copy(rhythmMeasuring = true, rhythmBeats = 0, rhythm = null, lastError = null) }
+            _status.update { it.copy(rhythmMeasuring = true, rhythmSession = 0, rhythm = null, lastError = null) }
             try {
                 ensureConnected()
-                val outcome = rhythmRunner.run(session) { n -> _status.update { it.copy(rhythmBeats = n) } }
+                val outcome = rhythmRunner.run(session) { n -> _status.update { it.copy(rhythmSession = n) } }
                 if (outcome == null) _status.update { it.copy(lastError = context.getString(R.string.measure_failed)) }
                 _status.update { it.copy(rhythm = outcome) }
             } catch (e: Exception) {

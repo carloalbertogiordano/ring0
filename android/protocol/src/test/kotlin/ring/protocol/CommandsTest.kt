@@ -177,6 +177,14 @@ class CommandsTest {
         assertEquals(75, result.bpm)
     }
 
+    @Test fun `real time reports every packet to the packet callback`() = runTest {
+        fun rrPacket(ms: Int) = Packet.build(0x69, byteArrayOf(1, 0, 0, 0, 0, ms.toByte(), (ms shr 8).toByte()))
+        val tr = FakeTransport().apply { responses[0x69] = listOf(800, 810, 790, 805, 795).map(::rrPacket) }
+        val seen = mutableListOf<RealTimeReading>()
+        RealTimeCommand.measure(RingClient(tr), targetBeats = 50, onPacket = { seen += it })
+        assertEquals(listOf(800, 810, 790, 805, 795), seen.map { it.rrMs })
+    }
+
     @Test fun `real time with too few beats and silence gives null`() = runTest {
         val tr = FakeTransport().apply { responses[0x69] = listOf(Packet.build(0x69, byteArrayOf(1, 0, 0, 0, 0, 0x20, 0x03))) }
         assertNull(RealTimeCommand.measure(RingClient(tr), targetBeats = 50))

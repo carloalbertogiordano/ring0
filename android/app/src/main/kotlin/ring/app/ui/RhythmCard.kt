@@ -22,7 +22,7 @@ fun RhythmCard(graph: Graph) {
         Label(stringResource(R.string.rhythm_title))
         T(stringResource(R.string.rhythm_intro), size = 11.sp, color = Term.dim)
         if (status.rhythmMeasuring) {
-            T(stringResource(R.string.rhythm_measuring, status.rhythmBeats, RhythmRunner.TARGET_BEATS), size = 12.sp, color = Term.accent)
+            T(stringResource(R.string.rhythm_measuring, status.rhythmSession, RhythmRunner.TARGET_SEGMENTS), size = 12.sp, color = Term.accent)
         }
         status.rhythm?.let { RhythmResultView(it) }
         TButton(
