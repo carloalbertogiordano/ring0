@@ -37,8 +37,15 @@ class AlertEngine(private val context: Context, private val dao: RingDao, privat
         if (!settings.alertsEnabled) return
         val t = settings.thresholds.value
         val hr = dao.lastN(SampleType.HR, 2).map { TimedValue(it.ts, it.value) }
-        // without step data the context is unknown: a high heart rate needs a margin above the threshold
-        when (ContextAlerts.heartRate(hr, t.hrHigh.toDouble(), t.hrLow.toDouble()) { null }) {
+        // resting context from the step slots; unknown (null) when the steps were not downloaded after that sample
+        val nowEpoch = Instant.now().epochSecond
+        val steps = dao.range(SampleType.STEPS, nowEpoch - STEP_LOOKBACK, nowEpoch)
+        val stepsSyncedAt = settings.lastStepsSyncEpoch
+        val isResting = { ts: Long ->
+            if (stepsSyncedAt < ts + STEP_SLOT) null
+            else steps.filter { it.ts in (ts - STEP_SLOT)..ts }.sumOf { it.value } < RESTING_STEPS
+        }
+        when (ContextAlerts.heartRate(hr, t.hrHigh.toDouble(), t.hrLow.toDouble(), isResting)) {
             HrAlert.HIGH -> fire(AlertKind.HR_HIGH, hr.maxOf { it.value }, t.hrHigh.toDouble())
             HrAlert.LOW -> fire(AlertKind.HR_LOW, hr.minOf { it.value }, t.hrLow.toDouble())
             null -> Unit
@@ -98,5 +105,8 @@ class AlertEngine(private val context: Context, private val dao: RingDao, privat
         const val CHANNEL = "alerts"
         const val COOLDOWN_SECONDS = 60 * 60L
         const val SPO2_LOOKBACK = 4 * 3600L
+        const val STEP_LOOKBACK = 2 * 3600L
+        const val STEP_SLOT = 900L
+        const val RESTING_STEPS = 40
     }
 }

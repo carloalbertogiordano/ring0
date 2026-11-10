@@ -251,4 +251,7 @@ Check that the ring is charged, out of its case and not connected to anything el
     <string name="btn_add_incident">Add</string>
     <string name="btn_add_details">Add details</string>
     <string name="source_manual_entry">Manual entry</string>
+    <string name="tile_steps">Steps</string>
+    <string name="steps_of_goal">of %1$d</string>
+    <string name="chart_steps">Steps (per 15 min)</string>
 </resources>

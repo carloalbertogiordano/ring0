@@ -251,4 +251,7 @@ Controlla che l\'anello sia carico, fuori dalla custodia e non collegato ad altr
     <string name="btn_add_incident">Aggiungi</string>
     <string name="btn_add_details">Aggiungi dettagli</string>
     <string name="source_manual_entry">Inserimento manuale</string>
+    <string name="tile_steps">Passi</string>
+    <string name="steps_of_goal">su %1$d</string>
+    <string name="chart_steps">Passi (ogni 15 min)</string>
 </resources>

@@ -21,7 +21,15 @@ import ring.domain.Baseline
 data class ReadinessReport(val readiness: Readiness?, val baselineDays: Int)
 
 /** Recent context used by the check: baselines and the latest values. */
-data class CheckContext(val restingHr: Double?, val hrvZ: Double?, val skinTemp: Double?, val tempZ: Double?, val stress: Int?)
+data class CheckContext(
+    val restingHr: Double?,
+    val hrvZ: Double?,
+    val skinTemp: Double?,
+    val tempZ: Double?,
+    val stress: Int?,
+    /** True when step data says the user is moving right now; null when the step data is not fresh. */
+    val moving: Boolean?,
+)
 
 /** Computes recovery and the illness warning from stored data (all local). */
 class Insights(private val dao: RingDao, private val zone: ZoneId = ZoneId.systemDefault()) {
@@ -84,7 +92,7 @@ class Insights(private val dao: RingDao, private val zone: ZoneId = ZoneId.syste
     }
 
     /** Context for a check: resting HR, how HRV and skin temperature compare with the last two weeks, latest stress. */
-    suspend fun checkContext(now: Long = Instant.now().epochSecond): CheckContext {
+    suspend fun checkContext(now: Long = Instant.now().epochSecond, stepsFresh: Boolean = false): CheckContext {
         val twoWeeks = now - 14 * DAY
         fun recent(samples: List<Sample>) = samples.lastOrNull()?.takeIf { now - it.ts <= RECENT_SECONDS }?.value
         val hrv = dao.range(SampleType.HRV, twoWeeks, now)
@@ -99,11 +107,15 @@ class Insights(private val dao: RingDao, private val zone: ZoneId = ZoneId.syste
             skinTemp = tempLatest,
             tempZ = tempLatest?.let { tempBase?.z(it) },
             stress = recent(dao.range(SampleType.STRESS, twoWeeks, now))?.toInt(),
+            moving = if (stepsFresh) dao.range(SampleType.STEPS, now - MOVING_WINDOW - SLOT, now).sumOf { it.value } >= MOVING_STEPS else null,
         )
     }
 
     private companion object {
         const val RECENT_SECONDS = 3 * 3_600L
+        const val SLOT = 900L
+        const val MOVING_WINDOW = 900L
+        const val MOVING_STEPS = 40
         const val BASELINE_SAMPLES = 2_000
         const val MIN_HRV_LN_SPREAD = 0.10
         const val DAY = 86_400L

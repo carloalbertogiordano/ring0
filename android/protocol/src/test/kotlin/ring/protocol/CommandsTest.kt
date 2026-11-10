@@ -269,4 +269,24 @@ class CommandsTest {
         assertEquals(Goals(steps = 10000, calories = 1000), goals)
         assertContentEquals(byteArrayOf(1), GoalsCommand.encodeRead())
     }
+
+    // Real R09 responses (FW RT09CR2_3.00.03_260929, 2026-11-10).
+    @Test fun `steps and goals real r09 packets`() {
+        val packets = packets(
+            "43f00401000000000000000000000038",
+            "43261110380004f001b80072000000e1",
+            "432611103c010423000d000800000003",
+            "43261110400204950184005d00000047",
+            "432611104403048a002f001f000000ad",
+        )
+        val slots = StepsCommand.decode(packets)
+        assertEquals(listOf(184, 13, 132, 47), slots.map { it.steps })
+        assertEquals(Instant.parse("2026-11-10T14:00:00Z"), slots.first().time)
+        assertEquals(376, slots.sumOf { it.steps })
+        assertTrue(StepsCommand.isComplete(packets))
+        assertTrue(StepsCommand.decode(packets("43ff0000000000000000000000000042")).isEmpty())
+        val goals = GoalsCommand.decode(packets("2101881300e09304b80b0000000000f7").single())
+        assertEquals(5000, goals.steps)
+        assertEquals(300000, goals.calories)
+    }
 }

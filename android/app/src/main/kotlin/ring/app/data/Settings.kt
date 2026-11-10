@@ -32,6 +32,16 @@ class SettingsStore(context: Context) {
         get() = prefs.getBoolean("onboarded", false)
         set(value) = prefs.edit().putBoolean("onboarded", value).apply()
 
+    /** Daily step goal read from the ring (0 = unknown). */
+    var stepGoal: Int
+        get() = prefs.getInt("stepGoal", 0)
+        set(value) = prefs.edit().putInt("stepGoal", value).apply()
+
+    /** When the step slots were last downloaded; lets alerts know if "no steps" really means "standing still". */
+    var lastStepsSyncEpoch: Long
+        get() = prefs.getLong("lastStepsSync", 0)
+        set(value) = prefs.edit().putLong("lastStepsSync", value).apply()
+
     var alertsEnabled: Boolean
         get() = prefs.getBoolean("alerts", true)
         set(value) = prefs.edit().putBoolean("alerts", value).apply()

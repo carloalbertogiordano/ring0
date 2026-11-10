@@ -20,6 +20,9 @@ object SampleType {
     const val HRV = "hrv"
     const val HRV_LIVE = "hrv_live"
     const val RESP = "resp"
+
+    /** Steps in one 15-minute slot (timestamp = slot start). */
+    const val STEPS = "steps"
     const val SPO2 = "spo2"
     const val BATTERY = "battery"
 }
