@@ -69,7 +69,9 @@ class RingClient:
             queue: asyncio.Queue[Packet] = asyncio.Queue()
             self._pending = (cmd, queue)
             try:
-                await self._transport.write(build(cmd, payload))
+                frame = build(cmd, payload)
+                log.debug("tx %s", frame.hex())
+                await self._transport.write(frame)
                 while True:
                     packets.append(await self._next(queue, cmd, wait))
                     if is_last(packets):
@@ -91,6 +93,7 @@ class RingClient:
         return pkt
 
     def _handle_notification(self, data: bytes) -> None:
+        log.debug("rx %s", data.hex())
         try:
             pkt = parse(data)
         except PacketError as exc:
