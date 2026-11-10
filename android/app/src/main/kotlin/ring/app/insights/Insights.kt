@@ -108,7 +108,7 @@ class Insights(private val dao: RingDao, private val zone: ZoneId = ZoneId.syste
     }
 
     /** Resting HR used as the zero of the effort scale: median of recent nights, else the day's low quantile. */
-    private suspend fun restingBaseline(now: Long): Int? {
+    suspend fun restingBaseline(now: Long): Int? {
         val nightly = nights(now, REST_NIGHTS).mapNotNull { it.rhr }
         val rest = if (nightly.isNotEmpty()) Stats.median(nightly) else RestingHr.estimate(dao.range(SampleType.HR, now - DAY, now).timed())
         return rest?.roundToInt()

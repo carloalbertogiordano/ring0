@@ -29,6 +29,8 @@ import ring.app.data.SettingsStore
 import ring.app.insights.BodyBatteryReport
 import ring.app.insights.Insights
 import ring.app.insights.ReadinessReport
+import ring.app.insights.SleepInsights
+import ring.app.insights.SleepReport
 import ring.app.insights.TrainingReport
 import ring.app.sync.AlertEngine
 import ring.app.sync.IncidentRecorder
@@ -97,6 +99,7 @@ data class Status(
     val training: TrainingReport? = null,
     val batteryEstimate: BatteryEstimate? = null,
     val bodyBattery: BodyBatteryReport? = null,
+    val sleep: SleepReport? = null,
     val liveTarget: Int = 12,
     val spo2Measuring: Boolean = false,
     val liveSpo2: Int? = null,
@@ -118,6 +121,7 @@ class Graph(private val context: Context) {
     val session = RingSession(manager)
     private val sync = SyncEngine(dao)
     val insights = Insights(dao)
+    private val sleepInsights = SleepInsights(dao)
     val incidents = IncidentRecorder(dao)
     val alerts = AlertEngine(context, dao, settings, insights, incidents)
     private val _checkRequested = MutableStateFlow(false)
@@ -206,7 +210,8 @@ class Graph(private val context: Context) {
         refreshTraining()
         val battery = runCatching { insights.batteryForecast() }.getOrNull()
         val energy = runCatching { insights.bodyBattery(settings.profile.value) }.getOrNull()
-        _status.update { it.copy(batteryEstimate = battery, bodyBattery = energy) }
+        val sleep = runCatching { sleepInsights.report(settings.sleepTargetMin, insights.restingBaseline(Instant.now().epochSecond)?.toDouble()) }.getOrNull()
+        _status.update { it.copy(batteryEstimate = battery, bodyBattery = energy, sleep = sleep) }
     }
 
     /** Turns on the default automatic measurements (heart every 5 min, SpO2, stress, HRV, temperature). */

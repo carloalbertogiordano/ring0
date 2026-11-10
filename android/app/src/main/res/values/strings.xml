@@ -288,4 +288,15 @@ Check that the ring is charged, out of its case and not connected to anything el
     <string name="energy_need_data">Not enough data yet.</string>
     <string name="energy_no_sleep">No sleep found in the last day and a half. The level needs a recorded night to start from: wear the ring tonight.</string>
     <string name="energy_hint">Our own model: sleep recharges, stress and effort drain. A guide to your pattern, not a measurement.</string>
+    <string name="sleep_insights_title">Sleep (estimate)</string>
+    <string name="sleep_insights_need_data">No recorded night yet. Wear the ring while you sleep.</string>
+    <string name="sleep_last_night">Last night</string>
+    <string name="sleep_target">Your target</string>
+    <string name="sleep_debt_7d">Sleep debt (7 nights)</string>
+    <string name="sleep_regularity">Regularity</string>
+    <string name="sleep_bedtime">Aim to be asleep by</string>
+    <string name="sleep_naps">Possible naps today</string>
+    <string name="sleep_naps_value">%1$d (%2$d min)</string>
+    <string name="sleep_insights_hint">Score, debt and bedtime are our own heuristics. Naps are guessed from a calm, low heart rate: quiet sitting can look the same.</string>
+    <string name="profile_sleep_target">Sleep target</string>
 </resources>

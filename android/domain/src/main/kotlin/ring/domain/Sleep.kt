@@ -26,6 +26,22 @@ object SleepMetrics {
     private const val SECONDS_PER_MINUTE = 60
     private const val PERCENT = 100.0
 
+    /** Summary from stage minutes only (the order of stages is not stored): awake minutes all count as awakenings. */
+    fun fromTotals(startEpoch: Long, endEpoch: Long, lightMin: Int, deepMin: Int, remMin: Int, awakeMin: Int): SleepSummary {
+        val asleep = lightMin + deepMin + remMin
+        val inBed = maxOf(((endEpoch - startEpoch) / SECONDS_PER_MINUTE).toInt(), asleep + awakeMin)
+        return SleepSummary(
+            timeInBedMin = inBed,
+            totalSleepMin = asleep,
+            efficiency = if (inBed > 0) asleep.toDouble() / inBed else 0.0,
+            latencyMin = 0,
+            wasoMin = awakeMin,
+            lightPct = pct(lightMin, asleep),
+            deepPct = pct(deepMin, asleep),
+            remPct = pct(remMin, asleep),
+        )
+    }
+
     fun summarize(night: SleepNight): SleepSummary {
         fun minutes(t: SleepStageType) = night.stages.filter { it.type == t }.sumOf { it.minutes }
         val light = minutes(SleepStageType.LIGHT)
@@ -41,7 +57,7 @@ object SleepMetrics {
             totalSleepMin = asleep,
             efficiency = if (inBed > 0) asleep.toDouble() / inBed else 0.0,
             latencyMin = latency,
-            // risvegli a sonno iniziato: veglia totale meno quella iniziale e quella finale
+            // awakenings after sleep onset: total wake minus the initial and the final wake
             wasoMin = (awake - latency - trailing).coerceAtLeast(0),
             lightPct = pct(light, asleep),
             deepPct = pct(deep, asleep),

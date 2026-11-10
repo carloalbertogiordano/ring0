@@ -288,4 +288,15 @@ Controlla che l\'anello sia carico, fuori dalla custodia e non collegato ad altr
     <string name="energy_need_data">Non ci sono ancora abbastanza dati.</string>
     <string name="energy_no_sleep">Nessun sonno trovato nell\'ultimo giorno e mezzo. Il livello ha bisogno di una notte registrata da cui partire: indossa l\'anello stanotte.</string>
     <string name="energy_hint">Modello nostro: il sonno ricarica, stress e sforzo scaricano. Una guida al tuo andamento, non una misura.</string>
+    <string name="sleep_insights_title">Sonno (stima)</string>
+    <string name="sleep_insights_need_data">Nessuna notte registrata. Indossa l\'anello mentre dormi.</string>
+    <string name="sleep_last_night">Ultima notte</string>
+    <string name="sleep_target">Il tuo obiettivo</string>
+    <string name="sleep_debt_7d">Debito di sonno (7 notti)</string>
+    <string name="sleep_regularity">Regolarità</string>
+    <string name="sleep_bedtime">Punta a dormire entro</string>
+    <string name="sleep_naps">Possibili pisolini oggi</string>
+    <string name="sleep_naps_value">%1$d (%2$d min)</string>
+    <string name="sleep_insights_hint">Punteggio, debito e orario sono euristiche nostre. I pisolini sono ipotesi da battito calmo e basso: stare seduti tranquilli può sembrare uguale.</string>
+    <string name="profile_sleep_target">Obiettivo di sonno</string>
 </resources>

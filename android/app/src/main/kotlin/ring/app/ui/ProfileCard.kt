@@ -4,6 +4,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -24,6 +27,10 @@ private const val MIN_HEIGHT = 120.0
 private const val MAX_HEIGHT = 230.0
 private const val MIN_HR_MAX = 120
 private const val MAX_HR_MAX = 230
+private const val MINUTES_PER_HOUR = 60
+private const val SLEEP_STEP_MIN = 15
+private const val MIN_SLEEP_TARGET = 300
+private const val MAX_SLEEP_TARGET = 600
 
 /** Body data used for calories, training load and fitness estimates. Stored on the phone only. */
 @Composable
@@ -67,6 +74,19 @@ fun ProfileCard(graph: Graph) {
             if (p.hrMaxOverride == null) stringResource(R.string.profile_hr_max_auto, hrMax) else "$hrMax",
             { save(p.copy(hrMaxOverride = (hrMax - 1).coerceAtLeast(MIN_HR_MAX))) },
             { save(p.copy(hrMaxOverride = (hrMax + 1).coerceAtMost(MAX_HR_MAX))) },
+        )
+        var sleepTarget by remember { mutableIntStateOf(graph.settings.sleepTargetMin) }
+        Stepper(
+            stringResource(R.string.profile_sleep_target),
+            stringResource(R.string.duration_h_m, sleepTarget / MINUTES_PER_HOUR, sleepTarget % MINUTES_PER_HOUR),
+            {
+                sleepTarget = (sleepTarget - SLEEP_STEP_MIN).coerceAtLeast(MIN_SLEEP_TARGET)
+                graph.settings.sleepTargetMin = sleepTarget
+            },
+            {
+                sleepTarget = (sleepTarget + SLEEP_STEP_MIN).coerceAtMost(MAX_SLEEP_TARGET)
+                graph.settings.sleepTargetMin = sleepTarget
+            },
         )
         if (p.hrMaxOverride != null) {
             TButton(stringResource(R.string.profile_hr_max_reset), { save(p.copy(hrMaxOverride = null)) }, kind = BtnKind.GHOST)

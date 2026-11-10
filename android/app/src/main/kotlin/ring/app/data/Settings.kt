@@ -40,6 +40,11 @@ class SettingsStore(context: Context) {
         get() = prefs.getBoolean("onboarded", false)
         set(value) = prefs.edit().putBoolean("onboarded", value).apply()
 
+    /** Sleep wanted per night, in minutes: the basis of sleep debt and the suggested bedtime. */
+    var sleepTargetMin: Int
+        get() = prefs.getInt("sleepTarget", DEFAULT_SLEEP_TARGET_MIN)
+        set(value) = prefs.edit().putInt("sleepTarget", value).apply()
+
     var alertsEnabled: Boolean
         get() = prefs.getBoolean("alerts", true)
         set(value) = prefs.edit().putBoolean("alerts", value).apply()
@@ -97,5 +102,6 @@ class SettingsStore(context: Context) {
     }
 }
 
+private const val DEFAULT_SLEEP_TARGET_MIN = 480
 private const val DEFAULT_WEIGHT_KG = 70f
 private const val DEFAULT_HEIGHT_CM = 170f
