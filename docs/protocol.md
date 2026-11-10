@@ -74,3 +74,20 @@ Richieste (come in Gadgetbridge; colmi-docs dice payload vuoto, ma il ring rispo
 Verificato: CRC16/MODBUS corretto sul ring reale (check standard `"123456789"` = 0x4B37).
 Codice: `proto/ringproto/bigdata.py`, `bigdata_client.py`. CLI: `python -m ringproto.cli bigdata <MAC> --type 0x25 --payload 02`.
 Decoder dei dati (temperatura/sonno/SpO2): da scrivere con dati reali (slice 6).
+
+## Preferenze di monitoraggio automatico (0x2C SpO2, 0x36 stress, 0x38 HRV, 0x3A temperatura)
+Lettura: `[cmd] 01 ...`; scrittura: `[cmd] 02 <0|1> ...`; la **temperatura ha un byte extra `03`**:
+lettura `3a 03 01`, scrittura `3a 03 02 <0|1>`. Flag "abilitato" nella risposta: byte 2 (temperatura: byte 3). La
+risposta alla scrittura non e' affidabile (eco dello stesso comando): si rilegge.
+
+Stato di fabbrica del tuo R09: **tutti e 4 disattivi** (anche l'HR automatico). Reale:
+
+| Monitor | Lettura prima | Lettura dopo scrittura 1 |
+|---|---|---|
+| SpO2 | `2c 01 00 1e 00…` (byte3=0x1e: intervallo 30 min?) | `2c 01 01 00…` |
+| Stress | `36 01 00…` | `36 01 01…` |
+| HRV | `38 01 00…` | `38 01 01…` |
+| Temperatura | `3a 03 01 00…` | `3a 03 01 01…` |
+
+Notifica non richiesta osservata: `73 0c <%>` = livello batteria (0x0c), es. `73 0c 1d…` = 29%.
+Codice: `proto/ringproto/commands/auto_monitor.py`.

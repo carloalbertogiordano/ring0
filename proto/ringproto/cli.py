@@ -7,6 +7,7 @@ from collections.abc import Awaitable, Callable
 from datetime import UTC, date, datetime
 
 from ringproto.client import RingClient
+from ringproto.commands.auto_monitor import Feature, read_enabled, write_enabled
 from ringproto.commands.battery import read_battery
 from ringproto.commands.hr_log import read_hr_log
 from ringproto.commands.hr_settings import HeartRateSettings, read_hr_settings, write_hr_settings
@@ -32,6 +33,14 @@ async def _hr_settings(ring: RingClient, args: argparse.Namespace) -> object:
     return await read_hr_settings(ring)
 
 
+async def _monitors(ring: RingClient, args: argparse.Namespace) -> object:
+    wanted = {name.upper() for name in args.enable or []}
+    for feature in Feature:
+        if feature.name in wanted:
+            await write_enabled(ring, feature, enabled=True)
+    return {f.name.lower(): await read_enabled(ring, f) for f in Feature}
+
+
 async def _hr_log(ring: RingClient, args: argparse.Namespace) -> object:
     day = args.date or datetime.now(UTC).date()
     log = await read_hr_log(ring, datetime(day.year, day.month, day.day, tzinfo=UTC))
@@ -48,6 +57,7 @@ COMMANDS: dict[str, Handler] = {
     "set-time": _set_time,
     "hr-settings": _hr_settings,
     "hr-log": _hr_log,
+    "monitors": _monitors,
 }
 
 
@@ -68,6 +78,7 @@ def main() -> None:
     parser.add_argument("command", choices=[*sorted(COMMANDS), "bigdata"])
     parser.add_argument("address")
     parser.add_argument("--interval", type=int, help="hr-settings: abilita e imposta i minuti")
+    parser.add_argument("--enable", nargs="+", help="monitors: spo2 stress hrv temperature")
     parser.add_argument("--disable", action="store_true", help="hr-settings: disabilita")
     parser.add_argument("--date", type=date.fromisoformat, help="hr-log: giorno YYYY-MM-DD (UTC)")
     parser.add_argument("--type", type=lambda v: int(v, 0), help="bigdata: tipo (es. 0x25)")

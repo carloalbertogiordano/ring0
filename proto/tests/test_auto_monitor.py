@@ -9,7 +9,7 @@ from ringproto.commands.auto_monitor import (
     read_enabled,
     write_enabled,
 )
-from ringproto.packet import Packet, build
+from ringproto.packet import Packet, build, parse
 from tests.fakes import FakeTransport
 
 
@@ -76,3 +76,22 @@ async def test_write_enabled_discards_write_reply_and_returns_read_back_state() 
 
     assert tr.sent == [build(0x3A, bytes([3, 2, 1])), build(0x3A, bytes([3, 1]))]
     assert result is True
+
+
+# Risposte reali del ring R09 (FW RT09CR2_3.00.03_260929, 2026-11-10): prima/dopo l'abilitazione.
+REAL_READS = {
+    (Feature.SPO2, False): "2c01001e00000000000000000000004b",
+    (Feature.SPO2, True): "2c01010000000000000000000000002e",
+    (Feature.STRESS, False): "36010000000000000000000000000037",
+    (Feature.STRESS, True): "36010100000000000000000000000038",
+    (Feature.HRV, False): "38010000000000000000000000000039",
+    (Feature.HRV, True): "3801010000000000000000000000003a",
+    (Feature.TEMPERATURE, False): "3a03010000000000000000000000003e",
+    (Feature.TEMPERATURE, True): "3a03010100000000000000000000003f",
+}
+
+
+@pytest.mark.parametrize(("key", "raw"), REAL_READS.items(), ids=lambda v: str(v)[:24])
+def test_decode_real_r09_reads(key: tuple[Feature, bool], raw: str) -> None:
+    feature, expected = key
+    assert decode(feature, parse(bytes.fromhex(raw))) is expected
