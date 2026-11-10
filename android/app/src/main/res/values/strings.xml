@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Ring</string>
+    <string name="app_name">Ring0</string>
     <string name="ago_never">never</string>
     <string name="ago_now">just now</string>
     <string name="ago_min">%1$d min ago</string>
