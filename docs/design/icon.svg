@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="432" height="432">
+  <defs>
+    <radialGradient id="glow" cx="54" cy="54" r="40" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#00FF9C" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#00FF9C" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="mask"><rect width="108" height="108" rx="26"/></clipPath>
+  </defs>
+  <g clip-path="url(#mask)">
+    <rect width="108" height="108" fill="#040906"/>
+    <g stroke="#00FF9C" stroke-opacity="0.08" stroke-width="0.5">
+      <path d="M12 0V108M24 0V108M36 0V108M48 0V108M60 0V108M72 0V108M84 0V108M96 0V108"/>
+      <path d="M0 12H108M0 24H108M0 36H108M0 48H108M0 60H108M0 72H108M0 84H108M0 96H108"/>
+    </g>
+    <circle cx="54" cy="54" r="40" fill="url(#glow)"/>
+    <!-- brackets -->
+    <g fill="none" stroke="#00FF9C" stroke-width="2.4" stroke-linecap="square" stroke-opacity="0.9">
+      <path d="M30 38V30H38M70 30H78V38M30 70V78H38M78 70V78H70"/>
+    </g>
+    <!-- ring -->
+    <circle cx="54" cy="54" r="22" fill="none" stroke="#00FF9C" stroke-width="6.5"/>
+    <circle cx="54" cy="54" r="17.6" fill="none" stroke="#00B36B" stroke-width="1.2"/>
+    <!-- sensor diamond -->
+    <path d="M54 25.5L58 30.5L54 35.5L50 30.5Z" fill="#B8FFE0" stroke="#00FF9C" stroke-width="1.2" stroke-linejoin="round"/>
+    <!-- ecg -->
+    <path d="M36 56H44.5L48 49L52.5 64L57 45L60.5 56H72" fill="none" stroke="#E8FFF4" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>
