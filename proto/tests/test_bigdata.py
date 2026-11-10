@@ -11,7 +11,7 @@ def test_crc16_modbus_of_empty_is_initial_value() -> None:
     assert crc16_modbus(b"") == 0xFFFF
 
 
-# Richieste usate da client noti (Gadgetbridge): confermano CRC e layout [BC][id][len LE][crc LE][payload].
+# Richieste di client noti (Gadgetbridge): confermano CRC e layout [BC][id][len][crc][payload].
 @pytest.mark.parametrize(
     ("type_id", "payload", "hex_frame"),
     [

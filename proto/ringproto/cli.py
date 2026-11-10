@@ -52,8 +52,8 @@ COMMANDS: dict[str, Handler] = {
 
 
 async def _run(args: argparse.Namespace) -> None:
-    async with connect_ring(args.address) as ring:
-        print(await COMMANDS[args.command](ring, args))
+    async with connect_ring(args.address) as session:
+        print(await COMMANDS[args.command](session.v1, args))
 
 
 def main() -> None:

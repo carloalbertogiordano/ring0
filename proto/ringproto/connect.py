@@ -11,11 +11,13 @@ import logging
 import shutil
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
 
 from bleak import BleakClient, BleakScanner
 from bleak.exc import BleakError
 
-from ringproto.ble import BleakTransport
+from ringproto.bigdata_client import BigDataClient
+from ringproto.ble import BIG_NOTIFY_CHAR, BIG_WRITE_CHAR, BleakTransport
 from ringproto.client import RingClient
 
 log = logging.getLogger(__name__)
@@ -23,6 +25,14 @@ log = logging.getLogger(__name__)
 RELEASE_WAIT = 3.0
 SCAN_TIMEOUT = 25.0
 CONNECT_TIMEOUT = 30.0
+
+
+@dataclass(frozen=True)
+class RingSession:
+    """Client dei due canali del ring: comandi V1 (16 byte) e big-data V2."""
+
+    v1: RingClient
+    bigdata: BigDataClient
 
 
 class RingNotReachableError(ConnectionError):
@@ -65,13 +75,17 @@ async def _connect(address: str, retries: int) -> BleakClient:
 
 
 @asynccontextmanager
-async def connect_ring(address: str, retries: int = 4) -> AsyncIterator[RingClient]:
-    """Connette al ring e restituisce un `RingClient` pronto; disconnette all'uscita."""
+async def connect_ring(address: str, retries: int = 4) -> AsyncIterator[RingSession]:
+    """Connette al ring e restituisce i client dei due canali; disconnette all'uscita."""
     bleak_client = await _connect(address, retries)
     try:
-        transport = BleakTransport(bleak_client)
-        ring = RingClient(transport)
-        await transport.start()
-        yield ring
+        v1_transport = BleakTransport(bleak_client)
+        v2_transport = BleakTransport(
+            bleak_client, write_char=BIG_WRITE_CHAR, notify_char=BIG_NOTIFY_CHAR
+        )
+        session = RingSession(RingClient(v1_transport), BigDataClient(v2_transport))
+        await v1_transport.start()
+        await v2_transport.start()
+        yield session
     finally:
         await bleak_client.disconnect()
