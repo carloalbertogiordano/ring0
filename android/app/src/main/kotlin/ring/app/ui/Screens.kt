@@ -56,7 +56,7 @@ import ring.app.data.Thresholds
 private val DAY_TIME = DateTimeFormatter.ofPattern("d MMM HH:mm").withZone(ZoneId.systemDefault())
 private val PERIODS = listOf(R.string.period_24h to 24L * 3600, R.string.period_7d to 7L * 86_400, R.string.period_30d to 30L * 86_400)
 
-/** Radice: primo avvio, errori di sistema (permessi, Bluetooth) oppure l'app con la barra a schede. */
+/** Root: first run, system errors (permissions, Bluetooth) or the app with its tab bar. */
 @Composable
 fun AppRoot(graph: Graph, startService: () -> Unit) {
     val ctx = LocalContext.current

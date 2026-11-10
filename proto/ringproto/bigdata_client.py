@@ -1,4 +1,4 @@
-"""Client del canale big-data V2: una richiesta alla volta, risposta ricomposta e validata."""
+"""Big-data V2 channel client: one request at a time, reassembled and validated response."""
 
 import asyncio
 import logging
@@ -11,7 +11,7 @@ log = logging.getLogger(__name__)
 
 
 class BigDataClient:
-    """Invia richieste big-data in serie e attende il frame dello stesso tipo."""
+    """Sends big-data requests in series and waits for the frame of the same type."""
 
     def __init__(
         self,
@@ -30,7 +30,7 @@ class BigDataClient:
     async def request(
         self, type_id: int, payload: bytes = b"", timeout: float | None = None
     ) -> BigFrame:
-        """Invia una richiesta e restituisce il frame di risposta con lo stesso tipo."""
+        """Sends a request and returns the response frame of the same type."""
         async with self._lock:
             self._assembler = FrameAssembler()  # scarta frammenti residui di risposte precedenti
             future: asyncio.Future[BigFrame] = asyncio.get_running_loop().create_future()

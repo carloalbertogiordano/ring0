@@ -1,10 +1,10 @@
-"""Preferenze di monitoraggio automatico: SpO2, stress, HRV, temperatura.
+"""Automatic monitoring preferences: SpO2, stress, HRV, temperature.
 
-Lettura:   [cmd][prefisso][0x01]
-Scrittura: [cmd][prefisso][0x02][0|1]
-Risposta:  flag "abilitato" subito dopo prefisso e sotto-comando.
-Il prefisso e' vuoto salvo che per la temperatura (0x03). Come per l'HR, la risposta alla
-scrittura non e' affidabile: si rilegge lo stato.
+Read:     [cmd][prefix][0x01]
+Write:    [cmd][prefix][0x02][0|1]
+Response: "enabled" flag right after the prefix and sub-command.
+The prefix is empty except for temperature (0x03). As with HR, the reply to a write is
+unreliable: the state is read back instead.
 """
 
 from enum import Enum
@@ -31,22 +31,22 @@ class Feature(Enum):
 
     @property
     def prefix(self) -> bytes:
-        """Byte che precedono il sotto-comando nel payload."""
+        """Bytes preceding the sub-command in the payload."""
         return bytes(self.value[1])
 
 
 def encode_read(feature: Feature) -> bytes:
-    """Payload della richiesta di lettura."""
+    """Payload of the read request."""
     return feature.prefix + bytes([SUB_READ])
 
 
 def encode_write(feature: Feature, *, enabled: bool) -> bytes:
-    """Payload della richiesta di scrittura."""
+    """Payload of the write request."""
     return feature.prefix + bytes([SUB_WRITE, int(enabled)])
 
 
 def decode(feature: Feature, pkt: Packet) -> bool:
-    """True se la misura automatica e' abilitata."""
+    """True if the automatic measurement is enabled."""
     if pkt.cmd != feature.cmd:
         msg = f"not a {feature.name.lower()} preference packet: cmd {pkt.cmd:#04x}"
         raise ValueError(msg)
@@ -54,11 +54,11 @@ def decode(feature: Feature, pkt: Packet) -> bool:
 
 
 async def read_enabled(client: RingClient, feature: Feature) -> bool:
-    """Legge se la misura automatica e' attiva."""
+    """Reads whether the automatic measurement is on."""
     return decode(feature, await client.request(feature.cmd, encode_read(feature)))
 
 
 async def write_enabled(client: RingClient, feature: Feature, *, enabled: bool) -> bool:
-    """Abilita/disabilita la misura e restituisce lo stato riletto dal ring."""
+    """Enables/disables the measurement and returns the state read back from the ring."""
     await client.request(feature.cmd, encode_write(feature, enabled=enabled))
     return await read_enabled(client, feature)

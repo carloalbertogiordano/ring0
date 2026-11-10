@@ -20,13 +20,13 @@ import ring.domain.Baseline
 
 data class ReadinessReport(val readiness: Readiness?, val baselineDays: Int)
 
-/** Calcola recupero e allarme malessere dai dati salvati (tutto locale). */
+/** Computes recovery and the illness warning from stored data (all local). */
 class Insights(private val dao: RingDao, private val zone: ZoneId = ZoneId.systemDefault()) {
     private fun List<Sample>.timed() = map { TimedValue(it.ts, it.value) }
 
     private class Night(val temp: Double?, val rhr: Double?, val hrv: Double?)
 
-    /** Notte che finisce alle 06:00 locali del giorno `endDay`: temperatura media, FC a riposo e HRV mediana. */
+    /** Night ending at 06:00 local time of `endDay`: mean temperature, resting HR and median HRV. */
     private suspend fun night(endDay: LocalDate): Night {
         val end = endDay.atTime(LocalTime.of(6, 0)).atZone(zone).toEpochSecond()
         val start = endDay.minusDays(1).atTime(LocalTime.of(22, 0)).atZone(zone).toEpochSecond()
@@ -39,14 +39,14 @@ class Insights(private val dao: RingDao, private val zone: ZoneId = ZoneId.syste
         )
     }
 
-    /** Ultime `count` notti complete in ordine cronologico (l'ultima e' la piu' recente). */
+    /** Last `count` complete nights in chronological order (the last one is the most recent). */
     private suspend fun nights(now: Long, count: Int): List<Night> {
         val local = Instant.ofEpochSecond(now).atZone(zone)
         val latestEnd = if (local.toLocalTime() >= LocalTime.of(6, 0)) local.toLocalDate() else local.toLocalDate().minusDays(1)
         return (count - 1 downTo 0).map { night(latestEnd.minusDays(it.toLong())) }
     }
 
-    /** Recupero: ultima notte (HRV e FC a riposo) contro la baseline delle notti precedenti, piu' il sonno. */
+    /** Recovery: last night's HRV and resting HR against the baseline of earlier nights, plus sleep. */
     suspend fun readiness(now: Long = Instant.now().epochSecond): ReadinessReport {
         val all = nights(now, HISTORY_NIGHTS + 1)
         val last = all.last()
@@ -68,7 +68,7 @@ class Insights(private val dao: RingDao, private val zone: ZoneId = ZoneId.syste
         return ReadinessReport(ReadinessScore.compute(input), all.count { it.hrv != null })
     }
 
-    /** Allarme precoce: ultime due notti contro la baseline delle notti precedenti. */
+    /** Early warning: the last two nights against the baseline of earlier nights. */
     suspend fun illness(now: Long = Instant.now().epochSecond): IllnessAssessment {
         val all = nights(now, ILLNESS_NIGHTS)
         val tempBase = Baseline.of(all.dropLast(2).mapNotNull { it.temp }, minSpread = MIN_TEMP_SPREAD)

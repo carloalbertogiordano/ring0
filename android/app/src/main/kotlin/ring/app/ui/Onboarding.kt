@@ -152,7 +152,7 @@ private fun PermCard(title: String, why: String, ok: Boolean, required: Boolean 
 
 private fun looksLikeRing(d: FoundDevice) = d.name.contains("ring", ignoreCase = true) || d.name.startsWith("R0") || d.name.contains("colmi", ignoreCase = true)
 
-/** Ricerca dei dispositivi BLE; mostra gli anelli e, a richiesta, tutti i dispositivi con un nome. */
+/** BLE device search; shows rings and, on request, every named device. */
 @Composable
 fun RingPicker(onPick: (FoundDevice) -> Unit) {
     val ctx = LocalContext.current

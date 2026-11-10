@@ -18,7 +18,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         val graph = (application as RingApp).graph
         setContent { RingTheme { AppRoot(graph, ::startRingService) } }
-        // utente gia' configurato: riavvia il servizio se i permessi ci sono ancora
+        // already set up: restart the service if the permissions are still granted
         if (graph.settings.onboarded) startRingService()
     }
 

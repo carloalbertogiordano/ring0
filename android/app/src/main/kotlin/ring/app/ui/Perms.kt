@@ -14,7 +14,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
-/** Controlli dello stato dei permessi e del Bluetooth. */
+/** Permission and Bluetooth state checks. */
 object Perms {
     val nearby = arrayOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT)
     const val NOTIFICATIONS = Manifest.permission.POST_NOTIFICATIONS

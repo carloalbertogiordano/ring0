@@ -1,4 +1,4 @@
-"""Trasporto BLE sopra bleak: RX (write) e TX (notify) del servizio UART del ring."""
+"""BLE transport on top of bleak: RX (write) and TX (notify) of the ring's UART service."""
 
 from collections.abc import Callable
 
@@ -13,7 +13,7 @@ BIG_NOTIFY_CHAR = "de5bf729-d711-4e47-af26-65e3012a5dc7"
 
 
 class BleakTransport:
-    """Adatta un BleakClient connesso all'interfaccia `Transport` del client."""
+    """Adapts a connected BleakClient to the client's `Transport` interface."""
 
     def __init__(
         self, client: BleakClient, write_char: str = RX_CHAR, notify_char: str = TX_CHAR
@@ -24,11 +24,11 @@ class BleakTransport:
         self._handler: Callable[[bytes], None] | None = None
 
     def set_notify_handler(self, handler: Callable[[bytes], None]) -> None:
-        """Registra il callback per i pacchetti in arrivo."""
+        """Registers the callback for incoming packets."""
         self._handler = handler
 
     async def start(self) -> None:
-        """Si sottoscrive alle notifiche del canale."""
+        """Subscribes to the channel notifications."""
         await self._client.start_notify(self._notify_char, self._on_notify)
 
     async def write(self, data: bytes) -> None:

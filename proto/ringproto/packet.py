@@ -1,6 +1,6 @@
-"""Frame a 16 byte del canale UART V1: [cmd][14 byte dati][crc].
+"""16-byte frame of the V1 UART channel: [cmd][14 data bytes][crc].
 
-crc = somma dei primi 15 byte & 0xFF. Il bit 7 di cmd e' il flag di errore.
+crc = sum of the first 15 bytes & 0xFF. Bit 7 of cmd is the error flag.
 """
 
 from dataclasses import dataclass
@@ -23,12 +23,12 @@ class Packet:
 
 
 def checksum(data: bytes) -> int:
-    """Somma dei byte troncata a 8 bit."""
+    """Sum of the bytes truncated to 8 bits."""
     return sum(data) & 0xFF
 
 
 def build(cmd: int, payload: bytes = b"") -> bytes:
-    """Costruisce un pacchetto: cmd + payload (padding a 14 byte) + crc."""
+    """Builds a packet: cmd + payload (padded to 14 bytes) + crc."""
     if not 0 <= cmd <= MAX_CMD:
         msg = f"command out of range: {cmd}"
         raise ValueError(msg)
@@ -40,7 +40,7 @@ def build(cmd: int, payload: bytes = b"") -> bytes:
 
 
 def parse(raw: bytes) -> Packet:
-    """Valida lunghezza e crc, estrae cmd (senza flag errore), payload e flag errore."""
+    """Validates length and crc, extracts cmd (without the error flag), payload and error flag."""
     if len(raw) != PACKET_LEN:
         msg = f"bad length: {len(raw)} != {PACKET_LEN}"
         raise PacketError(msg)

@@ -12,7 +12,7 @@ from ringproto.commands.hr_settings import (
 from ringproto.packet import Packet, build, parse
 from tests.fakes import FakeTransport
 
-# Risposta reale dal repo tahnok (ring R02): auto-HR attivo, ogni 60 minuti.
+# Real response from the tahnok repo (R02 ring): auto HR on, every 60 minutes.
 REAL_RSP = bytes.fromhex("1601013c0000000000000000000000" + "54")
 
 
@@ -63,9 +63,7 @@ async def test_read_hr_settings_roundtrip() -> None:
 
 async def test_write_hr_settings_discards_write_reply_and_returns_read_back_state() -> None:
     tr = FakeTransport()
-    junk_reply = build(
-        0x16, bytes([2, 0, 0])
-    )  # il ring risponde in modo inattendibile alla scrittura
+    junk_reply = build(0x16, bytes([2, 0, 0]))  # the ring answers a write unreliably
     confirmed = build(0x16, bytes([1, 1, 5]))
     tr.scripted[0x16] = [[junk_reply], [confirmed]]
 

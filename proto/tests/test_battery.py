@@ -5,7 +5,7 @@ from ringproto.commands.battery import Battery, decode, read_battery
 from ringproto.packet import Packet, parse
 from tests.fakes import FakeTransport
 
-# Vettore reale: R09 FW RT09CR2_3.00.03_260929, batteria 7%, non in carica.
+# Real vector: R09 FW RT09CR2_3.00.03_260929, battery 7%, not charging.
 REAL_RSP = bytes.fromhex("0307000000000000000000000000000a")
 
 

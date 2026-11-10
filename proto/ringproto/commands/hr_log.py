@@ -1,12 +1,12 @@
-"""CMD 0x15 log frequenza cardiaca di un giorno (risposta a piu' pacchetti).
+"""CMD 0x15: heart rate log of one day (multi-packet response).
 
-Richiesta: [0x15][unix timestamp LE u32 della mezzanotte del giorno].
-Risposta, dal sub-tipo (payload[0]):
-  0     [size][intervallo_min]        numero di pacchetti e passo dei campioni
-  1     [timestamp LE u32][9 valori]  primo blocco
-  >= 2  [13 valori]                   blocchi successivi
-  0xFF                                nessun dato
-Valore 0 = nessuna misura in quello slot.
+Request: [0x15][unix timestamp LE u32 of the day's midnight].
+Response, by sub-type (payload[0]):
+  0     [size][interval_min]          number of packets and sample step
+  1     [timestamp LE u32][9 values]  first block
+  >= 2  [13 values]                   following blocks
+  0xFF                                no data
+Value 0 = no measurement in that slot.
 """
 
 import struct
@@ -30,13 +30,13 @@ class HeartRateLog:
     samples: tuple[int, ...]
 
     def readings(self) -> list[tuple[datetime, int]]:
-        """Coppie (istante, bpm) per gli slot con una misura valida."""
+        """(instant, bpm) pairs for the slots with a valid measurement."""
         step = timedelta(minutes=self.interval_minutes)
         return [(self.day_start + i * step, bpm) for i, bpm in enumerate(self.samples) if bpm > 0]
 
 
 def encode_request(day_start: datetime) -> bytes:
-    """Payload della richiesta: timestamp unix (LE, u32) di inizio giorno."""
+    """Request payload: unix timestamp (LE, u32) of the start of the day."""
     if day_start.tzinfo is None:
         msg = "datetime must carry a timezone"
         raise ValueError(msg)
@@ -44,7 +44,7 @@ def encode_request(day_start: datetime) -> bytes:
 
 
 def decode(packets: list[Packet]) -> HeartRateLog | None:
-    """Ricompone i pacchetti in un log; None se il ring non ha dati per quel giorno."""
+    """Reassembles the packets into a log; None if the ring has no data for that day."""
     if packets[0].payload[0] == SUB_NO_DATA:
         return None
     header = packets[0].payload
@@ -65,6 +65,6 @@ def decode(packets: list[Packet]) -> HeartRateLog | None:
 
 
 async def read_hr_log(client: RingClient, day_start: datetime) -> HeartRateLog | None:
-    """Scarica il log HR del giorno che inizia a `day_start`."""
+    """Downloads the HR log of the day starting at `day_start`."""
     packets = await client.request_many(CMD_HR_LOG, encode_request(day_start), is_last=is_complete)
     return decode(packets)

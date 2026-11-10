@@ -1,8 +1,8 @@
-"""CMD 0x01 imposta data/ora; la risposta descrive le capability del ring.
+"""CMD 0x01 sets date/time; the response describes the ring's capabilities.
 
-Richiesta: [0x01][anno][mese][giorno][ora][min][sec][lingua], campi in BCD come in
-tahnok/colmi_r02_client (colmi-docs dice "binario": discrepanza da chiarire sul ring).
-Si imposta sempre UTC.
+Request: [0x01][year][month][day][hour][min][sec][language], fields in BCD as in
+tahnok/colmi_r02_client (colmi-docs says "binary"; BCD was confirmed on the real ring).
+The time is always set in UTC.
 """
 
 from dataclasses import dataclass
@@ -27,7 +27,7 @@ def to_bcd(value: int) -> int:
 
 
 def encode_payload(when: datetime) -> bytes:
-    """Payload (7 byte) di set time per un datetime con timezone, convertito in UTC."""
+    """Set-time payload (7 bytes) for a timezone-aware datetime, converted to UTC."""
     if when.tzinfo is None:
         msg = "datetime must carry a timezone"
         raise ValueError(msg)
@@ -41,7 +41,7 @@ def encode_payload(when: datetime) -> bytes:
 
 @dataclass(frozen=True)
 class Capabilities:
-    """Capability dichiarate dal ring nella risposta a set time."""
+    """Capabilities declared by the ring in its reply to set time."""
 
     temperature: bool
     blood_oxygen: bool
@@ -55,7 +55,7 @@ class Capabilities:
 
 
 def decode(pkt: Packet) -> Capabilities:
-    """Decodifica la risposta di set time (offset nel payload, vedi docs/protocol.md)."""
+    """Decodes the set-time response (payload offsets, see docs/protocol.md)."""
     if pkt.cmd != CMD_SET_TIME:
         msg = f"not a set time packet: cmd {pkt.cmd:#04x}"
         raise ValueError(msg)
@@ -74,6 +74,6 @@ def decode(pkt: Packet) -> Capabilities:
 
 
 async def set_time(client: RingClient, when: datetime | None = None) -> Capabilities:
-    """Imposta l'ora del ring (default: adesso, UTC) e restituisce le sue capability."""
+    """Sets the ring's clock (default: now, UTC) and returns its capabilities."""
     pkt = await client.request(CMD_SET_TIME, encode_payload(when or datetime.now(UTC)))
     return decode(pkt)

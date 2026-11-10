@@ -1,9 +1,9 @@
-"""CMD 0x37 (stress) e 0x39 (HRV): un valore ogni 30 minuti, per giorno.
+"""CMD 0x37 (stress) and 0x39 (HRV): one value every 30 minutes, per day.
 
-Richiesta stress: nessun argomento. Richiesta HRV: [giorni fa, u32 LE] (da Gadgetbridge;
-colmi-docs parla di un "index": da confermare con dati reali).
-Risposta: header, poi blocchi: sub 1 = [?][12 valori], sub >= 2 = [13 valori]; 0 = nessuna misura.
-Verificato solo su risposte vuote (0xFF): i valori vanno ancora confrontati con dati reali.
+Stress request: no arguments. HRV request: [days ago, u32 LE] (from Gadgetbridge;
+colmi-docs mentions an "index": to be confirmed with real data).
+Response: header, then blocks: sub 1 = [?][12 values], sub >= 2 = [13 values]; 0 = no measurement.
+Stress verified on the real ring; HRV assumed to share the same layout.
 """
 
 import struct
@@ -29,18 +29,18 @@ class SlotLog:
     samples: tuple[int, ...]
 
     def readings(self, day_start: datetime) -> list[tuple[datetime, int]]:
-        """Coppie (istante, valore) per gli slot con una misura, dato l'inizio giorno."""
+        """(instant, value) pairs for the slots with a measurement, given the start of the day."""
         step = timedelta(minutes=self.interval_minutes)
         return [(day_start + i * step, v) for i, v in enumerate(self.samples) if v > 0]
 
 
 def encode_stress_request() -> bytes:
-    """Payload della richiesta stress (vuoto)."""
+    """Payload of the stress request (empty)."""
     return b""
 
 
 def encode_hrv_request(days_ago: int) -> bytes:
-    """Payload della richiesta HRV per il giorno `days_ago` (0 = oggi)."""
+    """Payload of the HRV request for day `days_ago` (0 = today)."""
     if days_ago < 0:
         msg = f"days_ago must be >= 0: {days_ago}"
         raise ValueError(msg)
@@ -48,7 +48,7 @@ def encode_hrv_request(days_ago: int) -> bytes:
 
 
 def decode(packets: list[Packet]) -> SlotLog | None:
-    """Ricompone i pacchetti; None se il ring non ha dati."""
+    """Reassembles the packets; None if the ring has no data."""
     if packets[0].payload[0] == SUB_NO_DATA:
         return None
     interval = packets[0].payload[2] or DEFAULT_INTERVAL
@@ -68,6 +68,6 @@ async def read_stress_log(client: RingClient) -> SlotLog | None:
 
 
 async def read_hrv_log(client: RingClient, days_ago: int = 0) -> SlotLog | None:
-    """Scarica il log HRV del giorno `days_ago`."""
+    """Downloads the HRV log of day `days_ago`."""
     packets = await client.request_many(CMD_HRV, encode_hrv_request(days_ago), is_last=is_complete)
     return decode(packets)

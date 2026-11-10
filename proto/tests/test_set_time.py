@@ -114,7 +114,7 @@ async def test_set_time_sends_bcd_packet_and_returns_capabilities() -> None:
     assert caps.blood_oxygen is True
 
 
-# Risposta reale del ring R09 (FW RT09CR2_3.00.03_260929) a set time, catturata il 2026-11-10.
+# Real R09 response (FW RT09CR2_3.00.03_260929) to set time, captured on 2026-11-10.
 REAL_RSP = bytes.fromhex("01010000020000000001002000003055")
 
 

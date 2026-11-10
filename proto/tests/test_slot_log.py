@@ -126,7 +126,7 @@ def test_decode_header_only_returns_none() -> None:
     assert decode(pkts(header(CMD_STRESS, total=1))) is None
 
 
-# Log stress reale del R09 (2026-11-10): una sola misura, 35 nello slot 29 (14:30 UTC).
+# Real R09 stress log (2026-11-10): a single measurement, 35 in slot 29 (14:30 UTC).
 REAL_STRESS = (
     "3700051e00000000000000000000005a",
     "37010000000000000000000000000038",

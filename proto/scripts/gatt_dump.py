@@ -1,11 +1,13 @@
-"""Enumera servizi/caratteristiche GATT e legge quelle leggibili. Solo letture, nessuna scrittura."""
+"""Enumerates GATT services/characteristics and reads the readable ones. Reads only, no writes."""
+
 import asyncio, sys
 from bleak import BleakClient, BleakScanner
+
 
 async def main(addr):
     dev = await BleakScanner.find_device_by_address(addr, timeout=20)
     if not dev:
-        sys.exit("device non trovato")
+        sys.exit("device not found")
     async with BleakClient(dev, timeout=30) as c:
         print(f"connected={c.is_connected} mtu={c.mtu_size}")
         for s in c.services:
@@ -21,5 +23,6 @@ async def main(addr):
                 print(line)
                 for d in ch.descriptors:
                     print(f"      [desc] {d.uuid} handle={d.handle}")
+
 
 asyncio.run(main(sys.argv[1]))

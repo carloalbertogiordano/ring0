@@ -71,7 +71,7 @@ async def _hrv_log(ring: RingClient, args: argparse.Namespace) -> str:
 
 
 async def _raw(ring: RingClient, args: argparse.Namespace) -> str:
-    """Esplora un comando V1: invia `--cmd/--payload` e raccoglie fino a `--count` pacchetti."""
+    """Explores a V1 command: sends `--cmd/--payload` and collects up to `--count` packets."""
     count = args.count
     packets = await ring.request_many(
         args.cmd,
@@ -117,21 +117,21 @@ async def _run(args: argparse.Namespace) -> None:
 
 
 def main() -> None:
-    """Entry point della CLI."""
+    """CLI entry point."""
     parser = argparse.ArgumentParser(prog="ringproto")
-    parser.add_argument("-v", "--verbose", action="store_true", help="log dei pacchetti raw")
+    parser.add_argument("-v", "--verbose", action="store_true", help="log raw packets")
     parser.add_argument("command", choices=[*sorted(COMMANDS), "bigdata", "temperature"])
     parser.add_argument("address")
-    parser.add_argument("--interval", type=int, help="hr-settings: abilita e imposta i minuti")
+    parser.add_argument("--interval", type=int, help="hr-settings: enable, interval in minutes")
     parser.add_argument("--enable", nargs="+", help="monitors: spo2 stress hrv temperature")
-    parser.add_argument("--cmd", type=lambda v: int(v, 0), help="raw: id comando V1")
-    parser.add_argument("--count", type=int, default=1, help="raw: pacchetti da attendere")
-    parser.add_argument("--days-ago", type=int, default=0, help="hrv-log: giorni fa")
-    parser.add_argument("--days", type=int, default=2, help="temperature: giorni richiesti")
-    parser.add_argument("--disable", action="store_true", help="hr-settings: disabilita")
-    parser.add_argument("--date", type=date.fromisoformat, help="hr-log: giorno YYYY-MM-DD (UTC)")
-    parser.add_argument("--type", type=lambda v: int(v, 0), help="bigdata: tipo (es. 0x25)")
-    parser.add_argument("--payload", default="", help="bigdata: payload hex della richiesta")
+    parser.add_argument("--cmd", type=lambda v: int(v, 0), help="raw: V1 command id")
+    parser.add_argument("--count", type=int, default=1, help="raw: packets to wait for")
+    parser.add_argument("--days-ago", type=int, default=0, help="hrv-log: days ago")
+    parser.add_argument("--days", type=int, default=2, help="temperature: days requested")
+    parser.add_argument("--disable", action="store_true", help="hr-settings: disable")
+    parser.add_argument("--date", type=date.fromisoformat, help="hr-log: day YYYY-MM-DD (UTC)")
+    parser.add_argument("--type", type=lambda v: int(v, 0), help="bigdata: type (e.g. 0x25)")
+    parser.add_argument("--payload", default="", help="bigdata: hex payload of the request")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
     if args.verbose:

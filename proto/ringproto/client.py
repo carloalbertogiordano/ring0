@@ -1,4 +1,4 @@
-"""Client del canale UART V1: un comando alla volta, con timeout e routing delle notifiche."""
+"""V1 UART channel client: one command at a time, with timeouts and notification routing."""
 
 import asyncio
 import logging
@@ -13,25 +13,25 @@ DEFAULT_TIMEOUT = 5.0
 
 
 class Transport(Protocol):
-    """Canale di basso livello verso il ring (BLE reale o finto nei test)."""
+    """Low-level channel to the ring (real BLE, or a fake in tests)."""
 
     def set_notify_handler(self, handler: Callable[[bytes], None]) -> None:  # noqa: V107
-        """Registra il callback invocato per ogni notifica ricevuta."""
+        """Registers the callback invoked for every notification received."""
 
     async def write(self, data: bytes) -> None:
-        """Scrive un pacchetto sul canale RX del ring."""
+        """Writes a packet to the ring's RX channel."""
 
 
 class RingTimeoutError(TimeoutError):
-    """Il ring non ha risposto entro il timeout."""
+    """The ring did not answer within the timeout."""
 
 
 class RingCommandError(RuntimeError):
-    """Il ring ha risposto con il flag di errore."""
+    """The ring answered with the error flag."""
 
 
 class RingClient:
-    """Invia comandi in serie e associa ogni risposta al comando atteso."""
+    """Sends commands in series and matches each response to the expected command."""
 
     def __init__(
         self,
@@ -47,7 +47,7 @@ class RingClient:
         transport.set_notify_handler(self._handle_notification)
 
     async def request(self, cmd: int, payload: bytes = b"", timeout: float | None = None) -> Packet:
-        """Invia un comando e attende una sola risposta con lo stesso id."""
+        """Sends a command and waits for a single response with the same id."""
         packets = await self.request_many(cmd, payload, is_last=lambda _: True, timeout=timeout)
         return packets[0]
 
@@ -59,9 +59,9 @@ class RingClient:
         is_last: Callable[[list[Packet]], bool],
         timeout: float | None = None,
     ) -> list[Packet]:
-        """Invia un comando e raccoglie le risposte finche' `is_last(pacchetti_finora)` e' vero.
+        """Sends a command and collects responses until `is_last(packets_so_far)` is true.
 
-        Il timeout vale per ogni singolo pacchetto atteso.
+        The timeout applies to each single expected packet.
         """
         wait = timeout or self._default_timeout
         packets: list[Packet] = []

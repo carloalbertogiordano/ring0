@@ -13,7 +13,7 @@ data class Thresholds(
     val batteryLow: Int = 15,
 )
 
-/** Preferenze dell'app (SharedPreferences): ring scelto, intervallo di sync, soglie degli alert. */
+/** App preferences (SharedPreferences): chosen ring, sync interval, alert thresholds. */
 class SettingsStore(context: Context) {
     private val prefs = context.getSharedPreferences("ring", Context.MODE_PRIVATE)
 

@@ -16,7 +16,7 @@ class Battery:
 
 
 def decode(pkt: Packet) -> Battery:
-    """Decodifica la risposta batteria."""
+    """Decodes the battery response."""
     if pkt.cmd != CMD_BATTERY:
         msg = f"not a battery packet: cmd {pkt.cmd:#04x}"
         raise ValueError(msg)
@@ -28,5 +28,5 @@ def decode(pkt: Packet) -> Battery:
 
 
 async def read_battery(client: RingClient) -> Battery:
-    """Legge livello e stato di carica dal ring."""
+    """Reads level and charging state from the ring."""
     return decode(await client.request(CMD_BATTERY))

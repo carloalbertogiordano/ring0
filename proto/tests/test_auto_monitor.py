@@ -78,7 +78,7 @@ async def test_write_enabled_discards_write_reply_and_returns_read_back_state() 
     assert result is True
 
 
-# Risposte reali del ring R09 (FW RT09CR2_3.00.03_260929, 2026-11-10): prima/dopo l'abilitazione.
+# Real R09 responses (FW RT09CR2_3.00.03_260929, 2026-11-10): before/after enabling.
 REAL_READS = {
     (Feature.SPO2, False): "2c01001e00000000000000000000004b",
     (Feature.SPO2, True): "2c01010000000000000000000000002e",

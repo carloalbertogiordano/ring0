@@ -1,7 +1,7 @@
-"""Frame del canale big-data V2: [0xBC][id][len LE u16][crc16 LE u16][payload].
+"""Big-data V2 channel frame: [0xBC][id][len LE u16][crc16 LE u16][payload].
 
-crc16 = CRC-16/MODBUS (poly 0xA001 riflesso, init 0xFFFF) del solo payload. Le risposte piu' lunghe
-della MTU arrivano spezzate su piu' notifiche e vanno ricomposte.
+crc16 = CRC-16/MODBUS (reflected poly 0xA001, init 0xFFFF) of the payload only. Responses
+longer than the MTU arrive split across several notifications and must be reassembled.
 """
 
 import logging
@@ -34,7 +34,7 @@ def crc16_modbus(data: bytes) -> int:
 
 
 def encode_frame(type_id: int, payload: bytes = b"") -> bytes:
-    """Costruisce un frame big-data (richiesta o, nei test, risposta)."""
+    """Builds a big-data frame (a request or, in tests, a response)."""
     return struct.pack("<BBHH", MAGIC, type_id, len(payload), crc16_modbus(payload)) + payload
 
 
@@ -45,7 +45,7 @@ class FrameAssembler:
         self._buf = bytearray()
 
     def feed(self, data: bytes) -> list[BigFrame]:
-        """Aggiunge una notifica e restituisce i frame ora completi."""
+        """Adds a notification and returns the frames that are now complete."""
         self._buf += data
         frames: list[BigFrame] = []
         while True:
@@ -56,7 +56,7 @@ class FrameAssembler:
                 frames.append(frame)
 
     def _step(self) -> tuple[bool, BigFrame | None]:
-        """Un passo di parsing: (ha_consumato_byte, frame_valido_o_None)."""
+        """One parsing step: (consumed_bytes, valid_frame_or_None)."""
         start = self._buf.find(MAGIC)
         if start < 0:
             self._buf.clear()

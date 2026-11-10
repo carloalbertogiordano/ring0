@@ -1,9 +1,9 @@
-"""Connessione robusta al ring su Linux/BlueZ (verificata col ring reale).
+"""Robust connection to the ring on Linux/BlueZ (verified on the real ring).
 
-Vedi docs/ring-recon.md.
+See docs/ring-recon.md.
 
-Con il ring bonded, bluetoothd lo tiene connesso e il ring non si pubblicizza piu': prima si
-rilascia la connessione, si attende, poi scan + connect con retry.
+With the ring bonded, bluetoothd keeps it connected and the ring stops advertising: first
+release the connection, wait, then scan + connect with retries.
 """
 
 import asyncio
@@ -29,14 +29,14 @@ CONNECT_TIMEOUT = 30.0
 
 @dataclass(frozen=True)
 class RingSession:
-    """Client dei due canali del ring: comandi V1 (16 byte) e big-data V2."""
+    """Clients for the ring's two channels: V1 commands (16 bytes) and big-data V2."""
 
     v1: RingClient
     bigdata: BigDataClient
 
 
 class RingNotReachableError(ConnectionError):
-    """Il ring non e' stato trovato o la connessione e' fallita dopo tutti i tentativi."""
+    """The ring was not found, or the connection failed after all attempts."""
 
 
 async def _release_from_bluez(address: str) -> None:
@@ -76,7 +76,7 @@ async def _connect(address: str, retries: int) -> BleakClient:
 
 @asynccontextmanager
 async def connect_ring(address: str, retries: int = 4) -> AsyncIterator[RingSession]:
-    """Connette al ring e restituisce i client dei due canali; disconnette all'uscita."""
+    """Connects to the ring and returns the clients of both channels; disconnects on exit."""
     bleak_client = await _connect(address, retries)
     try:
         v1_transport = BleakTransport(bleak_client)

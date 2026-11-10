@@ -1,9 +1,9 @@
-"""CMD 0x16 impostazioni del monitoraggio HR automatico.
+"""CMD 0x16: automatic HR monitoring settings.
 
-Lettura:  richiesta [0x16][0x01], risposta [0x16][0x01][abilitato][intervallo_min].
-Scrittura: richiesta [0x16][0x02][abilitato: 1=si, 2=no][intervallo_min].
-La risposta alla scrittura non e' affidabile (lo nota anche il client di riferimento):
-si rilegge lo stato per confermarla.
+Read:  request [0x16][0x01], response [0x16][0x01][enabled][interval_min].
+Write: request [0x16][0x02][enabled: 1=yes, 2=no][interval_min].
+The reply to a write is unreliable (the reference client notes it too):
+the state is read back to confirm it.
 """
 
 from dataclasses import dataclass
@@ -26,7 +26,7 @@ class HeartRateSettings:
 
 
 def decode(pkt: Packet) -> HeartRateSettings:
-    """Decodifica la risposta di lettura delle impostazioni."""
+    """Decodes the settings read response."""
     if pkt.cmd != CMD_HR_SETTINGS:
         msg = f"not a heart rate settings packet: cmd {pkt.cmd:#04x}"
         raise ValueError(msg)
@@ -38,12 +38,12 @@ def decode(pkt: Packet) -> HeartRateSettings:
 
 
 def encode_read() -> bytes:
-    """Payload della richiesta di lettura."""
+    """Payload of the read request."""
     return bytes([SUB_READ])
 
 
 def encode_write(settings: HeartRateSettings) -> bytes:
-    """Payload della richiesta di scrittura."""
+    """Payload of the write request."""
     if not 0 < settings.interval_minutes <= MAX_INTERVAL:
         msg = f"interval must be 1..{MAX_INTERVAL} minutes: {settings.interval_minutes}"
         raise ValueError(msg)
@@ -52,11 +52,11 @@ def encode_write(settings: HeartRateSettings) -> bytes:
 
 
 async def read_hr_settings(client: RingClient) -> HeartRateSettings:
-    """Legge le impostazioni correnti."""
+    """Reads the current settings."""
     return decode(await client.request(CMD_HR_SETTINGS, encode_read()))
 
 
 async def write_hr_settings(client: RingClient, settings: HeartRateSettings) -> HeartRateSettings:
-    """Scrive le impostazioni e restituisce lo stato riletto dal ring."""
+    """Writes the settings and returns the state read back from the ring."""
     await client.request(CMD_HR_SETTINGS, encode_write(settings))
     return await read_hr_settings(client)

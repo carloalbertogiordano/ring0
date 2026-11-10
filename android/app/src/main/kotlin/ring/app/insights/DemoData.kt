@@ -9,7 +9,7 @@ import ring.app.data.Sample
 import ring.app.data.SampleType
 import ring.app.data.SleepEntity
 
-/** Dati sintetici per provare grafici, recupero e allarmi senza aspettare giorni di dati reali. */
+/** Synthetic data to try charts, recovery and warnings without waiting for days of real data. */
 object DemoData {
     data class Demo(val samples: List<Sample>, val sleep: List<SleepEntity>)
 
@@ -27,7 +27,7 @@ object DemoData {
             val lastTwo = sick && back <= 1
             fun hourOfDay(ts: Long) = ((ts - dayStart) / HOUR).toInt()
             var ts = dayStart
-            // oggi: solo fino alle 07:00, cosi' la notte appena trascorsa e' completa e non si sovrappone ai dati veri
+            // today: only until 07:00, so last night is complete and does not overlap the real data
             val limit = if (back == 0) dayStart + 7 * HOUR else dayStart + DAY
             while (ts < limit) {
                 val h = (ts - dayStart) / HOUR.toDouble()
@@ -50,7 +50,7 @@ object DemoData {
                 }
                 ts += 5 * 60L
             }
-            val start = dayStart - HOUR + 30 * 60 // 23:30 del giorno prima
+            val start = dayStart - HOUR + 30 * 60 // 23:30 of the previous day
             val end = dayStart + 6 * HOUR + 40 * 60
             val total = ((end - start) / 60).toInt()
             val awake = if (lastTwo) 55 else 28

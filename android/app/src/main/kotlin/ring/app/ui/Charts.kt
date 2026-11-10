@@ -40,7 +40,7 @@ private const val GRID_LINES = 3
 private const val TWO_DAYS = 2 * 86_400L
 private const val DAY_MINUS = 20 * 3600L
 
-/** Andamento compatto (area + linea + punto finale) per i riquadri della Home. */
+/** Compact trend (area + line + end point) for the Home tiles. */
 @Composable
 fun Sparkline(values: List<Double>, color: Color, modifier: Modifier = Modifier) {
     Canvas(modifier.fillMaxWidth().height(26.dp)) {
@@ -125,7 +125,7 @@ fun TermChart(
     }
 }
 
-/** Traccia ECG che si disegna in loop (decorativa, mostra che la misura e' in corso). */
+/** ECG trace that draws itself in a loop (decorative, shows that a measurement is running). */
 @Composable
 fun Ecg(modifier: Modifier = Modifier, active: Boolean = true) {
     val t = rememberInfiniteTransition(label = "ecg")
@@ -145,7 +145,7 @@ fun Ecg(modifier: Modifier = Modifier, active: Boolean = true) {
     }
 }
 
-/** Radar animato per la ricerca dell'anello. */
+/** Animated radar for the ring search. */
 @Composable
 fun Radar(size: Dp = 150.dp, found: Boolean = false, modifier: Modifier = Modifier) {
     val t = rememberInfiniteTransition(label = "radar")

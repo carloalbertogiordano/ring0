@@ -1,4 +1,4 @@
-"""Trasporto finto per testare il client senza BLE."""
+"""Fake transport to test the client without BLE."""
 
 import asyncio
 from collections.abc import Callable
@@ -7,7 +7,7 @@ from ringproto.packet import build
 
 
 class FakeTransport:
-    """Registra le scritture e risponde con pacchetti predefiniti per comando."""
+    """Records writes and answers with canned packets per command."""
 
     def __init__(self) -> None:
         self.events: list[tuple[str, int]] = []
@@ -54,7 +54,7 @@ def error_response(cmd: int) -> bytes:
 
 
 class FakeBigTransport(FakeTransport):
-    """Come FakeTransport ma per il canale big-data: la chiave e' il type id (byte 1)."""
+    """Like FakeTransport but for the big-data channel: the key is the type id (byte 1)."""
 
     def _key(self, data: bytes) -> int:
         return data[1]

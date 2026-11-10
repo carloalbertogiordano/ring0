@@ -50,7 +50,7 @@ data class LiveResult(
     val breathConfidence: Double = 0.0,
 )
 
-/** Stato osservabile dalla UI. */
+/** State observed by the UI. */
 data class Status(
     val connected: Boolean = false,
     val battery: Battery? = null,
@@ -98,11 +98,11 @@ class Graph(private val context: Context) {
             throw e
         }
         _status.update { it.copy(connected = true, connectFailures = 0) }
-        // un real-time rimasto attivo consuma batteria: stop di sicurezza a ogni connessione
+        // a real-time stream left running drains the battery: safety stop on every connection
         runCatching { session.v1.send(RealTimeCommand.CMD_STOP, byteArrayOf(RealTimeCommand.KIND_HEART_RATE.toByte(), 0, 0)) }
     }
 
-    /** Un ciclo completo: connette se serve, sincronizza, valuta gli alert. */
+    /** A full cycle: connect if needed, sync, evaluate alerts. */
     suspend fun syncNow() = syncLock.withLock {
         _status.update { it.copy(syncing = true, lastError = null) }
         try {
@@ -127,7 +127,7 @@ class Graph(private val context: Context) {
         }
     }
 
-    /** Carica 14 giorni di dati sintetici marcati "demo" (scenario sano o di malessere). */
+    /** Loads 14 days of synthetic data flagged "demo" (healthy or feeling-ill scenario). */
     fun loadDemo(sick: Boolean) {
         scope.launch {
             val demo = ring.app.insights.DemoData.generate(Instant.now().epochSecond, sick)
@@ -151,7 +151,7 @@ class Graph(private val context: Context) {
         _status.update { it.copy(readiness = report) }
     }
 
-    /** Attiva le misure automatiche di default (cuore ogni 5 min, SpO2, stress, HRV, temperatura). */
+    /** Turns on the default automatic measurements (heart every 5 min, SpO2, stress, HRV, temperature). */
     suspend fun enableDefaultMonitors() {
         try {
             ensureConnected()
@@ -166,7 +166,7 @@ class Graph(private val context: Context) {
 
     /**
      * Misura live: bpm e HRV (RMSSD/SDNN) dai battiti RR; il sensore impiega ~30-60 s ad agganciarsi.
-     * Con `withRespiration` raccoglie piu' battiti (~70) per stimare anche la frequenza respiratoria.
+     * With `withRespiration` it collects more beats (~70) to also estimate the breathing rate.
      */
     fun measureLive(withRespiration: Boolean = false) {
         scope.launch {
@@ -199,7 +199,7 @@ class Graph(private val context: Context) {
         }
     }
 
-    /** Legge lo stato dei monitor automatici del ring. */
+    /** Reads the state of the ring's automatic monitors. */
     fun refreshMonitors() {
         scope.launch {
             try {

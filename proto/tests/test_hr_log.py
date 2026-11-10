@@ -17,7 +17,7 @@ from tests.fakes import FakeTransport
 DAY = datetime(2026, 11, 10, tzinfo=UTC)
 TS = int(DAY.timestamp())
 
-# Pacchetto sub-tipo 0 reale (repo tahnok, ring R02): 24 pacchetti, intervallo 5 minuti.
+# Real sub-type 0 packet (tahnok repo, R02 ring): 24 packets, 5-minute interval.
 REAL_SUB0 = bytes.fromhex("15001805000000000000000000000032")
 
 
@@ -119,11 +119,11 @@ def test_is_last_is_false_when_first_packet_is_not_a_header() -> None:
 
 
 def test_decode_real_r09_no_data_response() -> None:
-    # Risposta reale del R09 con auto-HR disattivo (2026-11-10).
+    # Real R09 response with auto HR off (2026-11-10).
     assert decode(pkts(bytes.fromhex("15ff0000000000000000000000000014"))) is None
 
 
-# Log reale completo del ring R09 (24 pacchetti, 2026-11-10 ~15:25 CET): una sola misura, 96 bpm.
+# Complete real R09 log (24 packets, 2026-11-10 ~15:25 CET): a single measurement, 96 bpm.
 REAL_LOG_PACKETS = (
     "15001805000000000000000000000032",
     "1501805ef26a00000000000000000050",

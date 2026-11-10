@@ -1,9 +1,9 @@
-"""Big-data 0x25: storico temperatura cutanea (dito).
+"""Big-data 0x25: skin temperature history (finger).
 
-Richiesta: payload di 1 byte (2 = valore usato da Gadgetbridge; significato esatto da chiarire).
-Risposta: sequenza di blocchi da 50 byte, dal piu' vecchio a oggi:
-  [giorni fa][passo minuti (30)][48 valori]   -> °C = valore / 10 + 20; 0 = nessuna misura.
-Una risposta senza storico e' solo `00 1e`.
+Request: 1-byte payload (2 = value used by Gadgetbridge; exact meaning still unclear).
+Response: sequence of 50-byte blocks, oldest first up to today:
+  [days ago][step minutes (30)][48 values]   -> °C = value / 10 + 20; 0 = no measurement.
+A response without history is just `00 1e`.
 """
 
 from dataclasses import dataclass
@@ -29,7 +29,7 @@ class TemperatureDay:
     samples: tuple[int, ...]
 
     def readings(self, day_start: datetime) -> list[tuple[datetime, float]]:
-        """Coppie (istante, °C) per gli slot con misura, dato l'inizio (UTC) di quel giorno."""
+        """(instant, °C) pairs for slots with a measurement, given the (UTC) start of that day."""
         step = timedelta(minutes=self.interval_minutes)
         return [
             (day_start + i * step, raw * CELSIUS_PER_UNIT + BASE_CELSIUS)
@@ -39,7 +39,7 @@ class TemperatureDay:
 
 
 def encode_request(days: int = DEFAULT_DAYS) -> bytes:
-    """Payload della richiesta (1 byte)."""
+    """Request payload (1 byte)."""
     if not 1 <= days <= MAX_DAYS:
         msg = f"days must be 1..{MAX_DAYS}: {days}"
         raise ValueError(msg)
@@ -47,7 +47,7 @@ def encode_request(days: int = DEFAULT_DAYS) -> bytes:
 
 
 def decode(frame: BigFrame) -> list[TemperatureDay]:
-    """Decodifica la risposta in blocchi giornalieri (lista vuota se non c'e' storico)."""
+    """Decodes the response into daily blocks (empty list if there is no history)."""
     if frame.type_id != TYPE_TEMPERATURE:
         msg = f"not a temperature frame: type {frame.type_id:#04x}"
         raise ValueError(msg)

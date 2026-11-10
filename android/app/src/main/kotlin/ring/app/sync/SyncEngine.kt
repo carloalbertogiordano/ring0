@@ -28,7 +28,7 @@ data class SyncReport(
     val errors: List<String>,
 )
 
-/** Scarica dal ring gli ultimi giorni e li salva (idempotente: chiave (tipo, istante)). */
+/** Downloads the latest days from the ring and stores them (idempotent: key is (type, instant)). */
 class SyncEngine(private val dao: RingDao) {
     suspend fun sync(session: RingSession, days: Int, onProgress: (String, Float) -> Unit = { _, _ -> }): SyncReport {
         val errors = mutableListOf<String>()

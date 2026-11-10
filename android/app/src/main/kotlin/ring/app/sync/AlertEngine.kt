@@ -23,7 +23,7 @@ import ring.domain.TimedValue
 import ring.domain.WarningLevel
 import ring.app.insights.Insights
 
-/** Valuta le soglie sulle misure piu' recenti e notifica (con pausa per tipo di alert). */
+/** Checks thresholds on the latest measurements and notifies (with a cooldown per alert kind). */
 class AlertEngine(private val context: Context, private val dao: RingDao, private val settings: SettingsStore, private val insights: Insights) {
     init {
         val channel = NotificationChannel(CHANNEL, context.getString(R.string.notif_channel_alerts), NotificationManager.IMPORTANCE_HIGH)

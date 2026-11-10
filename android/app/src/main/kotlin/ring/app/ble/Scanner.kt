@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.callbackFlow
 
 data class FoundDevice(val address: String, val name: String, val rssi: Int)
 
-/** Scansione BLE dei dispositivi con un nome (il ring si annuncia come "COLMI Ring ..."). */
+/** BLE scan of named devices (the ring advertises as "COLMI Ring ..."). */
 @SuppressLint("MissingPermission")
 fun scanDevices(context: Context): Flow<FoundDevice> = callbackFlow {
     val scanner = context.getSystemService(BluetoothManager::class.java).adapter.bluetoothLeScanner
