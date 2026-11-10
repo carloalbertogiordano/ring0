@@ -2,7 +2,7 @@
 __pycache__/
 *.pyc
 *.db
-# catture grezze possono contenere MAC/dati personali: tracciale solo se anonimizzate
+# raw captures can contain MACs and personal data: never track them
 captures/*.btsnap
 captures/*.cfa
 captures/*.pcap*
@@ -11,3 +11,8 @@ android/.gradle/
 captures/*.btsnoop
 refs/
 captures/raw/
+captures/*
+!captures/.gitkeep
+local.session
+.coverage
+local.properties
