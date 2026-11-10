@@ -112,3 +112,7 @@ async def test_read_hr_log_roundtrip() -> None:
     assert tr.sent == [build(0x15, encode_request(DAY))]
     assert log is not None
     assert log.samples == (60,) * 9 + (65,) * 13
+
+
+def test_is_last_is_false_when_first_packet_is_not_a_header() -> None:
+    assert is_last(pkts(sub1([60] * 9))) is False
