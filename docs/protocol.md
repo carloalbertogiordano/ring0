@@ -18,8 +18,7 @@ Codice: `proto/ringproto/commands/battery.py`. Test: `proto/tests/test_battery.p
 
 ## 0x01 Set Time + capability
 Request: `01 <yy> <mm> <dd> <hh> <mi> <ss> 01 00*7 <crc>`, campi in **BCD**, ora **UTC**, byte 7 = lingua (1 = inglese).
-> Discrepanza: colmi-docs dice "binario", tahnok usa BCD. Il ring accetta il pacchetto in entrambi i casi (risponde);
-> quale sia interpretato correttamente va verificato con i timestamp dei log HR (slice 4).
+> colmi-docs dice "binario", tahnok usa BCD: **BCD confermato** dai timestamp del log HR (vedi 0x15).
 
 Response: `01 <payload 14 byte> <crc>` = mappa capability. Offset nel payload:
 
@@ -55,7 +54,9 @@ Req: `15 <unix ts LE u32 inizio giorno> 00*9 <crc>`. Provato con mezzanotte **UT
 Risposta a piu' pacchetti, `payload[0]` = sub-tipo: 0 = header (`[size][intervallo_min]`), 1 = `[ts LE u32][9 valori]`,
 >=2 = 13 valori, 0xFF = nessun dato. 0 = slot senza misura. `size` pacchetti in totale; log troncato a 1440/intervallo slot.
 Reale: `15ff0000000000000000000000000014` = nessun dato (auto-HR era disattivo).
-Da verificare con dati reali: convenzione del timestamp (UTC vs locale) e codifica BCD/binario dell'ora.
+**Verificato (2026-11-10)**: il ring ha restituito 24 pacchetti, `day_start` = mezzanotte UTC richiesta, una misura 96 bpm
+nello slot 173 (14:25 UTC = 15:25 CET = ora reale). Quindi l'ora impostata (BCD, UTC) e' corretta e il
+timestamp di inizio giorno e' epoch UTC. Slot da 5 min; 288 al giorno; risposta = header + 22 pacchetti da 13 valori.
 
 Codice: `proto/ringproto/commands/hr_log.py`, `hr_settings.py`.
 

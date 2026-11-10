@@ -121,3 +121,49 @@ def test_is_last_is_false_when_first_packet_is_not_a_header() -> None:
 def test_decode_real_r09_no_data_response() -> None:
     # Risposta reale del R09 con auto-HR disattivo (2026-11-10).
     assert decode(pkts(bytes.fromhex("15ff0000000000000000000000000014"))) is None
+
+
+# Log reale completo del ring R09 (24 pacchetti, 2026-11-10 ~15:25 CET): una sola misura, 96 bpm.
+REAL_LOG_PACKETS = (
+    "15001805000000000000000000000032",
+    "1501805ef26a00000000000000000050",
+    "15020000000000000000000000000017",
+    "15030000000000000000000000000018",
+    "15040000000000000000000000000019",
+    "1505000000000000000000000000001a",
+    "1506000000000000000000000000001b",
+    "1507000000000000000000000000001c",
+    "1508000000000000000000000000001d",
+    "1509000000000000000000000000001e",
+    "150a000000000000000000000000001f",
+    "150b0000000000000000000000000020",
+    "150c0000000000000000000000000021",
+    "150d0000000000000000000000000022",
+    "150e0000000000000000600000000083",
+    "150f0000000000000000000000000024",
+    "15100000000000000000000000000025",
+    "15110000000000000000000000000026",
+    "15120000000000000000000000000027",
+    "15130000000000000000000000000028",
+    "15140000000000000000000000000029",
+    "1515000000000000000000000000002a",
+    "1516000000000000000000000000002b",
+    "1517000000000000000000000000002c",
+)
+
+
+def test_decode_real_r09_log_has_single_reading_at_correct_utc_time() -> None:
+    log = decode([parse(bytes.fromhex(h)) for h in REAL_LOG_PACKETS])
+
+    assert log is not None
+    assert log.day_start == DAY
+    assert log.interval_minutes == 5
+    assert len(log.samples) == 288
+    assert log.readings() == [(datetime(2026, 11, 10, 14, 25, tzinfo=UTC), 96)]
+
+
+def test_is_last_triggers_exactly_on_last_real_packet() -> None:
+    packets = [parse(bytes.fromhex(h)) for h in REAL_LOG_PACKETS]
+
+    assert [is_last(packets[: i + 1]) for i in range(len(packets))].count(True) == 1
+    assert is_last(packets) is True
