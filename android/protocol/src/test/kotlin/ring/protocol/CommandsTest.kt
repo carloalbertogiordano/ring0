@@ -129,12 +129,40 @@ class CommandsTest {
         assertTrue(SleepCommand.decode(BigFrame(0x27, byteArrayOf(0))).isEmpty())
     }
 
-    @Test fun `real time decode and measure`() = runTest {
-        assertEquals(RealTimeReading(1, 0, 72), RealTimeCommand.decode(Packet.parse(Packet.build(0x69, byteArrayOf(1, 0, 72)))))
+    @Test fun `real time decodes bpm and rr from real packets`() {
+        val zeros = RealTimeCommand.decode(packets("6901000000000000000000000000006a").single())
+        assertEquals(RealTimeReading(1, 0, 0, 0), zeros)
+        val rr = RealTimeCommand.decode(packets("690100000000ee02000000000000005a").single())
+        assertEquals(RealTimeReading(1, 0, 0, 750), rr)
+    }
+
+    @Test fun `real time measure collects distinct beats and derives bpm`() = runTest {
+        fun rrPacket(ms: Int) = Packet.build(0x69, byteArrayOf(1, 0, 0, 0, 0, ms.toByte(), (ms shr 8).toByte()))
         val tr = FakeTransport().apply {
-            responses[0x69] = listOf(0, 0, 72).map { Packet.build(0x69, byteArrayOf(1, 0, it.toByte())) }
+            responses[0x69] = List(5) { Packet.build(0x69, byteArrayOf(1, 0, 0)) } +
+                listOf(750, 750, 723, 686, 700, 710).map(::rrPacket)
         }
-        assertEquals(72, RealTimeCommand.measure(RingClient(tr)))
+        val progress = mutableListOf<Int>()
+        val result = assertNotNull(RealTimeCommand.measure(RingClient(tr), targetBeats = 5) { progress += it })
+        assertEquals(listOf(750, 723, 686, 700, 710), result.rr)
+        assertEquals(85, result.bpm)
         assertEquals(0x6A, tr.sent.last()[0].toInt())
+        assertTrue(progress.last() >= 5)
+    }
+
+    @Test fun `real time measure prefers ring bpm when present and returns null on error`() = runTest {
+        val bpmPackets = FakeTransport().apply { responses[0x69] = List(10) { Packet.build(0x69, byteArrayOf(1, 0, 72)) } }
+        assertEquals(72, RealTimeCommand.measure(RingClient(bpmPackets), targetBeats = 1)?.bpm)
+    }
+
+    @Test fun `hrv metrics and artifact cleaning`() {
+        val rr = listOf(800, 810, 790, 805, 795)
+        assertEquals(15.0, assertNotNull(Hrv.rmssd(rr)), 1.0)
+        assertEquals(rr, Hrv.clean(rr))
+        assertEquals(listOf(800, 810, 790), Hrv.clean(listOf(800, 810, 5000, 790, 100)))
+        assertEquals(listOf(800, 810, 790, 805), Hrv.clean(listOf(800, 810, 790, 1500, 805)))
+        assertNull(Hrv.rmssd(listOf(800)))
+        assertNull(Hrv.sdnn(emptyList()))
+        assertEquals(75, Hrv.meanBpm(listOf(800, 800, 800)))
     }
 }

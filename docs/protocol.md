@@ -107,6 +107,15 @@ giorno, nessuno storico ancora): il significato del byte di richiesta resta da c
 Codice: `proto/ringproto/commands/temperature.py`. CLI: `python -m ringproto.cli temperature <MAC> --days N`.
 
 ## 0x69 / 0x6A Real-time (HR) - parzialmente verificato
-Start: `69 01 01 00…` (tipo 1 = HR, azione 1 = start). Risposte: `69 01 <errore> <bpm> 00…` ripetute; nei primi secondi
-`bpm = 0` (sensore in avvio), errore 0. Stop: `6a 01 00 00 00…` (il ring non risponde allo stop). Da verificare: tempo al
-primo valore non nullo e uso con dito fermo. Nota: il flag "manual HR" di set-time e' 0, ma il comando risponde comunque.
+Start: `69 01 01 00…` (tipo 1 = HR, azione 1 = start). Stop: `6a 01 00 00 00…` (nessuna risposta).
+Risposte `69 01 <errore> <bpm> <?> <?> <RR lo> <RR hi> 00…`. **Scoperta (app Android, 2026-11-10)**: i primi ~29 pacchetti sono tutti a 0
+(il byte `bpm` resta 0 anche dopo), poi compaiono nei byte 5-6 del payload valori u16 LE come `ee 02` = 750, `7c 02` = 636,
+`d3 02` = 723 ... = **intervalli RR in millisecondi** (750 ms = 80 bpm, coerente con l'HR a riposo misurato). Lo stesso RR viene
+ripetuto in pacchetti vicini (un pacchetto/s, un battito ogni ~0.7 s) -> scartare i duplicati consecutivi. Quindi il ring espone
+i **battiti singoli in tempo reale**: HRV vera (RMSSD/SDNN) calcolabile lato app. Il flag "manual HR" di set-time e' 0 ma il
+comando funziona. Implementazione: `android/protocol/.../RealTime.kt`, `Hrv.kt`.
+
+## 0x2A SpO2 - VERIFICATO (2026-11-10, app Android)
+Risposta reale `bc 2a 31 00 <crc> 00 …`: payload 49 byte = `[giorni fa][24 x (min,max)]` orari. Sul ring: SpO2 96% (media di min/max).
+## 0x25 Temperatura (app): risposta reale `bc 25 32 00 …` payload 50 byte, conferma il layout a blocchi.
+## 0x27 Sonno: ancora senza dati (risposta `bc 27 01 00 bf 40 00`); layout da Gadgetbridge, non verificato.

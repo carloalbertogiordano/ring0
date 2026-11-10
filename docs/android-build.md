@@ -1,0 +1,11 @@
+# Build Android su questa macchina
+
+Il loopback arriva ai server con indirizzo sorgente `192.168.1.49` (SNAT del gruppo `sandbox`), quindi il daemon Gradle
+e i worker di test rifiutano le connessioni ("Cannot accept connection from remote address"). Soluzioni adottate:
+
+- `android/gw.sh`: Gradle **senza daemon e in-process**. Richiede `GRADLE_OPTS` identico a `org.gradle.jvmargs`
+  (altrimenti Gradle forka un daemon) e il `gradle` di sistema (il wrapper non applica il javaagent -> fork).
+- `kotlin.compiler.execution.strategy=in-process` in `gradle.properties`.
+- Test: `./gw.sh :protocol:runTests` (JavaExec con JUnit Console) invece di `:protocol:test` (worker TCP).
+- Build/installazione: `./gw.sh :app:assembleDebug`, poi `adb -s <ip:porta> install -r app/build/outputs/apk/debug/app-debug.apk`.
+- compileSdk 37 (richiesto dalle librerie), targetSdk 36, minSdk 31. Pixel 9a (Android 17).
