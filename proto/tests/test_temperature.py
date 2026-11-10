@@ -15,7 +15,7 @@ from tests.fakes import FakeBigTransport, chunks
 
 DAY = datetime(2026, 11, 10, tzinfo=UTC)
 
-# Payload reale del R09 (2026-11-10 ~15:32 CET): oggi, passo 30 min, una sola misura (slot 29 = 14:30 UTC).
+# Payload reale R09 (2026-11-10): oggi, passo 30 min, una misura (slot 29 = 14:30 UTC).
 REAL_PAYLOAD = bytes.fromhex("001e" + "00" * 29 + "a9" + "00" * 18)
 
 
