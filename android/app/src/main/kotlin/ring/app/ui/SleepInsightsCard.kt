@@ -7,6 +7,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ring.app.Graph
 import ring.app.R
+import ring.app.insights.ApneaReport
 import ring.app.insights.SleepReport
 
 private const val MINUTES_PER_HOUR = 60
@@ -18,7 +19,7 @@ private const val OK_SCORE = 55
 @Composable
 fun SleepInsightsCard(graph: Graph) {
     val status by graph.status.collectAsStateWithLifecycle()
-    val report = status.sleep
+    val report = status.insights.sleep
     TCard {
         Label(stringResource(R.string.sleep_insights_title))
         if (report == null || (report.lastNight == null && report.bedtimeMinute == null)) {
@@ -26,6 +27,7 @@ fun SleepInsightsCard(graph: Graph) {
         } else {
             SleepBody(report)
         }
+        status.insights.apnea?.takeIf { it.nightsWithData > 0 }?.let { ApneaLine(it) }
     }
 }
 
@@ -68,4 +70,14 @@ private fun SleepBody(report: SleepReport) {
         KeyValue(stringResource(R.string.sleep_naps), stringResource(R.string.sleep_naps_value, report.naps.size, minutes))
     }
     T(stringResource(R.string.sleep_insights_hint), size = 10.sp, color = Term.faint)
+}
+
+@Composable
+private fun ApneaLine(apnea: ApneaReport) {
+    KeyValue(
+        stringResource(R.string.sleep_oxygen_dips),
+        stringResource(R.string.sleep_oxygen_dips_value, apnea.flaggedNights, apnea.nightsWithData),
+        if (apnea.pattern) Term.warn else Term.text,
+    )
+    if (apnea.pattern) T(stringResource(R.string.sleep_oxygen_pattern), size = 11.sp, color = Term.warn)
 }

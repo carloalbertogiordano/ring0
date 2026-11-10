@@ -141,6 +141,9 @@ interface RingDao {
     @Query("SELECT * FROM incidents WHERE id = :id")
     suspend fun incidentById(id: Long): IncidentEntity?
 
+    @Query("SELECT * FROM incidents WHERE ts >= :from ORDER BY ts")
+    suspend fun incidentsSince(from: Long): List<IncidentEntity>
+
     @Query("SELECT * FROM incidents WHERE ts >= :since AND checked = 0 ORDER BY ts DESC LIMIT 1")
     suspend fun latestUnchecked(since: Long): IncidentEntity?
 

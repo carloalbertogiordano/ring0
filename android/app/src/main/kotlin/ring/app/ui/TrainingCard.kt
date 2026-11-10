@@ -21,6 +21,8 @@ import ring.app.R
 import ring.app.insights.TrainingReport
 import ring.domain.HrZone
 import ring.domain.LoadLevel
+import ring.domain.RecoveryEvent
+import ring.domain.Vo2Estimate
 import kotlin.math.roundToInt
 
 private val ZONE_COLORS = mapOf(
@@ -37,21 +39,21 @@ private val BAR_ZONES = HrZone.entries.filter { it != HrZone.REST }
 fun TrainingCard(graph: Graph) {
     val status by graph.status.collectAsStateWithLifecycle()
     val profile by graph.settings.profile.collectAsStateWithLifecycle()
-    LaunchedEffect(profile) { graph.refreshTraining() }
-    val report = status.training
+    LaunchedEffect(profile) { graph.refreshInsights() }
+    val report = status.insights.training
     TCard {
         Label(stringResource(R.string.training_title))
         when {
             profile == null -> T(stringResource(R.string.training_need_profile), size = 12.sp, color = Term.dim)
             report == null -> T(stringResource(R.string.training_need_data), size = 12.sp, color = Term.dim)
-            else -> TrainingBody(report)
+            else -> TrainingBody(report, status.insights.recovery, status.insights.fitness)
         }
         T(stringResource(R.string.training_hint), size = 10.sp, color = Term.faint)
     }
 }
 
 @Composable
-private fun TrainingBody(report: TrainingReport) {
+private fun TrainingBody(report: TrainingReport, recovery: RecoveryEvent?, fitness: Vo2Estimate?) {
     val today = report.today
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Num("${today.trimp.roundToInt()}", stringResource(R.string.training_trimp_unit), 32.sp, Term.accent)
@@ -70,6 +72,16 @@ private fun TrainingBody(report: TrainingReport) {
         stringResource(R.string.training_kcal_value, (report.basalSoFarKcal + today.activeKcal).roundToInt()),
     )
     KeyValue(stringResource(R.string.training_kcal_active), stringResource(R.string.training_kcal_value, kcalActive))
+    recovery?.let {
+        KeyValue(stringResource(R.string.training_recovery), stringResource(R.string.training_recovery_value, it.drop5min.roundToInt()))
+    }
+    fitness?.let {
+        KeyValue(
+            stringResource(R.string.training_vo2),
+            stringResource(R.string.training_vo2_value, it.value.roundToInt(), it.low.roundToInt(), it.high.roundToInt()),
+        )
+        if (it.limitedAccuracy) T(stringResource(R.string.training_vo2_limited), size = 10.sp, color = Term.warn)
+    }
     val load = report.load
     if (load == null) {
         T(stringResource(R.string.training_trend_unknown), size = 11.sp, color = Term.dim)

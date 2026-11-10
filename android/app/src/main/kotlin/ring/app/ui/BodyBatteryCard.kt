@@ -23,7 +23,7 @@ private const val LOW_LEVEL = 30
 @Composable
 fun BodyBatteryCard(graph: Graph) {
     val status by graph.status.collectAsStateWithLifecycle()
-    val report = status.bodyBattery
+    val report = status.insights.bodyBattery
     TCard(hot = report != null) {
         Label(stringResource(R.string.energy_title))
         if (report == null) {

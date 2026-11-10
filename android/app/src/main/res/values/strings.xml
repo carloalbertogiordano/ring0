@@ -299,4 +299,19 @@ Check that the ring is charged, out of its case and not connected to anything el
     <string name="sleep_naps_value">%1$d (%2$d min)</string>
     <string name="sleep_insights_hint">Score, debt and bedtime are our own heuristics. Naps are guessed from a calm, low heart rate: quiet sitting can look the same.</string>
     <string name="profile_sleep_target">Sleep target</string>
+    <string name="training_recovery">HR recovery (5 min)</string>
+    <string name="training_recovery_value">-%1$d bpm</string>
+    <string name="training_vo2">VO2max (indicative)</string>
+    <string name="training_vo2_value">%1$d ml/kg/min (%2$d-%3$d)</string>
+    <string name="training_vo2_limited">This method agrees poorly with measured VO2max at your age: look only at the trend.</string>
+    <string name="sleep_oxygen_dips">Nights with oxygen dips</string>
+    <string name="sleep_oxygen_dips_value">%1$d of %2$d</string>
+    <string name="sleep_oxygen_pattern">Repeated dips under your night median. The ring only stores one SpO2 value per hour, so this is a hint, not a diagnosis: if you snore or wake tired, ask a doctor.</string>
+    <string name="habits_title">Habits and recovery</string>
+    <string name="habits_need_data">Not enough tagged incidents yet. Tag incidents with categories (caffeine, alcohol, exercise...) and wear the ring at night: a pattern needs at least 5 nights per category.</string>
+    <string name="habits_hint">Compares the night after each tagged incident with your other nights. Correlation, not proof.</string>
+    <string name="habit_metric_hrv">HRV</string>
+    <string name="habit_metric_rhr">Resting HR</string>
+    <string name="habit_metric_sleep">Sleep</string>
+    <string name="habit_value">%1$+.0f%% (%2$d nights)</string>
 </resources>

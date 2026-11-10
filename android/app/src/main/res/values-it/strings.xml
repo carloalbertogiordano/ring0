@@ -299,4 +299,19 @@ Controlla che l\'anello sia carico, fuori dalla custodia e non collegato ad altr
     <string name="sleep_naps_value">%1$d (%2$d min)</string>
     <string name="sleep_insights_hint">Punteggio, debito e orario sono euristiche nostre. I pisolini sono ipotesi da battito calmo e basso: stare seduti tranquilli può sembrare uguale.</string>
     <string name="profile_sleep_target">Obiettivo di sonno</string>
+    <string name="training_recovery">Recupero FC (5 min)</string>
+    <string name="training_recovery_value">-%1$d bpm</string>
+    <string name="training_vo2">VO2max (indicativo)</string>
+    <string name="training_vo2_value">%1$d ml/kg/min (%2$d-%3$d)</string>
+    <string name="training_vo2_limited">Alla tua età questo metodo concorda poco con il VO2max misurato: guarda solo la tendenza.</string>
+    <string name="sleep_oxygen_dips">Notti con cali di ossigeno</string>
+    <string name="sleep_oxygen_dips_value">%1$d su %2$d</string>
+    <string name="sleep_oxygen_pattern">Cali ripetuti sotto la tua mediana notturna. L\'anello salva un solo valore di SpO2 all\'ora, quindi è un indizio e non una diagnosi: se russi o ti svegli stanco, chiedi a un medico.</string>
+    <string name="habits_title">Abitudini e recupero</string>
+    <string name="habits_need_data">Non ci sono ancora abbastanza incidenti con categoria. Etichetta gli incidenti (caffè, alcol, esercizio...) e porta l\'anello di notte: servono almeno 5 notti per categoria.</string>
+    <string name="habits_hint">Confronta la notte dopo ogni incidente etichettato con le altre notti. Correlazione, non prova.</string>
+    <string name="habit_metric_hrv">HRV</string>
+    <string name="habit_metric_rhr">FC a riposo</string>
+    <string name="habit_metric_sleep">Sonno</string>
+    <string name="habit_value">%1$+.0f%% (%2$d notti)</string>
 </resources>

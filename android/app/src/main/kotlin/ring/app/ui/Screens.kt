@@ -371,7 +371,7 @@ private fun LiveCard(graph: Graph) {
 @Composable
 private fun ReadinessCard(graph: Graph) {
     val status by graph.status.collectAsStateWithLifecycle()
-    val report = status.readiness
+    val report = status.insights.readiness
     val r = report?.readiness
     TCard(hot = r != null) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -511,6 +511,7 @@ private fun HistoryScreen(graph: Graph) {
         item {
             HistoryPanel(graph, stringResource(R.string.chart_stress), SampleType.STRESS, "", from, to, Term.rem, 20.0, 0, thresholds.stressHigh.toDouble())
         }
+        item { HabitsCard(graph) }
         item { HistoryPanel(graph, stringResource(R.string.chart_hrv_ring), SampleType.HRV, " ms", from, to, Term.info, 20.0, 0, null) }
         item { HistoryPanel(graph, stringResource(R.string.chart_hrv_live), SampleType.HRV_LIVE, " ms", from, to, Term.rem, 20.0, 0, null) }
         item { HistoryPanel(graph, stringResource(R.string.chart_resp), SampleType.RESP, " /min", from, to, Term.info, 4.0, 0, null) }
@@ -607,7 +608,7 @@ private fun SettingsScreen(graph: Graph, onForget: () -> Unit) {
                 status.battery?.let {
                     KeyValue(stringResource(R.string.battery_label), if (it.charging) stringResource(R.string.battery_charging, it.level) else "${it.level}%")
                 }
-                status.batteryEstimate?.takeIf { status.battery?.charging != true }?.let {
+                status.insights.batteryEstimate?.takeIf { status.battery?.charging != true }?.let {
                     KeyValue(stringResource(R.string.battery_forecast_label), batteryLeftText(it.hoursLeft))
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

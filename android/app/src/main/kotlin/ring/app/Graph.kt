@@ -26,16 +26,14 @@ import ring.app.data.RingDb
 import ring.app.data.Sample
 import ring.app.data.SampleType
 import ring.app.data.SettingsStore
-import ring.app.insights.BodyBatteryReport
+import ring.app.insights.EstimateInsights
 import ring.app.insights.Insights
-import ring.app.insights.ReadinessReport
+import ring.app.insights.InsightsHub
+import ring.app.insights.InsightsSnapshot
 import ring.app.insights.SleepInsights
-import ring.app.insights.SleepReport
-import ring.app.insights.TrainingReport
 import ring.app.sync.AlertEngine
 import ring.app.sync.IncidentRecorder
 import ring.app.sync.SyncEngine
-import ring.domain.BatteryEstimate
 import ring.domain.RespirationRate
 import ring.domain.Symptom
 import ring.domain.Triage
@@ -95,11 +93,7 @@ data class Status(
     val liveBeats: Int = 0,
     val measuring: Boolean = false,
     val monitors: Map<String, Boolean> = emptyMap(),
-    val readiness: ReadinessReport? = null,
-    val training: TrainingReport? = null,
-    val batteryEstimate: BatteryEstimate? = null,
-    val bodyBattery: BodyBatteryReport? = null,
-    val sleep: SleepReport? = null,
+    val insights: InsightsSnapshot = InsightsSnapshot(),
     val liveTarget: Int = 12,
     val spo2Measuring: Boolean = false,
     val liveSpo2: Int? = null,
@@ -121,7 +115,7 @@ class Graph(private val context: Context) {
     val session = RingSession(manager)
     private val sync = SyncEngine(dao)
     val insights = Insights(dao)
-    private val sleepInsights = SleepInsights(dao)
+    private val hub = InsightsHub(insights, SleepInsights(dao), EstimateInsights(dao))
     val incidents = IncidentRecorder(dao)
     val alerts = AlertEngine(context, dao, settings, insights, incidents)
     private val _checkRequested = MutableStateFlow(false)
@@ -193,25 +187,10 @@ class Graph(private val context: Context) {
         }
     }
 
-    suspend fun refreshReadiness() {
-        val report = runCatching { insights.readiness() }.getOrNull()
-        _status.update { it.copy(readiness = report) }
-    }
-
-    /** Training numbers need the profile; without it they stay empty. */
-    suspend fun refreshTraining() {
-        val profile = settings.profile.value
-        val report = profile?.let { runCatching { insights.training(it) }.getOrNull() }
-        _status.update { it.copy(training = report) }
-    }
-
+    /** Recomputes every derived number (recovery, training, energy, sleep, fitness, ...) from the stored data. */
     suspend fun refreshInsights() {
-        refreshReadiness()
-        refreshTraining()
-        val battery = runCatching { insights.batteryForecast() }.getOrNull()
-        val energy = runCatching { insights.bodyBattery(settings.profile.value) }.getOrNull()
-        val sleep = runCatching { sleepInsights.report(settings.sleepTargetMin, insights.restingBaseline(Instant.now().epochSecond)?.toDouble()) }.getOrNull()
-        _status.update { it.copy(batteryEstimate = battery, bodyBattery = energy, sleep = sleep) }
+        val snapshot = hub.compute(settings.profile.value, settings.sleepTargetMin)
+        _status.update { it.copy(insights = snapshot) }
     }
 
     /** Turns on the default automatic measurements (heart every 5 min, SpO2, stress, HRV, temperature). */

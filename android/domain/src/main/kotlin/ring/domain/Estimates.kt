@@ -41,15 +41,19 @@ object HeartRateRecovery {
         return sorted.indices.mapNotNull { i ->
             val peak = sorted[i]
             val next = sorted.getOrNull(i + 1)
-            val previous = sorted.getOrNull(i - 1)
-            val isPeak = peak.value >= PEAK_FRACTION * hrMax && (previous == null || peak.value >= previous.value)
-            if (isPeak && next != null && next.ts - peak.ts == SLOT_SECONDS && next.value > 0 && peak.value - next.value >= MIN_DROP) {
-                RecoveryEvent(peak.ts, peak.value, peak.value - next.value)
+            if (isHighLocalMax(peak, sorted.getOrNull(i - 1), hrMax) && isSharpFall(peak, next)) {
+                RecoveryEvent(peak.ts, peak.value, peak.value - next!!.value)
             } else {
                 null
             }
         }
     }
+
+    private fun isHighLocalMax(peak: TimedValue, previous: TimedValue?, hrMax: Int): Boolean =
+        peak.value >= PEAK_FRACTION * hrMax && (previous == null || peak.value >= previous.value)
+
+    private fun isSharpFall(peak: TimedValue, next: TimedValue?): Boolean =
+        next != null && next.ts - peak.ts == SLOT_SECONDS && next.value > 0 && peak.value - next.value >= MIN_DROP
 }
 
 data class ApneaNight(val dips: Int, val lowest: Double, val flagged: Boolean)
