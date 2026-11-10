@@ -29,6 +29,8 @@ object RealTimeCommand {
     private const val RR_OFFSET = 5
     private const val STABLE_PACKETS = 10
     private const val MIN_PARTIAL_BEATS = 3
+    private const val DEFAULT_VALUE_PACKETS = 160
+    private const val STABLE_READINGS = 5
     private const val PACKET_TIMEOUT_MS = 4_000L
 
     fun decode(pkt: Packet): RealTimeReading {
@@ -83,5 +85,37 @@ object RealTimeCommand {
         val rr = beats(readings)
         val bpm = readings.lastOrNull { it.value > 0 }?.value ?: Hrv.meanBpm(Hrv.clean(rr))
         return LiveMeasurement(bpm, rr)
+    }
+
+    /**
+     * Measures a single-value kind (e.g. [KIND_SPO2]): waits for a stable non-zero value in `payload[2]` and returns
+     * the median of the last readings, or null on a ring error / timeout without a value. The PPG sensor is shared,
+     * so kinds must be measured one after the other.
+     */
+    suspend fun measureValue(
+        client: RingClient,
+        kind: Int,
+        maxPackets: Int = DEFAULT_VALUE_PACKETS,
+        onProgress: (Int) -> Unit = {},
+    ): Int? {
+        var latest: List<Packet> = emptyList()
+        fun valueOf(readings: List<RealTimeReading>): Int? =
+            readings.map { it.value }.filter { it > 0 }.takeLast(STABLE_READINGS).takeIf { it.size >= STABLE_READINGS }?.sorted()?.let { it[it.size / 2] }
+        try {
+            val packets = client.requestMany(
+                CMD_START, byteArrayOf(kind.toByte(), ACTION_START.toByte()), timeoutMs = PACKET_TIMEOUT_MS,
+            ) { received ->
+                latest = received
+                val decoded = received.map(::decode)
+                onProgress(decoded.count { it.value > 0 })
+                decoded.last().errorCode != 0 || valueOf(decoded) != null || received.size >= maxPackets
+            }
+            val readings = packets.map(::decode)
+            return if (readings.last().errorCode != 0) null else valueOf(readings)
+        } catch (_: RingTimeoutException) {
+            return valueOf(latest.map(::decode))
+        } finally {
+            withContext(NonCancellable) { runCatching { client.send(CMD_STOP, byteArrayOf(kind.toByte(), 0, 0)) } }
+        }
     }
 }

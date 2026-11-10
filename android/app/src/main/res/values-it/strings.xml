@@ -181,4 +181,8 @@ Controlla che l\'anello sia carico, fuori dalla custodia e non collegato ad altr
     <string name="reason_resting_hr">frequenza a riposo più alta del solito</string>
     <string name="reason_hrv_low">HRV più bassa del solito</string>
     <string name="btn_find_ring">Trova anello</string>
+    <string name="btn_spo2">Misura SpO2 · 30 s</string>
+    <string name="spo2_failed">Misura SpO2 non riuscita: tieni l\'anello ben aderente e il dito fermo, poi riprova</string>
+    <string name="spo2_result">SpO2: %1$d%%</string>
+    <string name="spo2_hint">L\'anello ha un solo sensore: SpO2 e misura del cuore vanno una dopo l\'altra.</string>
 </resources>

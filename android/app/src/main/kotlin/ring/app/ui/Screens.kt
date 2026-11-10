@@ -221,8 +221,14 @@ private fun LiveCard(graph: Graph) {
                 size = 11.sp, color = Term.accent,
             )
         }
-        TButton(if (status.measuring) stringResource(R.string.btn_measuring) else stringResource(R.string.btn_quick), { graph.measureLive(false) }, Modifier.fillMaxWidth(), enabled = !status.measuring)
-        TButton(stringResource(R.string.btn_full), { graph.measureLive(true) }, Modifier.fillMaxWidth(), BtnKind.GHOST, enabled = !status.measuring)
+        TButton(if (status.measuring) stringResource(R.string.btn_measuring) else stringResource(R.string.btn_quick), { graph.measureLive(false) }, Modifier.fillMaxWidth(), enabled = !status.measuring && !status.spo2Measuring)
+        TButton(stringResource(R.string.btn_full), { graph.measureLive(true) }, Modifier.fillMaxWidth(), BtnKind.GHOST, enabled = !status.measuring && !status.spo2Measuring)
+        status.liveSpo2?.let { T(stringResource(R.string.spo2_result, it), size = 13.sp, color = Term.info) }
+        TButton(
+            if (status.spo2Measuring) stringResource(R.string.btn_measuring) else stringResource(R.string.btn_spo2),
+            { graph.measureSpo2() }, Modifier.fillMaxWidth(), BtnKind.GHOST, enabled = !status.measuring && !status.spo2Measuring,
+        )
+        T(stringResource(R.string.spo2_hint), size = 10.sp, color = Term.faint)
         T(stringResource(R.string.full_hint), size = 10.sp, color = Term.faint)
     }
 }

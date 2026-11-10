@@ -177,6 +177,21 @@ class CommandsTest {
         assertNull(RealTimeCommand.measure(RingClient(tr), targetBeats = 50))
     }
 
+    @Test fun `single value measurement returns the median of the last stable readings`() = runTest {
+        fun pkt(v: Int) = Packet.build(0x69, byteArrayOf(3, 0, v.toByte()))
+        val tr = FakeTransport().apply { responses[0x69] = listOf(0, 0, 0, 96, 97, 97, 98, 97, 99, 99).map(::pkt) }
+        assertEquals(98, RealTimeCommand.measureValue(RingClient(tr), RealTimeCommand.KIND_SPO2))
+        assertEquals(0x6A, tr.sent.last()[0].toInt())
+        assertEquals(3, tr.sent.last()[1].toInt())
+    }
+
+    @Test fun `single value measurement gives null on error or without enough readings`() = runTest {
+        val err = Packet.build(0x69, byteArrayOf(3, 2, 0))
+        assertNull(RealTimeCommand.measureValue(RingClient(FakeTransport().apply { responses[0x69] = listOf(err) }), 3))
+        val few = FakeTransport().apply { responses[0x69] = listOf(97, 98).map { Packet.build(0x69, byteArrayOf(3, 0, it.toByte())) } }
+        assertNull(RealTimeCommand.measureValue(RingClient(few), 3))
+    }
+
     @Test fun `find ring and blink are fire and forget packets`() = runTest {
         val tr = FakeTransport()
         val client = RingClient(tr)

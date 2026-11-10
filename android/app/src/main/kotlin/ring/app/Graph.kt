@@ -68,6 +68,8 @@ data class Status(
     val monitors: Map<String, Boolean> = emptyMap(),
     val readiness: ReadinessReport? = null,
     val liveTarget: Int = 12,
+    val spo2Measuring: Boolean = false,
+    val liveSpo2: Int? = null,
 )
 
 /** Oggetti condivisi tra UI e servizio: database, connessione BLE, sync, alert. */
@@ -227,6 +229,27 @@ class Graph(private val context: Context) {
                 _status.update { it.copy(monitors = it.monitors + (name to confirmed)) }
             } catch (e: Exception) {
                 _status.update { it.copy(lastError = e.message ?: e.javaClass.simpleName) }
+            }
+        }
+    }
+
+    /** Measures SpO2 on demand (the ring shares one sensor, so this is separate from the heart measurement). */
+    fun measureSpo2() {
+        scope.launch {
+            _status.update { it.copy(spo2Measuring = true, liveSpo2 = null, lastError = null) }
+            try {
+                ensureConnected()
+                val value = RealTimeCommand.measureValue(session.v1, RealTimeCommand.KIND_SPO2)
+                _status.update { it.copy(liveSpo2 = value) }
+                if (value == null) {
+                    _status.update { it.copy(lastError = context.getString(R.string.spo2_failed)) }
+                } else {
+                    dao.upsertSamples(listOf(Sample(SampleType.SPO2, Instant.now().epochSecond, value.toDouble())))
+                }
+            } catch (e: Exception) {
+                _status.update { it.copy(lastError = e.message ?: e.javaClass.simpleName) }
+            } finally {
+                _status.update { it.copy(spo2Measuring = false) }
             }
         }
     }
