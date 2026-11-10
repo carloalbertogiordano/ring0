@@ -134,3 +134,16 @@ Slot time is on the ring clock (UTC). `43 ff` = no data (e.g. yesterday after a 
 Real R09 slot: `43 26 11 10 38 00 04 f0 01 b8 00 72 00` = 2026-11-10 14:00 UTC, 184 steps, 114 m.
 Goals request `21 01`; reply `21 01 <steps u24 LE> <calories u24 LE> <u24 ?>`: `21 01 88 13 00 e0 93 04 b8 0b 00` = 5000 steps,
 300000 cal, 3000 (probably distance in m). Reading only: writing goals is not implemented.
+
+## Alarms and push messages (from the decompiled official QRing app, 2026-11-10)
+Source: jadx on `refs/ATC_RF03_Ring/QRing_Patched_to_disable_certificate_pinning.apk` (`com.oudmon.ble.base.communication`).
+- **Big-data alarm (type 0x2C = 44)**, used by the app's reminder screen: read = payload `01`; write = `02 <count>` followed by
+  records `<len> <repeat|enable> <minutes lo> <minutes hi> <name UTF-8>`. Same layout as Gadgetbridge. Implemented in `AlarmCommand`.
+- **V1 alarm slots**: set = CMD `0x23` `[index 0..4][enable 0..2][hour BCD][minute BCD][7 bytes 0/1 = weekdays]`,
+  read = CMD `0x24` `[index]`. Hours and minutes are BCD. Implemented read-only in `AlarmSlotCommand`.
+- Push message CMD `0x72`: `[type][total chunks][chunk 1..n][up to 11 text bytes]`; `AlarmCommand`/`PushMessageCommand` in the app.
+
+**R09 result (FW RT09CR2_3.00.03_260929)**: the ring sends **no reply at all** to the big-data alarm read/write (`bc 2c ...`) nor to
+the V1 read `24 00`, while every other command answers within a second. Whether the alarm was stored, or whether this ring has a
+vibration motor / alarm feature at all, is NOT established. Pending: physical confirmation that the ring buzzes (push message 0x72,
+find device 0x50) and an alarm at the set time.

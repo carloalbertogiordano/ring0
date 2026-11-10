@@ -2,6 +2,8 @@ package ring.protocol.commands
 
 import ring.protocol.BigDataClient
 import ring.protocol.BigFrame
+import ring.protocol.Packet
+import ring.protocol.RingClient
 import ring.protocol.u16le
 import ring.protocol.u8
 
@@ -25,6 +27,7 @@ object AlarmCommand {
     private const val RECORD_HEADER = 4
     private const val MAX_NAME_BYTES = 28
     private const val MINUTES_PER_DAY = 1440
+    private const val WRITE_SETTLE_MS = 500L
 
     fun encodeReadRequest(): ByteArray = byteArrayOf(OP_READ.toByte())
 
@@ -66,12 +69,19 @@ object AlarmCommand {
         return out
     }
 
-    suspend fun read(client: BigDataClient): List<RingAlarm> =
-        decode(client.request(TYPE, encodeReadRequest())) ?: emptyList()
+    suspend fun read(client: BigDataClient): List<RingAlarm> {
+        decode(client.request(TYPE, encodeReadRequest()))?.let { return it }
+        // the first frame was the acknowledgement of an earlier write: ask again
+        return decode(client.request(TYPE, encodeReadRequest())) ?: emptyList()
+    }
 
-    /** Writes the full list and reads it back, returning what the ring now holds. */
+    /**
+     * Writes the full list and reads it back, returning what the ring now holds. The write is sent without waiting
+     * for an acknowledgement (the R09 does not always answer one); the read-back is the confirmation.
+     */
     suspend fun write(client: BigDataClient, alarms: List<RingAlarm>): List<RingAlarm> {
-        client.request(TYPE, encodeWritePayload(alarms))
+        client.send(TYPE, encodeWritePayload(alarms))
+        kotlinx.coroutines.delay(WRITE_SETTLE_MS)
         return read(client)
     }
 }
@@ -95,4 +105,21 @@ object PushMessageCommand {
     suspend fun send(client: ring.protocol.RingClient, text: String, type: Int = TYPE_SMS) {
         for (payload in encode(type, text)) client.send(CMD, payload)
     }
+}
+
+/** One alarm slot as the V1 command 0x24 reports it (documented in colmi-docs; ring clock = UTC). */
+data class SlotAlarm(val index: Int, val enabled: Boolean, val hour: Int, val minute: Int, val weekMask: List<Int>)
+
+/** CMD 0x24 read alarm slot: request [index]; response [index][enabled][hour][minute][7 week bytes]. Read only. */
+object AlarmSlotCommand {
+    const val CMD = 0x24
+    const val SLOTS = 5
+
+    fun decode(pkt: Packet): SlotAlarm {
+        require(pkt.cmd == CMD) { "not an alarm slot packet: cmd %#04x".format(pkt.cmd) }
+        val p = pkt.payload
+        return SlotAlarm(p.u8(0), p.u8(1) == 1, p.u8(2), p.u8(3), (0 until 7).map { p.u8(4 + it) })
+    }
+
+    suspend fun read(client: RingClient, index: Int): SlotAlarm = decode(client.request(CMD, byteArrayOf(index.toByte())))
 }

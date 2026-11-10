@@ -20,6 +20,14 @@ import ring.app.data.MIGRATION_1_2
 import ring.app.data.MIGRATION_2_3
 import ring.app.data.MIGRATION_3_4
 import ring.app.data.MIGRATION_4_5
+import ring.app.data.MIGRATION_5_6
+import ring.app.data.AlarmEntity
+import ring.domain.AlarmTime
+import ring.domain.LocalAlarm
+import ring.protocol.commands.AlarmCommand
+import ring.protocol.commands.AlarmSlotCommand
+import ring.protocol.commands.PushMessageCommand
+import ring.protocol.commands.RingAlarm
 import ring.app.data.RingDb
 import ring.app.data.Sample
 import ring.app.data.SampleType
@@ -94,12 +102,14 @@ data class Status(
     val stressMeasuring: Boolean = false,
     val liveStress: Int? = null,
     val check: CheckState = CheckState(),
+    /** Number of alarms the ring reports, null until read. */
+    val ringAlarmCount: Int? = null,
 )
 
 /** Oggetti condivisi tra UI e servizio: database, connessione BLE, sync, alert. */
 class Graph(private val context: Context) {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    val dao = Room.databaseBuilder(context, RingDb::class.java, "ring.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5).build().dao()
+    val dao = Room.databaseBuilder(context, RingDb::class.java, "ring.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6).build().dao()
     val settings = SettingsStore(context)
     private val manager = RingBleManager(context)
     val session = RingSession(manager)
@@ -151,6 +161,7 @@ class Graph(private val context: Context) {
                 )
             }
             refreshReadiness()
+            if (dao.allAlarms().isNotEmpty() && settings.alarmOffsetMin != currentOffsetMinutes()) pushAlarms()
             alerts.evaluate(report.battery?.level, report.battery?.charging ?: false)
         } catch (e: Exception) {
             _status.update { it.copy(connected = manager.isConnected, lastError = e.message ?: e.javaClass.simpleName) }
@@ -375,6 +386,69 @@ class Graph(private val context: Context) {
         }
     }
 
+    private fun currentOffsetMinutes(): Int = java.time.ZoneId.systemDefault().rules.getOffset(Instant.now()).totalSeconds / SECONDS_PER_MINUTE
+
+    /** Writes every stored alarm to the ring (converted to its UTC clock) and reads them back to confirm. */
+    private suspend fun pushAlarms() {
+        val offset = currentOffsetMinutes()
+        val ringAlarms = dao.allAlarms().map { a ->
+            val r = AlarmTime.toRing(LocalAlarm(a.hour, a.minute, a.weekdays), offset)
+            RingAlarm(a.enabled, r.minutes, r.weekdays, a.name)
+        }
+        try {
+            ensureConnected()
+            val confirmed = AlarmCommand.write(session.big, ringAlarms)
+            _status.update { it.copy(ringAlarmCount = confirmed.size) }
+            if (confirmed.size == ringAlarms.size) {
+                settings.alarmOffsetMin = offset
+            } else {
+                _status.update { it.copy(lastError = context.getString(R.string.alarm_write_failed)) }
+            }
+        } catch (e: Exception) {
+            _status.update { it.copy(lastError = context.getString(R.string.alarm_write_failed) + ": " + (e.message ?: e.javaClass.simpleName)) }
+        }
+    }
+
+    /** Reads the alarms stored on the ring (to show what is really there). */
+    fun readRingAlarms() {
+        scope.launch {
+            try {
+                ensureConnected()
+                // probe: the R09 does not answer the big-data alarm type, so ask the V1 alarm slots (read only)
+                val slots = (0 until AlarmSlotCommand.SLOTS).map { AlarmSlotCommand.read(session.v1, it) }
+                _status.update { it.copy(ringAlarmCount = slots.count { s -> s.enabled }) }
+            } catch (e: Exception) {
+                _status.update { it.copy(ringAlarmCount = null) }
+            }
+        }
+    }
+
+    fun saveAlarm(alarm: AlarmEntity) {
+        scope.launch {
+            dao.upsertAlarm(alarm)
+            pushAlarms()
+        }
+    }
+
+    fun deleteAlarm(id: Long) {
+        scope.launch {
+            dao.deleteAlarm(id)
+            pushAlarms()
+        }
+    }
+
+    /** Sends a short push message: the ring should buzz. */
+    fun vibrateTest() {
+        scope.launch {
+            try {
+                ensureConnected()
+                PushMessageCommand.send(session.v1, context.getString(R.string.notif_title))
+            } catch (e: Exception) {
+                _status.update { it.copy(lastError = e.message ?: e.javaClass.simpleName) }
+            }
+        }
+    }
+
     /** Lights the ring's green LED for about 10 seconds so it can be located. */
     fun findRing() {
         scope.launch {
@@ -395,6 +469,7 @@ class Graph(private val context: Context) {
         const val FIRST_SYNC_DAYS = 7
         const val REGULAR_SYNC_DAYS = 2
         const val HR_INTERVAL_MIN = 5
+        const val SECONDS_PER_MINUTE = 60
         const val QUICK_BEATS = 12
         const val RESPIRATION_BEATS = 70
         const val PACKETS_PER_BEAT_BUDGET = 4

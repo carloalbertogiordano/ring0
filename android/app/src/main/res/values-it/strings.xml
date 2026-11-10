@@ -254,4 +254,18 @@ Controlla che l\'anello sia carico, fuori dalla custodia e non collegato ad altr
     <string name="tile_steps">Passi</string>
     <string name="steps_of_goal">su %1$d</string>
     <string name="chart_steps">Passi (ogni 15 min)</string>
+    <string name="alarms_title">Sveglie dell\'anello</string>
+    <string name="btn_add_alarm">Aggiungi sveglia</string>
+    <string name="alarm_once">una volta</string>
+    <string name="alarm_every_day">ogni giorno</string>
+    <string name="alarm_weekdays">giorni feriali</string>
+    <string name="alarm_hint">L\'anello vibra in silenzio a quell\'ora, anche se il telefono è lontano. Gli orari sono convertiti nell\'orologio dell\'anello (UTC) e riscritti quando cambia l\'ora legale.</string>
+    <string name="alarm_edit_title">Sveglia</string>
+    <string name="alarm_hour">Ora</string>
+    <string name="alarm_minute">Minuto</string>
+    <string name="btn_delete_alarm">Elimina sveglia</string>
+    <string name="alarm_write_failed">Impossibile scrivere le sveglie sull\'anello</string>
+    <string name="btn_vibrate_test">Prova vibrazione</string>
+    <string name="vibrate_hint">Invia un breve messaggio all\'anello: dovrebbe vibrare.</string>
+    <string name="ring_alarm_count">L\'anello riporta %1$d sveglie</string>
 </resources>

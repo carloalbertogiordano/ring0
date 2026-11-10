@@ -337,4 +337,39 @@ class CommandsTest {
         assertEquals(2, tr.sent.size)
         assertEquals(0x72, tr.sent[0][0].toInt())
     }
+
+    @Test fun `alarm write sends the list then reads it back`() = runTest {
+        val alarms = listOf(RingAlarm(true, 6 * 60, 0b0111110, ""))
+        val written = AlarmCommand.encodeWritePayload(alarms)
+        val reply = BigData.encodeFrame(0x2C, byteArrayOf(1) + written.copyOfRange(1, written.size))
+        val tr = FakeTransport(keyIndex = 1).apply { responses[0x2C] = listOf(reply) }
+        val confirmed = AlarmCommand.write(BigDataClient(tr), alarms)
+        assertEquals(alarms, confirmed)
+        assertEquals(2, tr.sent.size)
+        assertEquals(2, tr.sent[0][6].toInt()) // first frame is the write (op 2), second the read request (op 1)
+        assertEquals(1, tr.sent[1][6].toInt())
+    }
+
+    /** Transport answering each write with the next scripted batch of notifications. */
+    private class ScriptedTransport(private val batches: MutableList<List<ByteArray>>) : Transport {
+        val sent = mutableListOf<ByteArray>()
+        private var handler: (ByteArray) -> Unit = {}
+
+        override fun setNotifyHandler(handler: (ByteArray) -> Unit) {
+            this.handler = handler
+        }
+
+        override suspend fun write(data: ByteArray) {
+            sent += data
+            batches.removeFirstOrNull()?.forEach(handler)
+        }
+    }
+
+    @Test fun `alarm read skips a stray acknowledgement`() = runTest {
+        val ack = BigData.encodeFrame(0x2C, byteArrayOf(2))
+        val list = BigData.encodeFrame(0x2C, byteArrayOf(1, 0))
+        val tr = ScriptedTransport(mutableListOf(listOf(ack), listOf(list)))
+        assertEquals(emptyList(), AlarmCommand.read(BigDataClient(tr)))
+        assertEquals(2, tr.sent.size)
+    }
 }

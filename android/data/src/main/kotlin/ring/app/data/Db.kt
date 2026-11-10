@@ -90,6 +90,18 @@ data class IncidentEntity(
     val note: String = "",
 )
 
+/** An alarm in the user's local time; the app converts it to the ring's UTC clock when writing it. */
+@Entity(tableName = "alarms")
+data class AlarmEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val hour: Int,
+    val minute: Int,
+    /** Local weekdays, bit 0 = Monday ... bit 6 = Sunday; 0 = once. */
+    val weekdays: Int = 0,
+    val enabled: Boolean = true,
+    val name: String = "",
+)
+
 /** Broad, fixed categories the user can tag an incident with. */
 enum class IncidentCategory { EXERCISE, STRESS_EMOTION, ILLNESS, SUBSTANCES, SLEEP_FATIGUE, ENVIRONMENT, OTHER }
 
@@ -152,6 +164,18 @@ interface RingDao {
     @Query("DELETE FROM incidents WHERE id = :id")
     suspend fun deleteIncident(id: Long)
 
+    @Query("SELECT * FROM alarms ORDER BY hour, minute")
+    fun observeAlarms(): Flow<List<AlarmEntity>>
+
+    @Query("SELECT * FROM alarms ORDER BY hour, minute")
+    suspend fun allAlarms(): List<AlarmEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAlarm(alarm: AlarmEntity): Long
+
+    @Query("DELETE FROM alarms WHERE id = :id")
+    suspend fun deleteAlarm(id: Long)
+
     @Query("DELETE FROM samples WHERE demo = 1")
     suspend fun deleteDemoSamples()
 
@@ -159,7 +183,7 @@ interface RingDao {
     suspend fun deleteDemoSleep()
 }
 
-@Database(entities = [Sample::class, SleepEntity::class, AlertEntity::class, IncidentEntity::class], version = 5, exportSchema = false)
+@Database(entities = [Sample::class, SleepEntity::class, AlertEntity::class, IncidentEntity::class, AlarmEntity::class], version = 6, exportSchema = false)
 abstract class RingDb : RoomDatabase() {
     abstract fun dao(): RingDao
 }
@@ -198,5 +222,15 @@ val MIGRATION_4_5 = object : Migration(4, 5) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("ALTER TABLE incidents ADD COLUMN categories TEXT NOT NULL DEFAULT ''")
         db.execSQL("ALTER TABLE incidents ADD COLUMN note TEXT NOT NULL DEFAULT ''")
+    }
+}
+
+/** v5 -> v6: alarms. */
+val MIGRATION_5_6 = object : Migration(5, 6) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS alarms (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, hour INTEGER NOT NULL, " +
+                "minute INTEGER NOT NULL, weekdays INTEGER NOT NULL, enabled INTEGER NOT NULL, name TEXT NOT NULL)",
+        )
     }
 }
