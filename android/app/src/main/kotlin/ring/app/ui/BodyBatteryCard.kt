@@ -28,6 +28,8 @@ fun BodyBatteryCard(graph: Graph) {
         Label(stringResource(R.string.energy_title))
         if (report == null) {
             T(stringResource(R.string.energy_need_data), size = 12.sp, color = Term.dim)
+        } else if (!report.anchored) {
+            T(stringResource(R.string.energy_no_sleep), size = 12.sp, color = Term.warn)
         } else {
             val level = report.current.roundToInt()
             val color = when {
@@ -39,7 +41,6 @@ fun BodyBatteryCard(graph: Graph) {
                 Num("$level", "/100", 40.sp, color)
             }
             Sparkline(report.series.map { it.value }, color, Modifier.fillMaxWidth().height(36.dp))
-            if (!report.anchored) T(stringResource(R.string.energy_no_sleep), size = 11.sp, color = Term.warn)
             T(stringResource(R.string.energy_hint), size = 10.sp, color = Term.faint)
         }
     }
