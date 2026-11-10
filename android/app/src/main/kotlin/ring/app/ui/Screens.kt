@@ -210,9 +210,16 @@ private fun LiveCard(graph: Graph) {
             T("Respiro: %.0f/min (affidabilita' %d%%)".format(it, (live.breathConfidence * 100).toInt()), size = 12.sp, color = Term.info)
         }
         Ecg(active = status.measuring)
-        if (status.measuring) T("Misuro… tieni il dito fermo (30-60 s per agganciare, poi i battiti)", size = 11.sp, color = Term.dim)
-        TButton(if (status.measuring) "Misuro…" else "Misura ora", { graph.measureLive(false) }, Modifier.fillMaxWidth(), enabled = !status.measuring)
-        TButton("Con respirazione (~2 min)", { graph.measureLive(true) }, Modifier.fillMaxWidth(), BtnKind.GHOST, enabled = !status.measuring)
+        if (status.measuring) {
+            T(
+                if (status.liveBeats == 0) "1/2 · Aggancio del sensore (circa 15 s). Dito fermo."
+                else "2/2 · Raccolgo i battiti: ${status.liveBeats}/${status.liveTarget}. Respira normalmente.",
+                size = 11.sp, color = Term.accent,
+            )
+        }
+        TButton(if (status.measuring) "Misuro…" else "Misura rapida · 30 s", { graph.measureLive(false) }, Modifier.fillMaxWidth(), enabled = !status.measuring)
+        TButton("Misura completa · 90 s", { graph.measureLive(true) }, Modifier.fillMaxWidth(), BtnKind.GHOST, enabled = !status.measuring)
+        T("La completa raccoglie piu' battiti e stima anche i respiri al minuto. Siediti, dito fermo, respira normalmente.", size = 10.sp, color = Term.faint)
     }
 }
 

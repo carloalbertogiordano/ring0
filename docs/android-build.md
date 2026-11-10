@@ -9,3 +9,10 @@ e i worker di test rifiutano le connessioni ("Cannot accept connection from remo
 - Test: `./gw.sh :protocol:runTests` (JavaExec con JUnit Console) invece di `:protocol:test` (worker TCP).
 - Build/installazione: `./gw.sh :app:assembleDebug`, poi `adb -s <ip:porta> install -r app/build/outputs/apk/debug/app-debug.apk`.
 - compileSdk 37 (richiesto dalle librerie), targetSdk 36, minSdk 31. Pixel 9a (Android 17).
+
+## Velocizzare la build
+- `gradle.properties`: configuration cache + build cache (la build a vuoto scende da ~70 s a ~19 s).
+- `gw.sh` usa `--offline`; per scaricare plugin/dipendenze nuovi: `GW_OFFLINE= ./gw.sh ...` (una volta).
+- Room/KSP vive nel modulo `:data`: una modifica alla sola UI non rifa' KSP (~12 s). Tempi tipici dopo un cambio in `ui/`:
+  compileKotlin ~29 s, dex ~12 s, totale ~60 s.
+- 4 core lasciati liberi (`taskset -c 0-11`, `nice 10`).

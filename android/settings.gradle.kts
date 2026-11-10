@@ -13,4 +13,4 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "RingApp"
-include(":protocol", ":domain", ":app")
+include(":protocol", ":domain", ":data", ":app")

@@ -28,6 +28,7 @@ object RealTimeCommand {
     private const val DEFAULT_TARGET_BEATS = 12
     private const val RR_OFFSET = 5
     private const val STABLE_PACKETS = 10
+    private const val MIN_PARTIAL_BEATS = 3
     private const val PACKET_TIMEOUT_MS = 4_000L
 
     fun decode(pkt: Packet): RealTimeReading {
@@ -53,26 +54,34 @@ object RealTimeCommand {
         targetBeats: Int = DEFAULT_TARGET_BEATS,
         onProgress: (Int) -> Unit = {},
     ): LiveMeasurement? {
+        var latest: List<Packet> = emptyList()
         try {
-            val readings = client.requestMany(
+            val packets = client.requestMany(
                 CMD_START, byteArrayOf(kind.toByte(), ACTION_START.toByte()), timeoutMs = PACKET_TIMEOUT_MS,
-            ) { packets ->
-                val decoded = packets.map(::decode)
+            ) { received ->
+                latest = received
+                val decoded = received.map(::decode)
                 val count = beats(decoded).size
                 onProgress(count)
+                // il bpm del ring da solo ferma la misura solo se non arrivano RR (altrimenti servono i battiti)
                 val firstBpm = decoded.indexOfFirst { it.value > 0 }
-                val bpmStable = firstBpm >= 0 && decoded.size - firstBpm >= STABLE_PACKETS
-                decoded.last().errorCode != 0 || count >= targetBeats || bpmStable || packets.size >= maxPackets
-            }.map(::decode)
-            if (readings.last().errorCode != 0) return null
-            val rr = beats(readings)
-            val bpm = readings.lastOrNull { it.value > 0 }?.value ?: Hrv.meanBpm(Hrv.clean(rr))
-            return LiveMeasurement(bpm, rr)
+                val bpmOnly = count == 0 && firstBpm >= 0 && decoded.size - firstBpm >= STABLE_PACKETS
+                decoded.last().errorCode != 0 || count >= targetBeats || bpmOnly || received.size >= maxPackets
+            }
+            return summarize(packets.map(::decode))
         } catch (_: RingTimeoutException) {
-            return null
+            // flusso interrotto: usa quanto raccolto se basta per un bpm/HRV, altrimenti niente
+            return summarize(latest.map(::decode))?.takeIf { it.rr.size >= MIN_PARTIAL_BEATS }
         } finally {
             // lo stop e' best effort e deve partire anche se il chiamante viene cancellato
             withContext(NonCancellable) { runCatching { client.send(CMD_STOP, byteArrayOf(kind.toByte(), 0, 0)) } }
         }
+    }
+
+    private fun summarize(readings: List<RealTimeReading>): LiveMeasurement? {
+        if (readings.isEmpty() || readings.last().errorCode != 0) return null
+        val rr = beats(readings)
+        val bpm = readings.lastOrNull { it.value > 0 }?.value ?: Hrv.meanBpm(Hrv.clean(rr))
+        return LiveMeasurement(bpm, rr)
     }
 }

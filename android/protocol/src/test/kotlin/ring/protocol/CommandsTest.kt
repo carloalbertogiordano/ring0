@@ -155,6 +155,28 @@ class CommandsTest {
         assertEquals(72, RealTimeCommand.measure(RingClient(bpmPackets), targetBeats = 1)?.bpm)
     }
 
+    @Test fun `real time keeps collecting beats after the ring starts reporting bpm`() = runTest {
+        fun rrPacket(ms: Int, bpm: Int) = Packet.build(0x69, byteArrayOf(1, 0, bpm.toByte(), 0, 0, ms.toByte(), (ms shr 8).toByte()))
+        val rrs = listOf(800, 810, 790, 805, 795, 812, 801, 789, 808, 797, 811, 803, 799, 806, 794, 807, 802, 796, 809, 798)
+        val tr = FakeTransport().apply { responses[0x69] = rrs.mapIndexed { i, ms -> rrPacket(ms, if (i >= 2) 72 else 0) } }
+        val result = assertNotNull(RealTimeCommand.measure(RingClient(tr), targetBeats = 18))
+        assertEquals(18, result.rr.size)
+        assertEquals(72, result.bpm)
+    }
+
+    @Test fun `real time returns partial beats when the stream stops early`() = runTest {
+        fun rrPacket(ms: Int) = Packet.build(0x69, byteArrayOf(1, 0, 0, 0, 0, ms.toByte(), (ms shr 8).toByte()))
+        val tr = FakeTransport().apply { responses[0x69] = listOf(800, 810, 790, 805, 795).map(::rrPacket) }
+        val result = assertNotNull(RealTimeCommand.measure(RingClient(tr), targetBeats = 50))
+        assertEquals(5, result.rr.size)
+        assertEquals(75, result.bpm)
+    }
+
+    @Test fun `real time with too few beats and silence gives null`() = runTest {
+        val tr = FakeTransport().apply { responses[0x69] = listOf(Packet.build(0x69, byteArrayOf(1, 0, 0, 0, 0, 0x20, 0x03))) }
+        assertNull(RealTimeCommand.measure(RingClient(tr), targetBeats = 50))
+    }
+
     @Test fun `hrv metrics and artifact cleaning`() {
         val rr = listOf(800, 810, 790, 805, 795)
         assertEquals(15.0, assertNotNull(Hrv.rmssd(rr)), 1.0)
