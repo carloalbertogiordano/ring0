@@ -177,6 +177,16 @@ class CommandsTest {
         assertNull(RealTimeCommand.measure(RingClient(tr), targetBeats = 50))
     }
 
+    @Test fun `find ring and blink are fire and forget packets`() = runTest {
+        val tr = FakeTransport()
+        val client = RingClient(tr)
+        FindRingCommand.find(client)
+        FindRingCommand.blink(client)
+        assertContentEquals(Packet.build(0x50, byteArrayOf(0x55, 0xAA.toByte())), tr.sent[0])
+        assertContentEquals(Packet.build(0x10), tr.sent[1])
+        assertContentEquals(byteArrayOf(0x55, 0xAA.toByte()), FindRingCommand.encodeFindPayload())
+    }
+
     @Test fun `hrv metrics and artifact cleaning`() {
         val rr = listOf(800, 810, 790, 805, 795)
         assertEquals(15.0, assertNotNull(Hrv.rmssd(rr)), 1.0)

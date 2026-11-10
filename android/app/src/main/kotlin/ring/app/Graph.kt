@@ -31,6 +31,7 @@ import ring.protocol.commands.AutoMonitorCommand
 import ring.protocol.commands.Battery
 import ring.protocol.commands.Capabilities
 import ring.protocol.commands.Feature
+import ring.protocol.commands.FindRingCommand
 import ring.protocol.commands.HeartRateSettings
 import ring.protocol.commands.HrSettingsCommand
 import ring.protocol.commands.Hrv
@@ -224,6 +225,18 @@ class Graph(private val context: Context) {
                     AutoMonitorCommand.write(session.v1, Feature.valueOf(name), enabled)
                 }
                 _status.update { it.copy(monitors = it.monitors + (name to confirmed)) }
+            } catch (e: Exception) {
+                _status.update { it.copy(lastError = e.message ?: e.javaClass.simpleName) }
+            }
+        }
+    }
+
+    /** Lights the ring's green LED for about 10 seconds so it can be located. */
+    fun findRing() {
+        scope.launch {
+            try {
+                ensureConnected()
+                FindRingCommand.find(session.v1)
             } catch (e: Exception) {
                 _status.update { it.copy(lastError = e.message ?: e.javaClass.simpleName) }
             }

@@ -180,4 +180,5 @@ Controlla che l\'anello sia carico, fuori dalla custodia e non collegato ad altr
     <string name="reason_skin_temp">temperatura notturna sopra la tua norma</string>
     <string name="reason_resting_hr">frequenza a riposo più alta del solito</string>
     <string name="reason_hrv_low">HRV più bassa del solito</string>
+    <string name="btn_find_ring">Trova anello</string>
 </resources>

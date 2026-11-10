@@ -180,4 +180,5 @@ Check that the ring is charged, out of its case and not connected to anything el
     <string name="reason_skin_temp">night skin temperature above your norm</string>
     <string name="reason_resting_hr">resting heart rate higher than usual</string>
     <string name="reason_hrv_low">HRV lower than usual</string>
+    <string name="btn_find_ring">Find ring</string>
 </resources>

@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -372,6 +373,7 @@ private fun SettingsScreen(graph: Graph, onForget: () -> Unit) {
     val alerts by graph.dao.observeAlerts().collectAsStateWithLifecycle(emptyList())
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     fun set(t: Thresholds) = graph.settings.setThresholds(t)
+    LaunchedEffect(status.connected) { if (status.connected && status.monitors.isEmpty()) graph.refreshMonitors() }
     LazyColumn(contentPadding = PAD, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item { T(stringResource(R.string.settings_title), size = 15.sp, weight = FontWeight.Bold, spacing = 4.sp) }
         item {
@@ -382,10 +384,15 @@ private fun SettingsScreen(graph: Graph, onForget: () -> Unit) {
                 }
                 KeyValue(stringResource(R.string.address_label), graph.settings.deviceAddress ?: "—")
                 status.battery?.let { KeyValue(stringResource(R.string.battery_label), if (it.charging) stringResource(R.string.battery_charging, it.level) else "${it.level}%") }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TButton(stringResource(R.string.btn_change_ring), { picking = !picking }, kind = BtnKind.GHOST)
-                    TButton(stringResource(R.string.btn_forget), { graph.disconnect(); graph.settings.deviceAddress = null; graph.settings.lastSyncEpoch = 0; onForget() }, kind = BtnKind.CRIT)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TButton(stringResource(R.string.btn_change_ring), { picking = !picking }, Modifier.weight(1f), BtnKind.GHOST)
+                    TButton(stringResource(R.string.btn_find_ring), { graph.findRing() }, Modifier.weight(1f), BtnKind.GHOST, enabled = status.connected)
                 }
+                TButton(
+                    stringResource(R.string.btn_forget),
+                    { graph.disconnect(); graph.settings.deviceAddress = null; graph.settings.lastSyncEpoch = 0; onForget() },
+                    Modifier.fillMaxWidth(), BtnKind.CRIT,
+                )
                 if (picking) RingPicker { d -> graph.settings.deviceAddress = d.address; graph.settings.lastSyncEpoch = 0; picking = false; graph.disconnect() }
             }
         }
