@@ -58,3 +58,18 @@ Reale: `15ff0000000000000000000000000014` = nessun dato (auto-HR era disattivo).
 Da verificare con dati reali: convenzione del timestamp (UTC vs locale) e codifica BCD/binario dell'ora.
 
 Codice: `proto/ringproto/commands/hr_log.py`, `hr_settings.py`.
+
+## Canale big-data V2 (`de5bf728…`: write `de5bf72a`, notify `de5bf729`)
+Frame: `BC <type> <len LE u16> <crc16 LE u16> <payload>`, crc16 = CRC-16/MODBUS (poly 0xA001, init 0xFFFF) del payload.
+Le risposte lunghe arrivano **frammentate** su piu' notifiche (MTU 23 -> 20 byte) e vanno ricomposte fino a `len + 6`.
+Richieste (come in Gadgetbridge; colmi-docs dice payload vuoto, ma il ring risponde a queste):
+
+| Tipo | Dato | Richiesta | Risposta reale a ring senza storico |
+|---|---|---|---|
+| 0x25 | temperatura | `bc 25 01 00 3e 81 02` | `bc 25 02 00 81 b8 00 1e` (payload `00 1e`) |
+| 0x27 | sonno | `bc 27 01 00 ff 00 ff` | `bc 27 01 00 bf 40 00` (payload `00` = 0 giorni) |
+| 0x2a | SpO2 | `bc 2a 01 00 ff 00 ff` | `bc 2a 00 00 ff ff` (payload vuoto) |
+
+Verificato: CRC16/MODBUS corretto sul ring reale (check standard `"123456789"` = 0x4B37).
+Codice: `proto/ringproto/bigdata.py`, `bigdata_client.py`. CLI: `python -m ringproto.cli bigdata <MAC> --type 0x25 --payload 02`.
+Decoder dei dati (temperatura/sonno/SpO2): da scrivere con dati reali (slice 6).

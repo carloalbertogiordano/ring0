@@ -10,3 +10,4 @@ android/build/
 android/.gradle/
 captures/*.btsnoop
 refs/
+captures/raw/

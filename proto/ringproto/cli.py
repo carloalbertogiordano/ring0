@@ -53,6 +53,11 @@ COMMANDS: dict[str, Handler] = {
 
 async def _run(args: argparse.Namespace) -> None:
     async with connect_ring(args.address) as session:
+        if args.command == "bigdata":
+            frame = await session.bigdata.request(args.type, bytes.fromhex(args.payload))
+            print(f"type={frame.type_id:#04x} len={len(frame.payload)}")
+            print(frame.payload.hex())
+            return
         print(await COMMANDS[args.command](session.v1, args))
 
 
@@ -60,11 +65,13 @@ def main() -> None:
     """Entry point della CLI."""
     parser = argparse.ArgumentParser(prog="ringproto")
     parser.add_argument("-v", "--verbose", action="store_true", help="log dei pacchetti raw")
-    parser.add_argument("command", choices=sorted(COMMANDS))
+    parser.add_argument("command", choices=[*sorted(COMMANDS), "bigdata"])
     parser.add_argument("address")
     parser.add_argument("--interval", type=int, help="hr-settings: abilita e imposta i minuti")
     parser.add_argument("--disable", action="store_true", help="hr-settings: disabilita")
     parser.add_argument("--date", type=date.fromisoformat, help="hr-log: giorno YYYY-MM-DD (UTC)")
+    parser.add_argument("--type", type=lambda v: int(v, 0), help="bigdata: tipo (es. 0x25)")
+    parser.add_argument("--payload", default="", help="bigdata: payload hex della richiesta")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
     if args.verbose:
