@@ -43,3 +43,14 @@ async def test_notification_before_handler_is_ignored() -> None:
     await tr.start()
 
     fake.notify_cb(None, bytearray(b"\x03"))  # type: ignore[misc]
+
+
+async def test_transport_can_target_other_characteristics() -> None:
+    fake = FakeBleakClient()
+    tr = BleakTransport(fake, write_char="w-uuid", notify_char="n-uuid")  # type: ignore[arg-type]
+
+    await tr.write(b"\xbc")
+    await tr.start()
+
+    assert fake.writes == [("w-uuid", b"\xbc", False)]
+    assert fake.notify_uuid == "n-uuid"
