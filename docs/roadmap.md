@@ -14,6 +14,25 @@ Legenda dipendenze: [dati] serve una notte/giorni di dati reali, [hw] serve capi
 4. Alert con contesto (FC alta solo da fermo, SpO2 bassa ripetuta/notturna), ODI notturno  [passi: Fase E; SpO2 ok]
 5. Analisi sonno: durata, efficienza, latenza, risvegli, regolarita'  [dati]
 
+## Fase B2 - Stime dai dati (prima di widget/export; ognuna dopo ricerca su paper e fonti, vedi docs/research/)
+Prerequisito: profilo utente nelle Impostazioni (eta', sesso, peso, altezza, HR max opzionale), solo in locale.
+14. Carico di allenamento (strain): minuti per zona HR, TRIMP giornaliero, rapporto acuto/cronico 7/28 gg  [ok]
+15. Calorie totali e attive: metabolismo basale (Mifflin-St Jeor) + calorie da HR (Keytel) vs stima dell'anello  [ok]
+16. "Batteria corporea" 0-100: sale con riposo/sonno, scende con stress e attivita'  [ok]
+17. Sonno esteso: punteggio, orario ideale di letto, pisolini (HR bassa + zero passi), fabbisogno stimato  [ok]
+18. Autonomia batteria: ore residue dal log batteria  [ok]
+19. Anello non indossato: buchi nei dati esclusi da medie e alert  [ok]
+20. Promemoria di inattivita' come notifica sul telefono  [ok]
+21. Correlazioni con gli incidenti/categorie (caffe', alcol, esercizio, malessere vs HRV, FC, sonno)  [dati]
+22. Recupero HR dopo sforzo (HRR) dal log a 5 minuti, indicativo  [ok]
+23. Riepilogo mattutino e serale (notifica con recupero, sonno, consigli)  [ok]
+24. VO2max stimato (indicativo): HR max / HR a riposo, affinato con HR-passi  [ok, indicativo]
+25. Notti sospette per apnea (SpO2 oraria + ODI), solo indicatore  [ok, indicativo]
+26. Fase del ciclo dalla temperatura cutanea notturna, opzionale  [dati, indicativo]
+27. Irregolarita' del ritmo dagli RR (screening, non diagnosi, con avvisi chiari)  [ok, indicativo]
+28. Idratazione: fattibilita' da valutare con la ricerca prima di implementare  [ricerca]
+Non previsto: pressione arteriosa (PPG senza calibrazione non e' affidabile).
+
 ## Fase C - Controlli sull'anello
 6. "Trova anello" (0x50, LED verde ~10 s)  [fatto, funziona]
 7. Sveglie, vibrazione e notifiche sul ring  [ANNULLATO: l'R09 non ha il motorino di vibrazione]
