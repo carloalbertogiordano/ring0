@@ -254,4 +254,15 @@ Controlla che l\'anello sia carico, fuori dalla custodia e non collegato ad altr
     <string name="tile_steps">Passi</string>
     <string name="steps_of_goal">su %1$d</string>
     <string name="chart_steps">Passi (ogni 15 min)</string>
+    <string name="profile_title">Il tuo profilo</string>
+    <string name="profile_not_set">Non impostato: calorie, carico di allenamento e stime di forma restano spente finché non scegli il sesso e regoli i valori. Salvato solo su questo telefono.</string>
+    <string name="profile_hint">Usato per calorie, carico di allenamento e stime di forma. Salvato solo su questo telefono.</string>
+    <string name="sex_male">Uomo</string>
+    <string name="sex_female">Donna</string>
+    <string name="profile_age">Età</string>
+    <string name="profile_weight">Peso (kg)</string>
+    <string name="profile_height">Altezza (cm)</string>
+    <string name="profile_hr_max">Frequenza massima (bpm)</string>
+    <string name="profile_hr_max_auto">%1$d (dall\'età)</string>
+    <string name="profile_hr_max_reset">Usa la formula dell\'età</string>
 </resources>

@@ -254,4 +254,15 @@ Check that the ring is charged, out of its case and not connected to anything el
     <string name="tile_steps">Steps</string>
     <string name="steps_of_goal">of %1$d</string>
     <string name="chart_steps">Steps (per 15 min)</string>
+    <string name="profile_title">Your profile</string>
+    <string name="profile_not_set">Not set: calories, training load and fitness estimates stay off until you choose a sex and adjust the values. Stored only on this phone.</string>
+    <string name="profile_hint">Used for calories, training load and fitness estimates. Stored only on this phone.</string>
+    <string name="sex_male">Male</string>
+    <string name="sex_female">Female</string>
+    <string name="profile_age">Age</string>
+    <string name="profile_weight">Weight (kg)</string>
+    <string name="profile_height">Height (cm)</string>
+    <string name="profile_hr_max">Max heart rate (bpm)</string>
+    <string name="profile_hr_max_auto">%1$d (from age)</string>
+    <string name="profile_hr_max_reset">Use age formula</string>
 </resources>

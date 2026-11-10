@@ -629,6 +629,7 @@ private fun SettingsScreen(graph: Graph, onForget: () -> Unit) {
                 }
             }
         }
+        item { ProfileCard(graph) }
         item {
             TCard {
                 Label(stringResource(R.string.sync_every))

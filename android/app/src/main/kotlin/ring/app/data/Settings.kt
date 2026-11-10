@@ -3,6 +3,9 @@ package ring.app.data
 import android.content.Context
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import ring.domain.Profile
+import ring.domain.Sex
+import java.time.LocalDate
 
 data class Thresholds(
     val hrHigh: Int = 130,
@@ -19,6 +22,11 @@ class SettingsStore(context: Context) {
 
     private val _thresholds = MutableStateFlow(readThresholds())
     val thresholds: StateFlow<Thresholds> = _thresholds
+
+    private val _profile = MutableStateFlow(readProfile())
+
+    /** Body data for the estimates; null until the user fills it in. Kept on the phone only. */
+    val profile: StateFlow<Profile?> = _profile
 
     var deviceAddress: String?
         get() = prefs.getString("address", null)
@@ -50,6 +58,30 @@ class SettingsStore(context: Context) {
         get() = prefs.getLong("lastSync", 0)
         set(value) = prefs.edit().putLong("lastSync", value).apply()
 
+    fun setProfile(p: Profile) {
+        prefs.edit()
+            .putInt("profBirthYear", LocalDate.now().year - p.ageYears)
+            .putString("profSex", p.sex.name)
+            .putFloat("profWeight", p.weightKg.toFloat())
+            .putFloat("profHeight", p.heightCm.toFloat())
+            .putInt("profHrMax", p.hrMaxOverride ?: 0)
+            .apply()
+        _profile.value = p
+    }
+
+    private fun readProfile(): Profile? {
+        val birthYear = prefs.getInt("profBirthYear", 0)
+        val sex = prefs.getString("profSex", null)?.let { runCatching { Sex.valueOf(it) }.getOrNull() }
+        if (birthYear == 0 || sex == null) return null
+        return Profile(
+            ageYears = LocalDate.now().year - birthYear,
+            sex = sex,
+            weightKg = prefs.getFloat("profWeight", DEFAULT_WEIGHT_KG).toDouble(),
+            heightCm = prefs.getFloat("profHeight", DEFAULT_HEIGHT_CM).toDouble(),
+            hrMaxOverride = prefs.getInt("profHrMax", 0).takeIf { it > 0 },
+        )
+    }
+
     fun lastAlert(kind: String): Long = prefs.getLong("alert_$kind", 0)
 
     fun markAlert(kind: String, epoch: Long) = prefs.edit().putLong("alert_$kind", epoch).apply()
@@ -74,3 +106,6 @@ class SettingsStore(context: Context) {
         )
     }
 }
+
+private const val DEFAULT_WEIGHT_KG = 70f
+private const val DEFAULT_HEIGHT_CM = 170f
