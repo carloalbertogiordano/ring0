@@ -10,7 +10,7 @@ from ringproto.commands.set_time import (
     set_time,
     to_bcd,
 )
-from ringproto.packet import Packet, build
+from ringproto.packet import Packet, build, parse
 from tests.fakes import FakeTransport
 
 WHEN = datetime(2026, 11, 10, 15, 7, 9, tzinfo=UTC)
@@ -112,3 +112,23 @@ async def test_set_time_sends_bcd_packet_and_returns_capabilities() -> None:
     assert tr.sent == [build(0x01, bytes([0x26, 0x11, 0x10, 0x15, 0x07, 0x09, 0x01]))]
     assert caps.temperature is True
     assert caps.blood_oxygen is True
+
+
+# Risposta reale del ring R09 (FW RT09CR2_3.00.03_260929) a set time, catturata il 2026-11-10.
+REAL_RSP = bytes.fromhex("01010000020000000001002000003055")
+
+
+def test_decode_real_r09_capabilities() -> None:
+    caps = decode(parse(REAL_RSP))
+
+    assert caps == Capabilities(
+        temperature=True,
+        blood_oxygen=True,
+        blood_pressure=False,
+        manual_heart_rate=False,
+        blood_sugar=False,
+        stress=True,
+        hrv=True,
+        new_sleep_protocol=True,
+        raw=REAL_RSP[1:-1],
+    )
