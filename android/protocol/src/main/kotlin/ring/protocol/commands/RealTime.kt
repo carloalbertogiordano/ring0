@@ -31,6 +31,7 @@ object RealTimeCommand {
     private const val MIN_PARTIAL_BEATS = 3
     private const val DEFAULT_VALUE_PACKETS = 160
     private const val STABLE_READINGS = 5
+    private const val MAX_SPREAD = 2
     private const val PACKET_TIMEOUT_MS = 4_000L
 
     fun decode(pkt: Packet): RealTimeReading {
@@ -100,7 +101,9 @@ object RealTimeCommand {
     ): Int? {
         var latest: List<Packet> = emptyList()
         fun valueOf(readings: List<RealTimeReading>): Int? =
-            readings.map { it.value }.filter { it > 0 }.takeLast(STABLE_READINGS).takeIf { it.size >= STABLE_READINGS }?.sorted()?.let { it[it.size / 2] }
+            readings.map { it.value }.filter { it > 0 }.takeLast(STABLE_READINGS)
+                .takeIf { it.size >= STABLE_READINGS && it.max() - it.min() <= MAX_SPREAD }
+                ?.sorted()?.let { it[it.size / 2] }
         try {
             val packets = client.requestMany(
                 CMD_START, byteArrayOf(kind.toByte(), ACTION_START.toByte()), timeoutMs = PACKET_TIMEOUT_MS,

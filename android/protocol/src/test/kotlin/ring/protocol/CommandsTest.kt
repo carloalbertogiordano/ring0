@@ -179,8 +179,8 @@ class CommandsTest {
 
     @Test fun `single value measurement returns the median of the last stable readings`() = runTest {
         fun pkt(v: Int) = Packet.build(0x69, byteArrayOf(3, 0, v.toByte()))
-        val tr = FakeTransport().apply { responses[0x69] = listOf(0, 0, 0, 96, 97, 97, 98, 97, 99, 99).map(::pkt) }
-        assertEquals(98, RealTimeCommand.measureValue(RingClient(tr), RealTimeCommand.KIND_SPO2))
+        val tr = FakeTransport().apply { responses[0x69] = listOf(0, 0, 0, 91, 99, 96, 97, 97, 98, 97, 99, 99).map(::pkt) }
+        assertEquals(97, RealTimeCommand.measureValue(RingClient(tr), RealTimeCommand.KIND_SPO2))
         assertEquals(0x6A, tr.sent.last()[0].toInt())
         assertEquals(3, tr.sent.last()[1].toInt())
     }
