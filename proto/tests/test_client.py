@@ -78,3 +78,59 @@ async def test_client_is_usable_after_a_timeout() -> None:
 
     tr.responses[0x03] = [BATTERY_RSP]
     assert (await client.request(0x03)).cmd == 0x03
+
+
+def _stop_after(count: int):  # noqa: ANN202
+    return lambda packets: len(packets) >= count
+
+
+async def test_request_many_collects_packets_until_predicate_is_true() -> None:
+    tr = FakeTransport()
+    tr.responses[0x15] = [response(0x15, bytes([i])) for i in range(4)]
+
+    packets = await RingClient(tr).request_many(0x15, is_last=_stop_after(4))
+
+    assert [p.payload[0] for p in packets] == [0, 1, 2, 3]
+
+
+async def test_request_many_ignores_other_commands_in_between() -> None:
+    tr = FakeTransport()
+    tr.responses[0x15] = [response(0x15, b"\x00"), response(0x73), response(0x15, b"\x01")]
+
+    packets = await RingClient(tr).request_many(0x15, is_last=_stop_after(2))
+
+    assert [p.cmd for p in packets] == [0x15, 0x15]
+
+
+async def test_request_many_times_out_if_stream_stalls() -> None:
+    tr = FakeTransport()
+    tr.responses[0x15] = [response(0x15, b"\x00")]
+
+    with pytest.raises(RingTimeoutError, match="0x15"):
+        await RingClient(tr, default_timeout=0.05).request_many(0x15, is_last=_stop_after(2))
+
+
+async def test_request_many_raises_on_error_packet() -> None:
+    tr = FakeTransport()
+    tr.responses[0x15] = [response(0x15, b"\x00"), error_response(0x15)]
+
+    with pytest.raises(RingCommandError, match="0x15"):
+        await RingClient(tr).request_many(0x15, is_last=_stop_after(5))
+
+
+async def test_request_many_is_serialized_with_request() -> None:
+    tr = FakeTransport()
+    tr.delay = 0.02
+    tr.responses[0x15] = [response(0x15, b"\x00"), response(0x15, b"\x01")]
+    tr.responses[0x03] = [BATTERY_RSP]
+    client = RingClient(tr)
+
+    await asyncio.gather(client.request_many(0x15, is_last=_stop_after(2)), client.request(0x03))
+
+    assert tr.events == [
+        ("write", 0x15),
+        ("notify", 0x15),
+        ("notify", 0x15),
+        ("write", 0x03),
+        ("notify", 0x03),
+    ]

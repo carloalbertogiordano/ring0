@@ -28,8 +28,13 @@ class FakeTransport:
         self.sent.append(data)
         cmd = data[0]
         self.events.append(("write", cmd))
-        for resp in self.responses.get(cmd, []):
-            asyncio.get_running_loop().call_later(self.delay, self.notify, resp)
+        batch = self.responses.get(cmd, [])
+        if batch:
+            asyncio.get_running_loop().call_later(self.delay, self._deliver, batch)
+
+    def _deliver(self, batch: list[bytes]) -> None:
+        for data in batch:
+            self.notify(data)
 
 
 def response(cmd: int, payload: bytes = b"") -> bytes:
