@@ -214,6 +214,7 @@ private fun HomeScreen(graph: Graph, onOpenCheck: () -> Unit) {
         item { CheckCard(onOpenCheck) }
         item { LiveCard(graph) }
         item { ReadinessCard(graph) }
+        item { BodyBatteryCard(graph) }
         item { TrainingCard(graph) }
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

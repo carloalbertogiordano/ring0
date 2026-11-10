@@ -284,4 +284,8 @@ Check that the ring is charged, out of its case and not connected to anything el
     <string name="battery_left_days">~%1$.1f days</string>
     <string name="training_worn">Worn today</string>
     <string name="duration_h_m">%1$d h %2$d min</string>
+    <string name="energy_title">Body battery (estimate)</string>
+    <string name="energy_need_data">Not enough data yet.</string>
+    <string name="energy_no_sleep">No sleep found in the last day and a half: the level is a rough guess.</string>
+    <string name="energy_hint">Our own model: sleep recharges, stress and effort drain. A guide to your pattern, not a measurement.</string>
 </resources>

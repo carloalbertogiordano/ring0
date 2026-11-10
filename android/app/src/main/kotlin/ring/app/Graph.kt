@@ -26,6 +26,7 @@ import ring.app.data.RingDb
 import ring.app.data.Sample
 import ring.app.data.SampleType
 import ring.app.data.SettingsStore
+import ring.app.insights.BodyBatteryReport
 import ring.app.insights.Insights
 import ring.app.insights.ReadinessReport
 import ring.app.insights.TrainingReport
@@ -95,6 +96,7 @@ data class Status(
     val readiness: ReadinessReport? = null,
     val training: TrainingReport? = null,
     val batteryEstimate: BatteryEstimate? = null,
+    val bodyBattery: BodyBatteryReport? = null,
     val liveTarget: Int = 12,
     val spo2Measuring: Boolean = false,
     val liveSpo2: Int? = null,
@@ -203,7 +205,8 @@ class Graph(private val context: Context) {
         refreshReadiness()
         refreshTraining()
         val battery = runCatching { insights.batteryForecast() }.getOrNull()
-        _status.update { it.copy(batteryEstimate = battery) }
+        val energy = runCatching { insights.bodyBattery(settings.profile.value) }.getOrNull()
+        _status.update { it.copy(batteryEstimate = battery, bodyBattery = energy) }
     }
 
     /** Turns on the default automatic measurements (heart every 5 min, SpO2, stress, HRV, temperature). */

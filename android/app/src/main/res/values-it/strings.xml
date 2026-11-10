@@ -284,4 +284,8 @@ Controlla che l\'anello sia carico, fuori dalla custodia e non collegato ad altr
     <string name="battery_left_days">~%1$.1f giorni</string>
     <string name="training_worn">Indossato oggi</string>
     <string name="duration_h_m">%1$d h %2$d min</string>
+    <string name="energy_title">Batteria corporea (stima)</string>
+    <string name="energy_need_data">Non ci sono ancora abbastanza dati.</string>
+    <string name="energy_no_sleep">Nessun sonno trovato nell\'ultimo giorno e mezzo: il livello è approssimativo.</string>
+    <string name="energy_hint">Modello nostro: il sonno ricarica, stress e sforzo scaricano. Una guida al tuo andamento, non una misura.</string>
 </resources>

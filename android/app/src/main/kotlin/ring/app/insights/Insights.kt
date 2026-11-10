@@ -3,10 +3,13 @@ package ring.app.insights
 import ring.app.data.RingDao
 import ring.app.data.Sample
 import ring.app.data.SampleType
+import ring.app.data.SleepEntity
 import ring.domain.Baseline
 import ring.domain.BatteryEstimate
 import ring.domain.BatteryForecast
+import ring.domain.BodyBattery
 import ring.domain.Energy
+import ring.domain.EnergySlot
 import ring.domain.HeartRateModel
 import ring.domain.IllnessAssessment
 import ring.domain.IllnessWarning
@@ -22,6 +25,7 @@ import ring.domain.Stats
 import ring.domain.TimedValue
 import ring.domain.TrainingDay
 import ring.domain.TrainingSummary
+import ring.domain.Trimp
 import ring.domain.Wear
 import java.time.Instant
 import java.time.LocalDate
@@ -30,6 +34,9 @@ import java.time.ZoneId
 import kotlin.math.roundToInt
 
 data class ReadinessReport(val readiness: Readiness?, val baselineDays: Int)
+
+/** Energy reserve over the last day and a half; `anchored` is false when no sleep was found to anchor the level. */
+data class BodyBatteryReport(val current: Double, val series: List<TimedValue>, val anchored: Boolean)
 
 /** Today's training numbers plus how the recent load compares with your usual. */
 data class TrainingReport(
@@ -132,6 +139,42 @@ class Insights(private val dao: RingDao, private val zone: ZoneId = ZoneId.syste
         )
     }
 
+    /** The energy model over the last 36 hours from sleep sessions, stress readings and effort. Null without any data. */
+    suspend fun bodyBattery(profile: Profile?, now: Long = Instant.now().epochSecond): BodyBatteryReport? {
+        val end = now / SLOT_SECONDS * SLOT_SECONDS
+        val start = end - ENERGY_WINDOW_HOURS * HOUR
+        val sleeps = dao.sleepSince(start - DAY)
+        val stress = dao.range(SampleType.STRESS, start - HOUR, end)
+        val hr = dao.range(SampleType.HR, start, end).timed()
+        if (sleeps.isEmpty() && stress.isEmpty() && hr.isEmpty()) return null
+        val hrRest = profile?.let { restingBaseline(now) }
+        val hrMax = profile?.let { HeartRateModel.hrMax(it) }
+        val slots = (0 until ENERGY_WINDOW_HOURS * HOUR / SLOT_SECONDS).map { i ->
+            val from = start + i * SLOT_SECONDS
+            val to = from + SLOT_SECONDS
+            val effort = if (profile != null && hrRest != null && hrMax != null) {
+                Trimp.fromSamples(hr.filter { it.ts in from until to }, HR_SAMPLE_MINUTES, hrRest, hrMax, profile.sex)
+            } else {
+                0.0
+            }
+            EnergySlot(
+                ts = to,
+                sleepWeight = sleepWeight(sleeps, from, to),
+                stress = stress.lastOrNull { it.ts in (from - HOUR)..to }?.value,
+                trimp = effort,
+            )
+        }
+        val series = BodyBattery.simulate(slots, ENERGY_START_LEVEL)
+        return BodyBatteryReport(series.last().value, series, anchored = slots.any { it.sleepWeight > 0 })
+    }
+
+    private fun sleepWeight(sleeps: List<SleepEntity>, from: Long, to: Long): Double =
+        sleeps.sumOf { s ->
+            val overlap = (minOf(to, s.end) - maxOf(from, s.start)).coerceAtLeast(0)
+            val inBed = ((s.end - s.start) / SECONDS_PER_MINUTE).toInt()
+            overlap.toDouble() / SLOT_SECONDS * BodyBattery.sleepQuality(s.lightMin, s.deepMin, s.remMin, inBed)
+        }.coerceAtMost(1.0)
+
     /** Hours of battery left at the recent discharge rate, from the battery readings of the last week. */
     suspend fun batteryForecast(now: Long = Instant.now().epochSecond): BatteryEstimate? =
         BatteryForecast.estimate(dao.range(SampleType.BATTERY, now - BATTERY_WINDOW_DAYS * DAY, now).timed())
@@ -178,6 +221,10 @@ class Insights(private val dao: RingDao, private val zone: ZoneId = ZoneId.syste
         const val REST_NIGHTS = 14
         const val LOAD_DAYS = 28
         const val BATTERY_WINDOW_DAYS = 7
+        const val SLOT_SECONDS = 1_800L
+        const val HOUR = 3_600L
+        const val ENERGY_WINDOW_HOURS = 36
+        const val ENERGY_START_LEVEL = 70.0
         const val HR_SAMPLE_MINUTES = 5
         const val MIN_SAMPLES_PER_DAY = 144
         const val ILLNESS_NIGHTS = 9
