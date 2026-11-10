@@ -66,8 +66,9 @@ def main() -> None:
     parser.add_argument("--disable", action="store_true", help="hr-settings: disabilita")
     parser.add_argument("--date", type=date.fromisoformat, help="hr-log: giorno YYYY-MM-DD (UTC)")
     args = parser.parse_args()
-    level = logging.DEBUG if args.verbose else logging.INFO
-    logging.basicConfig(level=level, format="%(asctime)s %(name)s %(message)s")
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
+    if args.verbose:
+        logging.getLogger("ringproto").setLevel(logging.DEBUG)
     asyncio.run(_run(args))
 
 
