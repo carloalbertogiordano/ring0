@@ -31,6 +31,11 @@ data class SyncReport(
 
 /** Downloads the latest days from the ring and stores them (idempotent: key is (type, instant)). */
 class SyncEngine(private val dao: RingDao) {
+    private val wear = WearFilter(dao)
+
+    /** Removes previously stored readings from periods when the ring was not worn. */
+    suspend fun cleanNonWear() = wear.cleanHistory()
+
     suspend fun sync(session: RingSession, days: Int, onProgress: (String, Float) -> Unit = { _, _ -> }): SyncReport {
         val errors = mutableListOf<String>()
         var inserted = 0
@@ -50,9 +55,10 @@ class SyncEngine(private val dao: RingDao) {
             }
 
         suspend fun save(type: String, readings: List<Reading>) {
-            if (readings.isEmpty()) return
-            dao.upsertSamples(readings.map { Sample(type, it.time.epochSecond, it.value) })
-            inserted += readings.size
+            val kept = if (type in WearFilter.FILTERED_TYPES) wear.keepWorn(readings) else readings
+            if (kept.isEmpty()) return
+            dao.upsertSamples(kept.map { Sample(type, it.time.epochSecond, it.value) })
+            inserted += kept.size
         }
 
         val caps = step("set-time") { SetTimeCommand.set(session.v1) }

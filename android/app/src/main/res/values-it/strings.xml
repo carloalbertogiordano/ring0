@@ -334,4 +334,5 @@ Controlla che l\'anello sia carico, fuori dalla custodia e non collegato ad altr
     <string name="rhythm_advice_recheck">Un risultato irregolare questa settimana: ripeti il controllo tra qualche ora.</string>
     <string name="rhythm_advice_doctor">Risultati irregolari in momenti diversi questa settimana. Non è una diagnosi, ma vale un ECG: parlane con un medico, e chiedi aiuto subito con dolore al petto, fiato corto o svenimenti.</string>
     <string name="rhythm_disclaimer">Solo screening, mai una diagnosi. Tarato su dati ECG pubblici di pazienti con fibrillazione (sensibilità circa 70%, specificità circa 95%) e non validato su fibrillazione reale con questo anello. Battiti extra e movimento possono sembrare irregolari, quindi ripetilo prima di trarre conclusioni.</string>
+    <string name="chart_gap_hint">Zone ombreggiate: nessun dato, l\'anello non era indossato. Sono escluse dai grafici, dalle medie e da ogni stima.</string>
 </resources>

@@ -40,7 +40,7 @@ fun BodyBatteryCard(graph: Graph) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Num("$level", "/100", 40.sp, color)
             }
-            Sparkline(report.series.map { it.value }, color, Modifier.fillMaxWidth().height(36.dp))
+            Sparkline(report.series, color, Modifier.fillMaxWidth().height(36.dp))
             T(stringResource(R.string.energy_hint), size = 10.sp, color = Term.faint)
         }
     }

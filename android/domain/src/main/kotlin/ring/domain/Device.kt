@@ -62,5 +62,8 @@ object Wear {
         return gaps
     }
 
+    /** True when the timestamp falls inside one of the gaps (the end of a gap is exclusive). */
+    fun inGap(ts: Long, gaps: List<WearGap>): Boolean = gaps.any { ts >= it.start && ts < it.end }
+
     fun wornSeconds(from: Long, to: Long, gaps: List<WearGap>): Long = (to - from) - gaps.sumOf { it.end - it.start }
 }

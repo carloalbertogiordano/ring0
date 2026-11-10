@@ -56,6 +56,11 @@ class SettingsStore(context: Context) {
 
     fun markSummary(slot: SummarySlot, epochDay: Long) = prefs.edit().putLong("summary_${slot.name}", epochDay).apply()
 
+    /** True once the stored data from periods without the ring was cleaned up. */
+    var wearCleaned: Boolean
+        get() = prefs.getBoolean("wearCleaned", false)
+        set(value) = prefs.edit().putBoolean("wearCleaned", value).apply()
+
     var alertsEnabled: Boolean
         get() = prefs.getBoolean("alerts", true)
         set(value) = prefs.edit().putBoolean("alerts", value).apply()

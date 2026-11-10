@@ -156,6 +156,9 @@ interface RingDao {
     @Query("DELETE FROM incidents WHERE id = :id")
     suspend fun deleteIncident(id: Long)
 
+    @Query("DELETE FROM samples WHERE type = :type AND ts >= :from AND ts < :to AND demo = 0")
+    suspend fun deleteRange(type: String, from: Long, to: Long)
+
     @Query("DELETE FROM samples WHERE demo = 1")
     suspend fun deleteDemoSamples()
 

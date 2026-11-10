@@ -159,6 +159,10 @@ class Graph(private val context: Context) {
             val days = if (settings.lastSyncEpoch == 0L) FIRST_SYNC_DAYS else REGULAR_SYNC_DAYS
             val report = sync.sync(session, days) { step, fraction -> _status.update { it.copy(syncStep = step, syncProgress = fraction) } }
             if (report.errors.isEmpty()) settings.lastSyncEpoch = Instant.now().epochSecond
+            if (!settings.wearCleaned) {
+                sync.cleanNonWear()
+                settings.wearCleaned = true
+            }
             _status.update {
                 it.copy(
                     battery = report.battery ?: it.battery,

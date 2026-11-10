@@ -50,6 +50,7 @@ import ring.app.alerts.alertText
 import ring.app.data.Sample
 import ring.app.data.SampleType
 import ring.app.data.Thresholds
+import ring.domain.TimedValue
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -440,7 +441,7 @@ private fun MetricTile(
         last?.let { "${clock(it.ts)} · ${ago(it.ts)}" } ?: stringResource(R.string.no_data),
         modifier,
         alert,
-    ) { if (samples.size >= 2) Sparkline(samples.map { it.value }, if (alert) Term.warn else color) }
+    ) { if (samples.size >= 2) Sparkline(samples.map { TimedValue(it.ts, it.value) }, if (alert) Term.warn else color, from = now - 86_400L, to = now) }
 }
 
 @Composable
@@ -512,6 +513,7 @@ private fun HistoryScreen(graph: Graph) {
         item {
             HistoryPanel(graph, stringResource(R.string.chart_stress), SampleType.STRESS, "", from, to, Term.rem, 20.0, 0, thresholds.stressHigh.toDouble())
         }
+        item { T(stringResource(R.string.chart_gap_hint), size = 10.sp, color = Term.faint) }
         item { HabitsCard(graph) }
         item { HistoryPanel(graph, stringResource(R.string.chart_hrv_ring), SampleType.HRV, " ms", from, to, Term.info, 20.0, 0, null) }
         item { HistoryPanel(graph, stringResource(R.string.chart_hrv_live), SampleType.HRV_LIVE, " ms", from, to, Term.rem, 20.0, 0, null) }
