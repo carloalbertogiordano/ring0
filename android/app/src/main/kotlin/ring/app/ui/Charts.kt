@@ -65,7 +65,7 @@ fun Sparkline(values: List<Double>, color: Color, modifier: Modifier = Modifier)
     }
 }
 
-/** Grafico con griglia, etichette, soglia tratteggiata e punto finale evidenziato (asse X in epoch secondi). */
+/** Chart with grid, labels, dashed threshold and highlighted last point (X axis in epoch seconds). */
 @Composable
 fun TermChart(
     samples: List<Sample>,

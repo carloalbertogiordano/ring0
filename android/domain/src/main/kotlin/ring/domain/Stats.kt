@@ -7,7 +7,7 @@ import kotlin.math.sqrt
 /** A value with its instant (epoch seconds, UTC). */
 data class TimedValue(val ts: Long, val value: Double)
 
-/** Statistiche di base su liste di numeri. */
+/** Basic statistics on lists of numbers. */
 object Stats {
     fun mean(xs: List<Double>): Double = xs.sum() / xs.size
 
