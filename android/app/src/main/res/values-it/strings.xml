@@ -265,4 +265,21 @@ Controlla che l\'anello sia carico, fuori dalla custodia e non collegato ad altr
     <string name="profile_hr_max">Frequenza massima (bpm)</string>
     <string name="profile_hr_max_auto">%1$d (dall\'età)</string>
     <string name="profile_hr_max_reset">Usa la formula dell\'età</string>
+    <string name="training_title">Allenamento (stima)</string>
+    <string name="training_need_profile">Compila il profilo nelle Impostazioni per vedere calorie e carico di allenamento.</string>
+    <string name="training_need_data">Non ci sono ancora abbastanza dati di battito.</string>
+    <string name="training_load_today">Carico di oggi</string>
+    <string name="training_trimp_unit">TRIMP</string>
+    <string name="zone_rest_min">riposo %1$d min</string>
+    <string name="zone_min">Z%1$d %2$d min</string>
+    <string name="training_kcal_total">Calorie finora</string>
+    <string name="training_kcal_active">di cui attive</string>
+    <string name="training_kcal_value">%1$d kcal</string>
+    <string name="training_trend">Ultimi 7 giorni rispetto al tuo solito</string>
+    <string name="training_trend_value">%1$s (x%2$.2f)</string>
+    <string name="training_trend_low">più basso</string>
+    <string name="training_trend_usual">nella norma</string>
+    <string name="training_trend_high">più alto</string>
+    <string name="training_trend_unknown">Per la tendenza servono circa due settimane di dati di battito.</string>
+    <string name="training_hint">Stime da battito e profilo (TRIMP di Banister, Keytel, Mifflin-St Jeor). Le calorie possono essere molto imprecise; la tendenza non predice gli infortuni.</string>
 </resources>

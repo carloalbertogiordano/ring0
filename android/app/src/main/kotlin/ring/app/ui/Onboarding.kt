@@ -85,12 +85,12 @@ fun Onboarding(graph: Graph, onDone: () -> Unit) {
 @Composable
 private fun Welcome(onNext: () -> Unit) = OnboardingFrame(
     0,
-    "RING",
+    stringResource(R.string.app_name).uppercase(),
     content = {
         Box(Modifier.height(24.dp))
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
             LauncherMark(120.dp)
-            T("RING", size = 30.sp, weight = FontWeight.Bold, spacing = 8.sp)
+            T(stringResource(R.string.app_name).uppercase(), size = 30.sp, weight = FontWeight.Bold, spacing = 8.sp)
             T(stringResource(R.string.ob_tagline), color = Term.accent)
             TCard {
                 KeyValue(stringResource(R.string.ob_account), stringResource(R.string.value_none))
@@ -240,7 +240,7 @@ private fun ScanStep(graph: Graph, onBack: () -> Unit, onNext: () -> Unit) = Onb
             onNext()
         }
     },
-    footer = { TButton("Indietro", onBack, Modifier.fillMaxWidth(), BtnKind.GHOST) },
+    footer = { TButton(stringResource(R.string.btn_back), onBack, Modifier.fillMaxWidth(), BtnKind.GHOST) },
 )
 
 @Composable

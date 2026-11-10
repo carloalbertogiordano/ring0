@@ -131,3 +131,29 @@ class EnergyTest {
         assertEquals(1780.0 + active, Energy.totalKcal(samples, 5, man, 187), 1e-9)
     }
 }
+
+class TrainingSummaryTest {
+    private val man = Profile(ageYears = 30, sex = Sex.MALE, weightKg = 80.0, heightCm = 180.0)
+
+    @Test fun `a day combines zones, load and active energy`() {
+        val samples = hr(60.0, 150.0, 150.0, 100.0, 0.0)
+        val day = TrainingSummary.day(samples, sampleMinutes = 5, profile = man, hrRest = 60)
+        assertEquals(5, day.zoneMinutes[HrZone.REST])
+        assertEquals(5, day.zoneMinutes[HrZone.Z1])
+        assertEquals(10, day.zoneMinutes[HrZone.Z4])
+        val expectedTrimp = 2 * Trimp.session(150.0, 5.0, 60, 187, Sex.MALE) + Trimp.session(100.0, 5.0, 60, 187, Sex.MALE)
+        assertEquals(expectedTrimp, day.trimp, 1e-9)
+        assertEquals(Energy.activeKcal(samples, 5, man, 187), day.activeKcal, 1e-9)
+    }
+
+    @Test fun `a day without data is all zero`() {
+        val day = TrainingSummary.day(emptyList(), sampleMinutes = 5, profile = man, hrRest = 60)
+        assertEquals(0.0, day.trimp)
+        assertEquals(0.0, day.activeKcal)
+        assertEquals(0, day.zoneMinutes.values.sum())
+    }
+
+    @Test fun `basal energy is spread evenly over the day`() {
+        assertEquals(890.0, Energy.basalKcal(man, minutes = 720), 1e-9)
+    }
+}

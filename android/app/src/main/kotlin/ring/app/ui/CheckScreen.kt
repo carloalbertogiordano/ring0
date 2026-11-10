@@ -81,13 +81,13 @@ private fun CheckEditorHost(graph: Graph, incident: ring.app.data.IncidentEntity
             incident,
             onSave = {
                 scope.launch {
-                    graph.saveIncident(it)
+                    graph.incidents.save(it)
                     onDone()
                 }
             },
             onDelete = {
                 scope.launch {
-                    graph.deleteIncident(incident.id)
+                    graph.incidents.delete(incident.id)
                     onDone()
                 }
             },
@@ -181,7 +181,7 @@ fun CheckScreen(graph: Graph, onClose: () -> Unit) {
 
                 CheckPhase.DONE, CheckPhase.FAILED -> {
                     check.incidentId?.let { id ->
-                        TButton(stringResource(R.string.btn_add_details), { scope.launch { editing = graph.incident(id) } }, Modifier.fillMaxWidth())
+                        TButton(stringResource(R.string.btn_add_details), { scope.launch { editing = graph.dao.incidentById(id) } }, Modifier.fillMaxWidth())
                     }
                     TButton(stringResource(R.string.btn_check_again), { graph.resetCheck() }, Modifier.fillMaxWidth(), BtnKind.GHOST)
                 }

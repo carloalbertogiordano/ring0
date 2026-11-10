@@ -265,4 +265,21 @@ Check that the ring is charged, out of its case and not connected to anything el
     <string name="profile_hr_max">Max heart rate (bpm)</string>
     <string name="profile_hr_max_auto">%1$d (from age)</string>
     <string name="profile_hr_max_reset">Use age formula</string>
+    <string name="training_title">Training (estimate)</string>
+    <string name="training_need_profile">Fill in your profile in Settings to see calories and training load.</string>
+    <string name="training_need_data">Not enough heart rate data yet.</string>
+    <string name="training_load_today">Load today</string>
+    <string name="training_trimp_unit">TRIMP</string>
+    <string name="zone_rest_min">rest %1$d min</string>
+    <string name="zone_min">Z%1$d %2$d min</string>
+    <string name="training_kcal_total">Calories so far</string>
+    <string name="training_kcal_active">of which active</string>
+    <string name="training_kcal_value">%1$d kcal</string>
+    <string name="training_trend">Last 7 days vs your usual</string>
+    <string name="training_trend_value">%1$s (x%2$.2f)</string>
+    <string name="training_trend_low">lower</string>
+    <string name="training_trend_usual">usual</string>
+    <string name="training_trend_high">higher</string>
+    <string name="training_trend_unknown">A trend needs about two weeks of heart rate data.</string>
+    <string name="training_hint">Estimates from heart rate and your profile (Banister TRIMP, Keytel, Mifflin-St Jeor). Calories can be far off; the trend is not an injury predictor.</string>
 </resources>

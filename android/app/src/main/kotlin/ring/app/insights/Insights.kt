@@ -4,21 +4,38 @@ import ring.app.data.RingDao
 import ring.app.data.Sample
 import ring.app.data.SampleType
 import ring.domain.Baseline
+import ring.domain.Energy
+import ring.domain.HeartRateModel
 import ring.domain.IllnessAssessment
 import ring.domain.IllnessWarning
+import ring.domain.LoadTrend
+import ring.domain.LoadTrendResult
 import ring.domain.NightSignals
+import ring.domain.Profile
 import ring.domain.Readiness
 import ring.domain.ReadinessInput
 import ring.domain.ReadinessScore
 import ring.domain.RestingHr
 import ring.domain.Stats
 import ring.domain.TimedValue
+import ring.domain.TrainingDay
+import ring.domain.TrainingSummary
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
+import kotlin.math.roundToInt
 
 data class ReadinessReport(val readiness: Readiness?, val baselineDays: Int)
+
+/** Today's training numbers plus how the recent load compares with your usual. */
+data class TrainingReport(
+    val today: TrainingDay,
+    val basalSoFarKcal: Double,
+    val load: LoadTrendResult?,
+    val hrRest: Int,
+    val hrMax: Int,
+)
 
 /** Recent context used by the check: baselines and the latest values. */
 data class CheckContext(
@@ -79,6 +96,36 @@ class Insights(private val dao: RingDao, private val zone: ZoneId = ZoneId.syste
         return ReadinessReport(ReadinessScore.compute(input), all.count { it.hrv != null })
     }
 
+    /** Resting HR used as the zero of the effort scale: median of recent nights, else the day's low quantile. */
+    private suspend fun restingBaseline(now: Long): Int? {
+        val nightly = nights(now, REST_NIGHTS).mapNotNull { it.rhr }
+        val rest = if (nightly.isNotEmpty()) Stats.median(nightly) else RestingHr.estimate(dao.range(SampleType.HR, now - DAY, now).timed())
+        return rest?.roundToInt()
+    }
+
+    /** Zones, training load and calories for today, and the recent load trend. Null without a resting HR estimate. */
+    suspend fun training(profile: Profile, now: Long = Instant.now().epochSecond): TrainingReport? {
+        val hrRest = restingBaseline(now) ?: return null
+        val today = Instant.ofEpochSecond(now).atZone(zone).toLocalDate()
+        val dayStart = today.atStartOfDay(zone).toEpochSecond()
+        val history = dao.range(SampleType.HR, today.minusDays(LOAD_DAYS.toLong()).atStartOfDay(zone).toEpochSecond(), dayStart).timed()
+        val dailyLoad = history
+            .groupBy { Instant.ofEpochSecond(it.ts).atZone(zone).toLocalDate() }
+            .filterValues { day -> day.count { it.value > 0 } >= MIN_SAMPLES_PER_DAY }
+            .toSortedMap()
+            .values
+            .map { TrainingSummary.day(it, HR_SAMPLE_MINUTES, profile, hrRest).trimp }
+        val samplesToday = dao.range(SampleType.HR, dayStart, now).timed()
+        val minutesSoFar = ((now - dayStart) / SECONDS_PER_MINUTE).toInt()
+        return TrainingReport(
+            today = TrainingSummary.day(samplesToday, HR_SAMPLE_MINUTES, profile, hrRest),
+            basalSoFarKcal = Energy.basalKcal(profile, minutesSoFar),
+            load = LoadTrend.compute(dailyLoad),
+            hrRest = hrRest,
+            hrMax = HeartRateModel.hrMax(profile),
+        )
+    }
+
     /** Early warning: the last two nights against the baseline of earlier nights. */
     suspend fun illness(now: Long = Instant.now().epochSecond): IllnessAssessment {
         val all = nights(now, ILLNESS_NIGHTS)
@@ -122,6 +169,10 @@ class Insights(private val dao: RingDao, private val zone: ZoneId = ZoneId.syste
         const val DAY = 86_400L
         const val SECONDS_PER_MINUTE = 60
         const val HISTORY_NIGHTS = 28
+        const val REST_NIGHTS = 14
+        const val LOAD_DAYS = 28
+        const val HR_SAMPLE_MINUTES = 5
+        const val MIN_SAMPLES_PER_DAY = 144
         const val ILLNESS_NIGHTS = 9
         const val MIN_TEMP_SPREAD = 0.15
         const val MIN_RHR_SPREAD = 1.5

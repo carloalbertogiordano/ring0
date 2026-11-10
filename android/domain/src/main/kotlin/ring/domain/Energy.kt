@@ -36,6 +36,9 @@ object Energy {
             .sumOf { sampleMinutes * (keytelKcalPerMin(it.value, profile) - basalPerMinute).coerceAtLeast(0.0) }
     }
 
+    /** Basal energy over `minutes` of the day. */
+    fun basalKcal(profile: Profile, minutes: Int): Double = bmrKcalPerDay(profile) * minutes / MINUTES_PER_DAY
+
     fun totalKcal(samples: List<TimedValue>, sampleMinutes: Int, profile: Profile, hrMax: Int): Double =
         bmrKcalPerDay(profile) + activeKcal(samples, sampleMinutes, profile, hrMax)
 }

@@ -27,6 +27,7 @@ import ring.app.data.SampleType
 import ring.app.data.SettingsStore
 import ring.app.insights.Insights
 import ring.app.insights.ReadinessReport
+import ring.app.insights.TrainingReport
 import ring.app.sync.AlertEngine
 import ring.app.sync.IncidentRecorder
 import ring.app.sync.SyncEngine
@@ -90,6 +91,7 @@ data class Status(
     val measuring: Boolean = false,
     val monitors: Map<String, Boolean> = emptyMap(),
     val readiness: ReadinessReport? = null,
+    val training: TrainingReport? = null,
     val liveTarget: Int = 12,
     val spo2Measuring: Boolean = false,
     val liveSpo2: Int? = null,
@@ -111,7 +113,7 @@ class Graph(private val context: Context) {
     val session = RingSession(manager)
     private val sync = SyncEngine(dao)
     val insights = Insights(dao)
-    private val incidents = IncidentRecorder(dao)
+    val incidents = IncidentRecorder(dao)
     val alerts = AlertEngine(context, dao, settings, insights, incidents)
     private val _checkRequested = MutableStateFlow(false)
     val checkRequested: StateFlow<Boolean> = _checkRequested
@@ -120,7 +122,7 @@ class Graph(private val context: Context) {
     private val syncLock = Mutex()
 
     init {
-        scope.launch { refreshReadiness() }
+        scope.launch { refreshInsights() }
     }
 
     private suspend fun ensureConnected() {
@@ -156,7 +158,7 @@ class Graph(private val context: Context) {
                     lastError = report.errors.takeIf { e -> e.isNotEmpty() }?.joinToString("; "),
                 )
             }
-            refreshReadiness()
+            refreshInsights()
             alerts.evaluate(report.battery?.level, report.battery?.charging ?: false)
         } catch (e: Exception) {
             _status.update { it.copy(connected = manager.isConnected, lastError = e.message ?: e.javaClass.simpleName) }
@@ -171,7 +173,7 @@ class Graph(private val context: Context) {
             val demo = ring.app.insights.DemoData.generate(Instant.now().epochSecond, sick)
             dao.upsertSamples(demo.samples)
             dao.upsertSleep(demo.sleep)
-            refreshReadiness()
+            refreshInsights()
             alerts.evaluate(null, false)
         }
     }
@@ -180,13 +182,25 @@ class Graph(private val context: Context) {
         scope.launch {
             dao.deleteDemoSamples()
             dao.deleteDemoSleep()
-            refreshReadiness()
+            refreshInsights()
         }
     }
 
     suspend fun refreshReadiness() {
         val report = runCatching { insights.readiness() }.getOrNull()
         _status.update { it.copy(readiness = report) }
+    }
+
+    /** Training numbers need the profile; without it they stay empty. */
+    suspend fun refreshTraining() {
+        val profile = settings.profile.value
+        val report = profile?.let { runCatching { insights.training(it) }.getOrNull() }
+        _status.update { it.copy(training = report) }
+    }
+
+    suspend fun refreshInsights() {
+        refreshReadiness()
+        refreshTraining()
     }
 
     /** Turns on the default automatic measurements (heart every 5 min, SpO2, stress, HRV, temperature). */
@@ -293,14 +307,6 @@ class Graph(private val context: Context) {
     fun measureStress() {
         scope.launch { stressMeasure() }
     }
-
-    suspend fun incident(id: Long): ring.app.data.IncidentEntity? = dao.incidentById(id)
-
-    suspend fun manualIncidentDraft(): ring.app.data.IncidentEntity = incidents.manualDraft(Instant.now().epochSecond)
-
-    suspend fun saveIncident(incident: ring.app.data.IncidentEntity) = incidents.save(incident)
-
-    suspend fun deleteIncident(id: Long) = incidents.delete(id)
 
     /** Asks the UI to open the check screen (from a notification). */
     fun requestCheck() {

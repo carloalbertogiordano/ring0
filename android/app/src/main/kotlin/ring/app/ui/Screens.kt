@@ -185,7 +185,7 @@ private fun HomeScreen(graph: Graph, onOpenCheck: () -> Unit) {
     LazyColumn(contentPadding = PAD, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                T("RING", size = 15.sp, weight = FontWeight.Bold, spacing = 4.sp)
+                T(stringResource(R.string.app_name).uppercase(), size = 15.sp, weight = FontWeight.Bold, spacing = 4.sp)
                 when {
                     battery != null && status.connected -> TPill(
                         if (battery.charging) stringResource(R.string.pill_charging, battery.level) else "${battery.level}%",
@@ -214,6 +214,7 @@ private fun HomeScreen(graph: Graph, onOpenCheck: () -> Unit) {
         item { CheckCard(onOpenCheck) }
         item { LiveCard(graph) }
         item { ReadinessCard(graph) }
+        item { TrainingCard(graph) }
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -411,7 +412,7 @@ private fun NotFoundCard(graph: Graph) = TCard(accent = Term.warn) {
     T(stringResource(R.string.not_found_1), size = 12.sp)
     T(stringResource(R.string.not_found_2), size = 12.sp)
     T(stringResource(R.string.not_found_3), size = 12.sp)
-    TButton("Riprova", { graph.scope.launch { graph.syncNow() } }, Modifier.fillMaxWidth())
+    TButton(stringResource(R.string.btn_retry), { graph.scope.launch { graph.syncNow() } }, Modifier.fillMaxWidth())
 }
 
 @Composable
@@ -468,7 +469,7 @@ private fun HistoryScreen(graph: Graph) {
             current,
             onSave = {
                 scope.launch {
-                    graph.saveIncident(it)
+                    graph.incidents.save(it)
                     editing = null
                 }
             },
@@ -476,7 +477,7 @@ private fun HistoryScreen(graph: Graph) {
                 (
                     {
                         scope.launch {
-                            graph.deleteIncident(current.id)
+                            graph.incidents.delete(current.id)
                             editing = null
                         }
                     }
@@ -517,7 +518,9 @@ private fun HistoryScreen(graph: Graph) {
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Label(stringResource(R.string.incidents_title))
-                TButton(stringResource(R.string.btn_add_incident), { scope.launch { editing = graph.manualIncidentDraft() } }, kind = BtnKind.GHOST)
+                TButton(stringResource(R.string.btn_add_incident), {
+                    scope.launch { editing = graph.incidents.manualDraft(Instant.now().epochSecond) }
+                }, kind = BtnKind.GHOST)
             }
         }
         items(incidents) { IncidentCard(it) { editing = it } }

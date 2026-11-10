@@ -78,3 +78,17 @@ object LoadTrend {
         return LoadTrendResult(acute, chronic, ratio, level)
     }
 }
+
+data class TrainingDay(val zoneMinutes: Map<HrZone, Int>, val trimp: Double, val activeKcal: Double)
+
+/** Everything the training card needs for one stretch of heart rate samples. */
+object TrainingSummary {
+    fun day(samples: List<TimedValue>, sampleMinutes: Int, profile: Profile, hrRest: Int): TrainingDay {
+        val hrMax = HeartRateModel.hrMax(profile)
+        return TrainingDay(
+            zoneMinutes = HeartRateModel.minutesPerZone(samples, sampleMinutes, hrMax),
+            trimp = Trimp.fromSamples(samples, sampleMinutes, hrRest, hrMax, profile.sex),
+            activeKcal = Energy.activeKcal(samples, sampleMinutes, profile, hrMax),
+        )
+    }
+}
