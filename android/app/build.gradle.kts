@@ -5,12 +5,12 @@ plugins {
 
 android {
     namespace = "ring.app"
-    compileSdk = 34
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "ring.app"
         minSdk = 31
-        targetSdk = 34
+        targetSdk = 36
         versionCode = 1
         versionName = "0.1"
     }
