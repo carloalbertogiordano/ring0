@@ -86,7 +86,7 @@ def test_assembler_resyncs_when_length_field_is_implausible() -> None:
     assert asm.feed(bogus + _frame(b"after")) == [BigFrame(0x25, b"after")]
 
 
-# Frame reali del ring R09 (FW RT09CR2_3.00.03_260929, 2026-11-10) a ring appena configurato, senza storico.
+# Frame reali del ring R09 (FW RT09CR2_3.00.03_260929, 2026-11-10), senza storico.
 REAL_EMPTY_TEMP = bytes.fromhex("bc25020081b8001e")
 REAL_EMPTY_SLEEP = bytes.fromhex("bc270100bf4000")
 REAL_EMPTY_SPO2 = bytes.fromhex("bc2a0000ffff")
