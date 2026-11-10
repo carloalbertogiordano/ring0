@@ -13,6 +13,7 @@ class FakeTransport:
         self.events: list[tuple[str, int]] = []
         self.sent: list[bytes] = []
         self.responses: dict[int, list[bytes]] = {}
+        self.scripted: dict[int, list[list[bytes]]] = {}
         self.delay: float = 0.0
         self._handler: Callable[[bytes], None] | None = None
 
@@ -28,7 +29,8 @@ class FakeTransport:
         self.sent.append(data)
         cmd = data[0]
         self.events.append(("write", cmd))
-        batch = self.responses.get(cmd, [])
+        scripted = self.scripted.get(cmd)
+        batch = scripted.pop(0) if scripted else self.responses.get(cmd, [])
         if batch:
             asyncio.get_running_loop().call_later(self.delay, self._deliver, batch)
 

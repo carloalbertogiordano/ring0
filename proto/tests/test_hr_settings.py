@@ -61,11 +61,15 @@ async def test_read_hr_settings_roundtrip() -> None:
     assert tr.sent == [build(0x16, b"\x01")]
 
 
-async def test_write_hr_settings_sends_write_subcommand_and_returns_confirmed_state() -> None:
+async def test_write_hr_settings_discards_write_reply_and_returns_read_back_state() -> None:
     tr = FakeTransport()
-    tr.responses[0x16] = [build(0x16, bytes([2, 1, 5]))]
+    junk_reply = build(
+        0x16, bytes([2, 0, 0])
+    )  # il ring risponde in modo inattendibile alla scrittura
+    confirmed = build(0x16, bytes([1, 1, 5]))
+    tr.scripted[0x16] = [[junk_reply], [confirmed]]
 
     result = await write_hr_settings(RingClient(tr), HeartRateSettings(True, 5))
 
-    assert tr.sent == [build(0x16, bytes([2, 1, 5]))]
+    assert tr.sent == [build(0x16, bytes([2, 1, 5])), build(0x16, b"\x01")]
     assert result == HeartRateSettings(True, 5)
