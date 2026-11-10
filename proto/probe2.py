@@ -4,7 +4,7 @@ RX="6e400002-b5a3-f393-e0a9-e50e24dcca9e"; TX="6e400003-b5a3-f393-e0a9-e50e24dcc
 def packet(cmd, payload=b""):
     b=(bytes([cmd])+payload).ljust(15,b"\0"); return b+bytes([sum(b)&0xFF])
 async def main(addr):
-    dev = await BleakScanner.find_device_by_address(addr, timeout=20)
+    dev = await BleakScanner.find_device_by_address(addr, timeout=25)
     t0=time.time()
     def log(m): print(f"[{time.time()-t0:5.2f}s] {m}", flush=True)
     c = BleakClient(dev, disconnected_callback=lambda _: log("DISCONNECTED"), timeout=30)

@@ -4,7 +4,12 @@
 - Nome BLE: `COLMI Ring 2` (scatola: R09, "Ring 2" = nome commerciale)
 - MAC: vedi `captures/` (non riportato qui)
 - Adv: service `0xFEE7`, manufacturer data company id 0x1234 (4660) = `fee7` + MAC reversed
-- HW/FW revision: **non ancora letti**
+- HW revision: `RT09CR2_V3.0` (0x2A27) -> R09 confermato
+- FW revision: `RT09CR2_3.00.03_260929` (0x2A26)
+- System ID: `REDACTED` (= MAC reversed + 00 00 47 31 30...)
+- Serial (0x2A25): stringa vuota
+- Device Name (0x2A00): `COLMI Ring 2`
+- Batteria misurata alla prima prova: 7% (CMD 0x03, non in carica)
 
 ## GATT (captures/gatt_dump.txt)
 | Service | Note |
@@ -28,5 +33,24 @@ vengono servite. Trigger probabile: service HID (HOG) + auto-connect di bluetoot
 
 Cattura: `captures/hci_probe.btsnoop` (non tracciata, contiene il MAC).
 
+## Soluzione
+Pairing "Just Works" con agent NoInputNoOutput:
+```
+bluetoothctl remove <MAC>
+# scan bleak per metterlo in cache, poi:
+bluetoothctl: agent NoInputNoOutput; default-agent; pair <MAC>
+bluetoothctl untrust <MAC>   # evita auto-reconnect di bluetoothd che contende il link
+```
+Con ring bonded (e connesso a bluetoothd) il ring non pubblicizza piu': bleak non lo trova.
+Fare `bluetoothctl disconnect <MAC>`, attendere ~3 s, poi `BleakScanner.find_device_by_address` + connect.
+Dopo pairing: letture Device Information ok, `start_notify` su `6e400003` ok.
+
+## Primo scambio verificato (CMD 0x03 batteria)
+```
+TX 03 00 00 00 00 00 00 00 00 00 00 00 00 00 00 03
+RX 03 07 00 00 00 00 00 00 00 00 00 00 00 00 00 0a   -> byte1 = 7 (%), checksum ok
+```
+
 ## Prossimi passi
-- Far completare/evitare il pairing lato BlueZ, poi leggere device info e batteria (CMD 0x03).
+- Caricare il ring (7%).
+- Fase 1: client Python (set time, batteria, HR real-time, SpO2, passi, log HR).
