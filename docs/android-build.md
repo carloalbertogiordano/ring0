@@ -1,6 +1,6 @@
 # Build Android su questa macchina
 
-Il loopback arriva ai server con indirizzo sorgente `192.168.1.49` (SNAT del gruppo `sandbox`), quindi il daemon Gradle
+Il loopback arriva ai server con indirizzo sorgente `192.168.1.49` (SNAT del gruppo di rete usato dal sandbox), quindi il daemon Gradle
 e i worker di test rifiutano le connessioni ("Cannot accept connection from remote address"). Soluzioni adottate:
 
 - `android/gw.sh`: Gradle **senza daemon e in-process**. Richiede `GRADLE_OPTS` identico a `org.gradle.jvmargs`

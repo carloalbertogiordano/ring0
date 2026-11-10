@@ -13,6 +13,5 @@ refs/
 captures/raw/
 captures/*
 !captures/.gitkeep
-local.session
 .coverage
 local.properties
