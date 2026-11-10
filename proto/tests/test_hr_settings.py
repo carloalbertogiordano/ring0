@@ -73,3 +73,16 @@ async def test_write_hr_settings_discards_write_reply_and_returns_read_back_stat
 
     assert tr.sent == [build(0x16, bytes([2, 1, 5])), build(0x16, b"\x01")]
     assert result == HeartRateSettings(True, 5)
+
+
+# Risposte reali del ring R09 (FW RT09CR2_3.00.03_260929), 2026-11-10.
+R09_DISABLED_30MIN = bytes.fromhex("1601021e05000000000000000000003c")
+R09_ENABLED_5MIN = bytes.fromhex("16010105050000000000000000000022")
+
+
+def test_decode_real_r09_disabled_every_30_minutes() -> None:
+    assert decode(parse(R09_DISABLED_30MIN)) == HeartRateSettings(False, 30)
+
+
+def test_decode_real_r09_enabled_every_5_minutes() -> None:
+    assert decode(parse(R09_ENABLED_5MIN)) == HeartRateSettings(True, 5)

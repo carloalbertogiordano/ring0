@@ -116,3 +116,8 @@ async def test_read_hr_log_roundtrip() -> None:
 
 def test_is_last_is_false_when_first_packet_is_not_a_header() -> None:
     assert is_last(pkts(sub1([60] * 9))) is False
+
+
+def test_decode_real_r09_no_data_response() -> None:
+    # Risposta reale del R09 con auto-HR disattivo (2026-11-10).
+    assert decode(pkts(bytes.fromhex("15ff0000000000000000000000000014"))) is None

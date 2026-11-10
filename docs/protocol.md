@@ -36,3 +36,25 @@ Risposta reale del tuo R09 (2026-11-10): `01 01 00 00 02 00 00 00 00 01 00 20 00
 Byte non decodificati: payload[10] = 0x20 (flags2, bit5 non documentato), payload[13] = 0x30.
 
 Codice: `proto/ringproto/commands/set_time.py`. Test: `proto/tests/test_set_time.py`.
+
+## 0x16 Impostazioni HR automatico
+Lettura: req `16 01 00*13 17` -> rsp `16 01 <abilitato: 1=si 2=no> <intervallo_min> <?> 00*10 <crc>`
+Scrittura: req `16 02 <abilitato> <intervallo_min> 00*11 <crc>`; la risposta alla scrittura (`16 02 01 00…`) **non e' affidabile**:
+si rilegge lo stato.
+payload[3] = 5 in entrambe le letture: significato ignoto (candidato: intervallo minimo/granularita').
+
+| Esempio reale | Hex | Significato |
+|---|---|---|
+| rsp lettura | `1601021e05000000000000000000003c` | disabilitato, 30 min (stato di fabbrica) |
+| req scrittura | `1602010500000000000000000000001e` | abilita, 5 min |
+| rsp scrittura | `16020100000000000000000000000019` | (inattendibile) |
+| rsp lettura | `16010105050000000000000000000022` | abilitato, 5 min |
+
+## 0x15 Log HR giornaliero
+Req: `15 <unix ts LE u32 inizio giorno> 00*9 <crc>`. Provato con mezzanotte **UTC** di oggi (`15 80 5e f2 6a …`).
+Risposta a piu' pacchetti, `payload[0]` = sub-tipo: 0 = header (`[size][intervallo_min]`), 1 = `[ts LE u32][9 valori]`,
+>=2 = 13 valori, 0xFF = nessun dato. 0 = slot senza misura. `size` pacchetti in totale; log troncato a 1440/intervallo slot.
+Reale: `15ff0000000000000000000000000014` = nessun dato (auto-HR era disattivo).
+Da verificare con dati reali: convenzione del timestamp (UTC vs locale) e codifica BCD/binario dell'ora.
+
+Codice: `proto/ringproto/commands/hr_log.py`, `hr_settings.py`.
