@@ -28,6 +28,8 @@ files = ["ringproto"]
 
 [tool.pylint.main]
 ignore = [".venv"]
+[tool.pylint.design]
+max-attributes = 12
 [tool.pylint.similarities]
 min-similarity-lines = 4
 ignore-imports = true

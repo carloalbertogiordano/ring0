@@ -14,9 +14,12 @@ from ringproto.packet import Packet, build
 from tests.fakes import FakeTransport
 
 WHEN = datetime(2026, 11, 10, 15, 7, 9, tzinfo=UTC)
+BIT_FLAGS = ("blood_oxygen", "blood_pressure", "manual_heart_rate", "blood_sugar", "stress", "hrv")
 
 
-@pytest.mark.parametrize(("value", "bcd"), [(0, 0x00), (9, 0x09), (26, 0x26), (59, 0x59), (99, 0x99)])
+@pytest.mark.parametrize(
+    ("value", "bcd"), [(0, 0x00), (9, 0x09), (26, 0x26), (59, 0x59), (99, 0x99)]
+)
 def test_to_bcd(value: int, bcd: int) -> None:
     assert to_bcd(value) == bcd
 
@@ -86,9 +89,8 @@ def test_decode_temperature_flag_is_payload_byte_0() -> None:
 )
 def test_decode_bit_flags(offset: int, mask: int, field: str) -> None:
     caps = decode(_caps_packet(**{f"p{offset}": mask}))
-    assert getattr(caps, field) is True
-    others = [f for f in ("blood_oxygen", "blood_pressure", "stress", "hrv") if f != field]
-    assert not any(getattr(caps, f) for f in others if f != field and f[:3] != field[:3])
+    set_flags = {name for name in BIT_FLAGS if getattr(caps, name)}
+    assert set_flags == {field}
 
 
 def test_decode_new_sleep_protocol_is_payload_byte_8_equal_1() -> None:
