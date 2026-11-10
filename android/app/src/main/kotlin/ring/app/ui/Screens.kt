@@ -461,7 +461,6 @@ private fun SettingsScreen(graph: Graph, onForget: () -> Unit) {
                 if (status.monitors.isEmpty()) T(stringResource(R.string.monitors_hint), size = 11.sp, color = Term.dim)
             }
         }
-        item { AlarmsCard(graph) }
         item {
             TCard {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {

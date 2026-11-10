@@ -42,11 +42,6 @@ class SettingsStore(context: Context) {
         get() = prefs.getLong("lastStepsSync", 0)
         set(value) = prefs.edit().putLong("lastStepsSync", value).apply()
 
-    /** UTC offset (minutes) used the last time the alarms were written to the ring; a change means daylight saving moved. */
-    var alarmOffsetMin: Int
-        get() = prefs.getInt("alarmOffset", Int.MIN_VALUE)
-        set(value) = prefs.edit().putInt("alarmOffset", value).apply()
-
     var alertsEnabled: Boolean
         get() = prefs.getBoolean("alerts", true)
         set(value) = prefs.edit().putBoolean("alerts", value).apply()

@@ -15,8 +15,8 @@ Legenda dipendenze: [dati] serve una notte/giorni di dati reali, [hw] serve capi
 5. Analisi sonno: durata, efficienza, latenza, risvegli, regolarita'  [dati]
 
 ## Fase C - Controlli sull'anello
-6. Sveglia con vibrazione (big-data allarmi), "trova anello" (0x50 / blink 0x10)  [ok, da provare sul ring]
-7. Vibrazione per notifiche del telefono (0x72/0x73 push message; permesso lettura notifiche)  [ok, da provare]
+6. "Trova anello" (0x50, LED verde ~10 s)  [fatto, funziona]
+7. Sveglie, vibrazione e notifiche sul ring  [ANNULLATO: l'R09 non ha il motorino di vibrazione]
 8. Sessione di respirazione guidata con biofeedback HR/HRV (stream RR)  [ok]
 
 ## Fase D - Comodita' e dati

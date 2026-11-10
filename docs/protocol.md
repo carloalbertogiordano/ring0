@@ -135,15 +135,12 @@ Real R09 slot: `43 26 11 10 38 00 04 f0 01 b8 00 72 00` = 2026-11-10 14:00 UTC, 
 Goals request `21 01`; reply `21 01 <steps u24 LE> <calories u24 LE> <u24 ?>`: `21 01 88 13 00 e0 93 04 b8 0b 00` = 5000 steps,
 300000 cal, 3000 (probably distance in m). Reading only: writing goals is not implemented.
 
-## Alarms and push messages (from the decompiled official QRing app, 2026-11-10)
-Source: jadx on `refs/ATC_RF03_Ring/QRing_Patched_to_disable_certificate_pinning.apk` (`com.oudmon.ble.base.communication`).
-- **Big-data alarm (type 0x2C = 44)**, used by the app's reminder screen: read = payload `01`; write = `02 <count>` followed by
-  records `<len> <repeat|enable> <minutes lo> <minutes hi> <name UTF-8>`. Same layout as Gadgetbridge. Implemented in `AlarmCommand`.
-- **V1 alarm slots**: set = CMD `0x23` `[index 0..4][enable 0..2][hour BCD][minute BCD][7 bytes 0/1 = weekdays]`,
-  read = CMD `0x24` `[index]`. Hours and minutes are BCD. Implemented read-only in `AlarmSlotCommand`.
-- Push message CMD `0x72`: `[type][total chunks][chunk 1..n][up to 11 text bytes]`; `AlarmCommand`/`PushMessageCommand` in the app.
-
-**R09 result (FW RT09CR2_3.00.03_260929)**: the ring sends **no reply at all** to the big-data alarm read/write (`bc 2c ...`) nor to
-the V1 read `24 00`, while every other command answers within a second. Whether the alarm was stored, or whether this ring has a
-vibration motor / alarm feature at all, is NOT established. Pending: physical confirmation that the ring buzzes (push message 0x72,
-find device 0x50) and an alarm at the set time.
+## Alarms, push messages and vibration: NOT supported by the R09 (2026-11-10)
+The R09 has **no vibration motor**: confirmed on the physical ring (push message and alarm produce nothing; only the green LED of
+find-device 0x50 works). The commands below exist in the official QRing app (jadx on
+`refs/ATC_RF03_Ring/QRing_Patched_to_disable_certificate_pinning.apk`, `com.oudmon.ble.base.communication`) for other models, but
+the R09 (FW RT09CR2_3.00.03_260929) never answers them, so the app code was removed (see git history, commit "Remove alarms...").
+- Big-data alarm (type 0x2C): read = payload `01`; write = `02 <count>` + records `<len> <repeat|enable> <minutes lo> <minutes hi> <name>`.
+- V1 alarm slots: set = CMD `0x23` `[index 0..4][enable 0..2][hour BCD][minute BCD][7 bytes 0/1 = weekdays]`, read = CMD `0x24` `[index]`.
+- Push message CMD `0x72`: `[type][total chunks][chunk 1..n][up to 11 text bytes]`.
+- On the R09 every one of these gets **no reply at all**, while every other command answers within a second.

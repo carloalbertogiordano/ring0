@@ -115,11 +115,6 @@ class BigDataClient(
             }
         }
 
-    /** Writes a request without waiting for a reply (some writes are not acknowledged). */
-    suspend fun send(typeId: Int, payload: ByteArray = ByteArray(0)) {
-        mutex.withLock { transport.write(BigData.encodeFrame(typeId, payload)) }
-    }
-
     private fun handleNotification(data: ByteArray) {
         val frames = synchronized(this) { assembler.feed(data) }
         for (frame in frames) {

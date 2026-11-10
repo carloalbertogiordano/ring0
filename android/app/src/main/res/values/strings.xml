@@ -254,18 +254,4 @@ Check that the ring is charged, out of its case and not connected to anything el
     <string name="tile_steps">Steps</string>
     <string name="steps_of_goal">of %1$d</string>
     <string name="chart_steps">Steps (per 15 min)</string>
-    <string name="alarms_title">Ring alarms</string>
-    <string name="btn_add_alarm">Add alarm</string>
-    <string name="alarm_once">once</string>
-    <string name="alarm_every_day">every day</string>
-    <string name="alarm_weekdays">weekdays</string>
-    <string name="alarm_hint">The ring vibrates silently at that time, even if the phone is far away. Times are converted to the ring clock (UTC) and rewritten when daylight saving changes.</string>
-    <string name="alarm_edit_title">Alarm</string>
-    <string name="alarm_hour">Hour</string>
-    <string name="alarm_minute">Minute</string>
-    <string name="btn_delete_alarm">Delete alarm</string>
-    <string name="alarm_write_failed">Could not write the alarms to the ring</string>
-    <string name="btn_vibrate_test">Test vibration</string>
-    <string name="vibrate_hint">Sends a short message to the ring: it should buzz.</string>
-    <string name="ring_alarm_count">The ring reports %1$d alarms</string>
 </resources>
