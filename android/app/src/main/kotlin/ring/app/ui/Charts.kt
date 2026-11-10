@@ -63,7 +63,7 @@ fun Sparkline(points: List<TimedValue>, color: Color, modifier: Modifier = Modif
 
         fun y(v: Double) = (h - h * ((v - min) / span)).toFloat() + 2.dp.toPx()
         val segments = Series.segments(points)
-        drawHoles(Series.holes(segments), ::x, size.height)
+        drawHoles(Series.holes(segments, start, end), ::x, size.height)
         segments.forEach { segment ->
             if (segment.size < 2) {
                 drawCircle(color, 1.6.dp.toPx(), Offset(x(segment.first().ts), y(segment.first().value)))
@@ -158,7 +158,7 @@ fun TermChart(
         }
         val segments = Series.segments(samples.map { TimedValue(it.ts, it.value) })
         val top = 4.dp.toPx()
-        val holes = Series.holes(segments)
+        val holes = Series.holes(segments, from, to)
         holes.forEach { hole ->
             val left = x(hole.start)
             drawRect(Term.faint.copy(alpha = HOLE_ALPHA), Offset(left, top), Size((x(hole.end) - left).coerceAtLeast(1f), h))

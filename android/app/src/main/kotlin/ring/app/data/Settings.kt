@@ -61,6 +61,11 @@ class SettingsStore(context: Context) {
         get() = prefs.getBoolean("wearCleaned", false)
         set(value) = prefs.edit().putBoolean("wearCleaned", value).apply()
 
+    /** Optional experimental cycle estimate from skin temperature (only offered when the profile is female). */
+    var cycleEnabled: Boolean
+        get() = prefs.getBoolean("cycle", false)
+        set(value) = prefs.edit().putBoolean("cycle", value).apply()
+
     var alertsEnabled: Boolean
         get() = prefs.getBoolean("alerts", true)
         set(value) = prefs.edit().putBoolean("alerts", value).apply()

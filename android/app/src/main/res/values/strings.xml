@@ -335,4 +335,23 @@ Check that the ring is charged, out of its case and not connected to anything el
     <string name="rhythm_advice_doctor">Irregular results at different times this week. This is not a diagnosis, but it is worth an ECG: talk to a doctor, and seek help right away with chest pain, breathlessness or fainting.</string>
     <string name="rhythm_disclaimer">Screening only, never a diagnosis. Tuned on public ECG data from atrial fibrillation patients (sensitivity about 70%, specificity about 95%) and not validated on real atrial fibrillation with this ring. Extra beats and movement can look irregular, so repeat it before drawing conclusions.</string>
     <string name="chart_gap_hint">Shaded stretches: no data, the ring was not worn. They are left out of the charts and of every average and estimate.</string>
+    <string name="glossary_title">What do these numbers mean?</string>
+    <string name="info_hrv">HRV (heart rate variability) is the small variation in the time between heartbeats. Higher usually means a more relaxed, recovered body; it drops with stress, illness, alcohol and poor sleep. It is measured as RMSSD, in milliseconds. Compare it only with your own usual values: people differ a lot.</string>
+    <string name="info_stress">The ring\'s own estimate from your HRV and heart rate: higher means your body looks more tense. It reflects your body, not your mood, and it is not a psychological test.</string>
+    <string name="info_spo2">SpO2 is the percentage of oxygen carried by your blood. About 95-100% is normal. The ring measures it with light on the finger, so it is approximate and drifts with cold hands, movement and a loose fit.</string>
+    <string name="info_temp">Skin temperature at the finger, not core body temperature. It moves with the room, exercise and your cycle: the trend over several nights says more than a single reading.</string>
+    <string name="info_resp">Breaths per minute, estimated from the small changes in your heartbeat timing as you breathe. It needs a calm, still measurement.</string>
+    <string name="info_recovery">Compares last night\'s HRV and resting heart rate, plus how much you slept, with your own recent norm. Higher means you look better recovered than usual. It needs a few days of data before it means anything.</string>
+    <string name="info_energy">Our own model of your energy reserve: sleep refills it, stress and effort drain it. Use it to compare one day with another, not as a measurement. It needs a recorded night to start from.</string>
+    <string name="info_sleep">The score (0-100) mixes how long you slept against your target, how continuous it was and how much deep and REM sleep you got. Debt is the sleep you missed over the last 7 nights. Regularity is how consistent your sleep start is.</string>
+    <string name="info_training">TRIMP is training load: minutes at a raised heart rate, weighted so that harder effort counts much more. The trend compares your last 7 days with your usual. VO2max is an indicative fitness estimate from your resting heart rate: watch the trend, not the number. Recovery is how many beats per minute your heart rate fell 5 minutes after an effort.</string>
+    <string name="info_rhythm">Checks whether the timing between your heartbeats is regular. Irregular timing can come from atrial fibrillation, but also from extra beats, movement or a poor signal, so repeat it before drawing conclusions. It is a screening, never a diagnosis.</string>
+    <string name="info_habits">Looks at whether the nights after things you tagged (coffee, alcohol, hard exercise...) differ from your other nights in HRV, resting heart rate and sleep. It shows a correlation, not a cause.</string>
+    <string name="info_cycle">Estimates, from the nightly skin temperature, whether the slight rise that follows ovulation has happened. Optional and experimental; it is not a contraceptive or a fertility tool.</string>
+    <string name="cycle_title">Cycle (experimental)</string>
+    <string name="cycle_setting">Cycle estimate from skin temperature (experimental)</string>
+    <string name="cycle_need_data">Needs about three weeks of nightly skin temperature (%1$d nights so far).</string>
+    <string name="cycle_no_rise">No sustained post-ovulation temperature rise in the recent nights.</string>
+    <string name="cycle_after_rise">The temperature rise that usually follows ovulation started %1$d nights ago.</string>
+    <string name="cycle_hint">Skin temperature only. Not a contraceptive and not for planning or avoiding pregnancy: illness, alcohol and a warm room can look like a rise. Feedback from people who track their cycle is very welcome.</string>
 </resources>

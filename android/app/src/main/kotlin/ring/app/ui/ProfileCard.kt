@@ -2,11 +2,14 @@ package ring.app.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -88,6 +91,16 @@ fun ProfileCard(graph: Graph) {
                 graph.settings.sleepTargetMin = sleepTarget
             },
         )
+        if (p.sex == Sex.FEMALE && saved != null) {
+            var cycleOn by remember { mutableStateOf(graph.settings.cycleEnabled) }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                T(stringResource(R.string.cycle_setting), size = 12.sp)
+                TSwitch(cycleOn, {
+                    cycleOn = it
+                    graph.settings.cycleEnabled = it
+                })
+            }
+        }
         if (p.hrMaxOverride != null) {
             TButton(stringResource(R.string.profile_hr_max_reset), { save(p.copy(hrMaxOverride = null)) }, kind = BtnKind.GHOST)
         }

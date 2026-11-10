@@ -37,6 +37,22 @@ class SeriesTest {
     }
 }
 
+class SeriesEdgesTest {
+    @Test fun `no data before the first or after the last point is a hole too`() {
+        val segments = Series.segments(at(10_000, 10_300, 10_600))
+        assertEquals(listOf(WearGap(0, 10_000), WearGap(10_600, 20_000)), Series.holes(segments, from = 0, to = 20_000))
+    }
+
+    @Test fun `a short margin at the edges is not a hole`() {
+        val segments = Series.segments(at(600, 900, 1200))
+        assertEquals(emptyList(), Series.holes(segments, from = 0, to = 1500))
+    }
+
+    @Test fun `without any data the whole window is a hole`() {
+        assertEquals(listOf(WearGap(0, 5000)), Series.holes(emptyList(), from = 0, to = 5000))
+    }
+}
+
 class WearContainsTest {
     @Test fun `a timestamp inside a gap is not worn`() {
         val gaps = listOf(WearGap(1000, 2000), WearGap(5000, 6000))

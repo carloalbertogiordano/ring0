@@ -25,7 +25,7 @@ fun BodyBatteryCard(graph: Graph) {
     val status by graph.status.collectAsStateWithLifecycle()
     val report = status.insights.bodyBattery
     TCard(hot = report != null) {
-        Label(stringResource(R.string.energy_title))
+        LabelWithInfo(stringResource(R.string.energy_title), R.string.info_energy)
         if (report == null) {
             T(stringResource(R.string.energy_need_data), size = 12.sp, color = Term.dim)
         } else if (!report.anchored) {

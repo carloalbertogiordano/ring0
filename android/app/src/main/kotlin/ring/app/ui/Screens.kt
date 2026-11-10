@@ -5,6 +5,7 @@ import android.net.Uri
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.StringRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -218,6 +219,7 @@ private fun HomeScreen(graph: Graph, onOpenCheck: () -> Unit) {
         item { ReadinessCard(graph) }
         item { BodyBatteryCard(graph) }
         item { SleepInsightsCard(graph) }
+        item { CycleCard(graph) }
         item { TrainingCard(graph) }
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -377,7 +379,7 @@ private fun ReadinessCard(graph: Graph) {
     val r = report?.readiness
     TCard(hot = r != null) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Label(stringResource(R.string.recovery_title))
+            LabelWithInfo(stringResource(R.string.recovery_title), R.string.info_recovery, Modifier.weight(1f))
             if (r != null) T(stringResource(R.string.baseline_pct, (r.confidence * 100).toInt()), size = 10.sp, color = Term.dim)
         }
         if (r == null) {
@@ -509,16 +511,56 @@ private fun HistoryScreen(graph: Graph) {
             }
         }
         item { HistoryPanel(graph, stringResource(R.string.chart_hr), SampleType.HR, " bpm", from, to, Term.accent, 20.0, 0, thresholds.hrHigh.toDouble()) }
-        item { HistoryPanel(graph, stringResource(R.string.chart_temp), SampleType.TEMP, " °C", from, to, Color(0xFFFF9D3B), 1.0, 1, thresholds.tempHigh) }
         item {
-            HistoryPanel(graph, stringResource(R.string.chart_stress), SampleType.STRESS, "", from, to, Term.rem, 20.0, 0, thresholds.stressHigh.toDouble())
+            HistoryPanel(
+                graph,
+                stringResource(R.string.chart_temp),
+                SampleType.TEMP,
+                " °C",
+                from,
+                to,
+                Color(0xFFFF9D3B),
+                1.0,
+                1,
+                thresholds.tempHigh,
+                R.string.info_temp,
+            )
+        }
+        item {
+            HistoryPanel(
+                graph,
+                stringResource(R.string.chart_stress),
+                SampleType.STRESS,
+                "",
+                from,
+                to,
+                Term.rem,
+                20.0,
+                0,
+                thresholds.stressHigh.toDouble(),
+                R.string.info_stress,
+            )
         }
         item { T(stringResource(R.string.chart_gap_hint), size = 10.sp, color = Term.faint) }
         item { HabitsCard(graph) }
-        item { HistoryPanel(graph, stringResource(R.string.chart_hrv_ring), SampleType.HRV, " ms", from, to, Term.info, 20.0, 0, null) }
-        item { HistoryPanel(graph, stringResource(R.string.chart_hrv_live), SampleType.HRV_LIVE, " ms", from, to, Term.rem, 20.0, 0, null) }
-        item { HistoryPanel(graph, stringResource(R.string.chart_resp), SampleType.RESP, " /min", from, to, Term.info, 4.0, 0, null) }
-        item { HistoryPanel(graph, stringResource(R.string.chart_spo2), SampleType.SPO2, " %", from, to, Term.accent, 4.0, 0, thresholds.spo2Low.toDouble()) }
+        item { HistoryPanel(graph, stringResource(R.string.chart_hrv_ring), SampleType.HRV, " ms", from, to, Term.info, 20.0, 0, null, R.string.info_hrv) }
+        item { HistoryPanel(graph, stringResource(R.string.chart_hrv_live), SampleType.HRV_LIVE, " ms", from, to, Term.rem, 20.0, 0, null, R.string.info_hrv) }
+        item { HistoryPanel(graph, stringResource(R.string.chart_resp), SampleType.RESP, " /min", from, to, Term.info, 4.0, 0, null, R.string.info_resp) }
+        item {
+            HistoryPanel(
+                graph,
+                stringResource(R.string.chart_spo2),
+                SampleType.SPO2,
+                " %",
+                from,
+                to,
+                Term.accent,
+                4.0,
+                0,
+                thresholds.spo2Low.toDouble(),
+                R.string.info_spo2,
+            )
+        }
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Label(stringResource(R.string.incidents_title))
@@ -547,11 +589,12 @@ private fun HistoryPanel(
     minSpan: Double,
     decimals: Int,
     threshold: Double?,
+    @StringRes info: Int? = null,
 ) {
     val samples by remember(type, from) { graph.dao.observe(type, from, to) }.collectAsStateWithLifecycle(emptyList())
     val fmt = { v: Double -> "%.${decimals}f".format(v) }
     TCard {
-        Label(title)
+        if (info != null) LabelWithInfo(title, info) else Label(title)
         if (samples.isNotEmpty()) {
             T(
                 stringResource(
@@ -641,6 +684,7 @@ private fun SettingsScreen(graph: Graph, onForget: () -> Unit) {
             }
         }
         item { ProfileCard(graph) }
+        item { GlossaryCard() }
         item {
             TCard {
                 Label(stringResource(R.string.sync_every))

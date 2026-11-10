@@ -21,7 +21,7 @@ fun SleepInsightsCard(graph: Graph) {
     val status by graph.status.collectAsStateWithLifecycle()
     val report = status.insights.sleep
     TCard {
-        Label(stringResource(R.string.sleep_insights_title))
+        LabelWithInfo(stringResource(R.string.sleep_insights_title), R.string.info_sleep)
         if (report == null || (report.lastNight == null && report.bedtimeMinute == null)) {
             T(stringResource(R.string.sleep_insights_need_data), size = 12.sp, color = Term.dim)
         } else {

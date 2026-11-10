@@ -218,7 +218,7 @@ class Graph(private val context: Context) {
 
     /** Recomputes every derived number (recovery, training, energy, sleep, fitness, ...) from the stored data. */
     suspend fun refreshInsights() {
-        val snapshot = hub.compute(settings.profile.value, settings.sleepTargetMin)
+        val snapshot = hub.compute(settings.profile.value, settings.sleepTargetMin, settings.cycleEnabled)
         _status.update { it.copy(insights = snapshot) }
         summaries.maybeNotify(snapshot)
     }

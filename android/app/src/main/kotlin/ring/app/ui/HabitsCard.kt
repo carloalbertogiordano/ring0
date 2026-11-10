@@ -16,7 +16,7 @@ fun HabitsCard(graph: Graph) {
     val status by graph.status.collectAsStateWithLifecycle()
     val rows = status.insights.habits
     TCard {
-        Label(stringResource(R.string.habits_title))
+        LabelWithInfo(stringResource(R.string.habits_title), R.string.info_habits)
         if (rows.isEmpty()) {
             T(stringResource(R.string.habits_need_data), size = 12.sp, color = Term.dim)
         } else {

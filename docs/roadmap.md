@@ -28,7 +28,7 @@ Prerequisito: profilo utente nelle Impostazioni (eta', sesso, peso, altezza, HR 
 23. Riepilogo mattutino e serale (notifica con recupero, sonno, consigli)  [ok]
 24. VO2max stimato (indicativo): HR max / HR a riposo, [ok, indicativo]
 25. Notti sospette per apnea (SpO2 oraria + ODI), solo indicatore  [ok, indicativo]
-26. Fase del ciclo dalla temperatura cutanea notturna, opzionale  [dati, indicativo]
+26. Fase del ciclo dalla temperatura cutanea notturna, opzionale  [fatto, sperimentale: solo dati sintetici, serve feedback di chi traccia il ciclo]
 27. Irregolarita' del ritmo dagli RR (screening, non diagnosi, con avvisi chiari)  [ok, indicativo]
 28. Idratazione: fattibilita' da valutare con la ricerca prima di implementare  [ricerca]
 Non previsto: pressione arteriosa (PPG senza calibrazione non e' affidabile).

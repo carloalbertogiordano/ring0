@@ -42,7 +42,7 @@ fun TrainingCard(graph: Graph) {
     LaunchedEffect(profile) { graph.refreshInsights() }
     val report = status.insights.training
     TCard {
-        Label(stringResource(R.string.training_title))
+        LabelWithInfo(stringResource(R.string.training_title), R.string.info_training)
         when {
             profile == null -> T(stringResource(R.string.training_need_profile), size = 12.sp, color = Term.dim)
             report == null -> T(stringResource(R.string.training_need_data), size = 12.sp, color = Term.dim)

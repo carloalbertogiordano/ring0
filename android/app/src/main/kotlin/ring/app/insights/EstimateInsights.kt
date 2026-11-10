@@ -6,6 +6,8 @@ import ring.app.data.Sample
 import ring.app.data.SampleType
 import ring.domain.ApneaIndicator
 import ring.domain.ApneaNight
+import ring.domain.CycleEstimate
+import ring.domain.CycleTemperature
 import ring.domain.Fitness
 import ring.domain.HabitEffect
 import ring.domain.HabitEffectResult
@@ -60,6 +62,16 @@ class EstimateInsights(private val dao: RingDao, private val zone: ZoneId = Zone
         return ApneaReport(withData.lastOrNull(), withData.count { it.flagged }, withData.size, ApneaIndicator.pattern(withData))
     }
 
+    /** Mean skin temperature of each of the last 45 nights (null when a night has no data), oldest first. */
+    suspend fun cycle(now: Long): CycleEstimate {
+        val latest = latestNightEnd(now)
+        val nightly = (CYCLE_NIGHTS - 1 downTo 0).map { back ->
+            val (start, end) = nightWindow(latest.minusDays(back.toLong()))
+            dao.range(SampleType.TEMP, start, end).map { it.value }.takeIf { it.isNotEmpty() }?.let(Stats::mean)
+        }
+        return CycleTemperature.estimate(nightly)
+    }
+
     private class NightMetrics(val end: Long, val hrv: Double?, val rhr: Double?, val sleepMin: Double?)
 
     /** Effects (HRV, resting HR, sleep) of nights after each incident category against the other nights; only noteworthy ones. */
@@ -103,5 +115,6 @@ class EstimateInsights(private val dao: RingDao, private val zone: ZoneId = Zone
         const val APNEA_NIGHTS = 7
         const val MIN_SPO2_SAMPLES = 5
         const val HABIT_NIGHTS = 42
+        const val CYCLE_NIGHTS = 45
     }
 }

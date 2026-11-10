@@ -27,6 +27,13 @@ The R09 has **no vibration motor**, so alarms and haptic notifications are not p
 See [`docs/android-build.md`](docs/android-build.md). In short: JDK 21, Android SDK, then `cd android && ./gw.sh :app:assembleDebug`.
 (`gw.sh` runs Gradle without a daemon; the notes explain why it was needed on the author's machine.)
 
+## Help wanted
+- **Cycle estimate** (optional, experimental, in Settings when the profile is female): it looks for the sustained rise of nightly skin
+  temperature after ovulation. It was only tested on synthetic data, because the author cannot try it. If you track your cycle and
+  want to compare it with the app, feedback is very welcome.
+- **Rhythm check**: tuned on public ECG data and tried on one person with a regular pulse; reports from people with known atrial
+  fibrillation or frequent extra beats would show how it behaves with a real irregular pulse.
+
 ## Rules of the project
 - One ring only: no firmware flashing, reboot, OTA or factory reset without explicit approval.
 - Every discovered command goes into `docs/protocol.md` with a real hex example.
