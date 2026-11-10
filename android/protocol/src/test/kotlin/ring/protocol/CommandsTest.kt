@@ -212,4 +212,61 @@ class CommandsTest {
         assertNull(Hrv.sdnn(emptyList()))
         assertEquals(75, Hrv.meanBpm(listOf(800, 800, 800)))
     }
+
+    private fun stepPacket(vararg b: Int) = Packet.build(0x43, ByteArray(b.size) { b[it].toByte() })
+
+    // Real packets from a Colmi R02 (tahnok/colmi_r02_client docs): header + 5 slots on 2023-08-13.
+    private val realSteps = listOf(
+        stepPacket(0xF0, 0x05, 0x01),
+        stepPacket(0x23, 0x08, 0x13, 0x10, 0x00, 0x05, 0xC8, 0x00, 0x30, 0x00, 0x1B, 0x00),
+        stepPacket(0x23, 0x08, 0x13, 0x14, 0x01, 0x05, 0xB6, 0x18, 0xAA, 0x04, 0x69, 0x03),
+        stepPacket(0x23, 0x08, 0x13, 0x18, 0x02, 0x05, 0x38, 0x04, 0xE1, 0x00, 0x95, 0x00),
+        stepPacket(0x23, 0x08, 0x13, 0x1C, 0x03, 0x05, 0x05, 0x02, 0x6C, 0x00, 0x48, 0x00),
+        stepPacket(0x23, 0x08, 0x13, 0x4C, 0x04, 0x05, 0xEF, 0x01, 0x63, 0x00, 0x44, 0x00),
+    ).map { Packet.parse(it) }
+
+    @Test fun `steps request encoding`() {
+        assertContentEquals(byteArrayOf(0, 0x0F, 0x00, 0x5F, 0x01), StepsCommand.encodeRequest(0))
+        assertContentEquals(byteArrayOf(3, 0x0F, 0x00, 0x5F, 0x01), StepsCommand.encodeRequest(3))
+        assertFailsWith<IllegalArgumentException> { StepsCommand.encodeRequest(256) }
+    }
+
+    @Test fun `steps decode real packets`() {
+        val slots = StepsCommand.decode(realSteps)
+        assertEquals(5, slots.size)
+        assertEquals(Instant.parse("2023-08-13T04:00:00Z"), slots[0].time)
+        assertEquals(48, slots[0].steps)
+        assertEquals(27, slots[0].distanceM)
+        assertEquals(2000, slots[0].calories) // new calorie protocol: x10
+        assertEquals(1194, slots[1].steps)
+        assertEquals(873, slots[1].distanceM)
+        assertEquals(Instant.parse("2023-08-13T19:00:00Z"), slots[4].time)
+        assertEquals(99, slots[4].steps)
+    }
+
+    @Test fun `steps completion and no data`() {
+        assertEquals(listOf(false, false, false, false, false, true), realSteps.indices.map { StepsCommand.isComplete(realSteps.subList(0, it + 1)) })
+        val none = listOf(Packet.parse(stepPacket(0xFF)))
+        assertTrue(StepsCommand.isComplete(none))
+        assertTrue(StepsCommand.decode(none).isEmpty())
+        assertTrue(StepsCommand.isComplete(listOf(Packet.parse(stepPacket(0xF0, 0x00, 0x00)))))
+    }
+
+    @Test fun `steps without the new calorie flag keep calories as is`() {
+        val packets = listOf(Packet.parse(stepPacket(0x26, 0x11, 0x10, 0x08, 0x00, 0x01, 0x64, 0x00, 0x0A, 0x00, 0x07, 0x00)))
+        assertEquals(100, StepsCommand.decode(packets).single().calories)
+        assertFailsWith<IllegalArgumentException> { StepsCommand.decode(listOf(Packet.parse(stepPacket(0x2A, 0x11, 0x10, 0x08, 0, 1)))) }
+    }
+
+    @Test fun `steps read roundtrip`() = runTest {
+        val tr = FakeTransport().apply { responses[0x43] = realSteps.map { Packet.build(0x43, it.payload.copyOf(12)) } }
+        assertEquals(5, StepsCommand.read(RingClient(tr)).size)
+        assertContentEquals(Packet.build(0x43, StepsCommand.encodeRequest(0)), tr.sent.single())
+    }
+
+    @Test fun `goals decode`() {
+        val goals = GoalsCommand.decode(Packet.parse(Packet.build(0x21, byteArrayOf(1, 0x10, 0x27, 0x00, 0xE8.toByte(), 0x03, 0x00))))
+        assertEquals(Goals(steps = 10000, calories = 1000), goals)
+        assertContentEquals(byteArrayOf(1), GoalsCommand.encodeRead())
+    }
 }
