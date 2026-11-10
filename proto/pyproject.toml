@@ -33,3 +33,7 @@ min-similarity-lines = 4
 ignore-imports = true
 [tool.pylint.messages_control]
 disable = ["too-few-public-methods", "missing-module-docstring", "missing-function-docstring", "missing-class-docstring"]
+
+[tool.coverage.run]
+# I/O reale: verificato col ring, non con unit test
+omit = ["ringproto/connect.py", "ringproto/cli.py"]
