@@ -16,7 +16,7 @@ def test_crc16_modbus_of_empty_is_initial_value() -> None:
     ("type_id", "payload", "hex_frame"),
     [
         (0x2A, b"\xff", "bc2a0100ff00ff"),
-        (0x27, b"\xff", "bc2701 00ff00ff".replace(" ", "")),
+        (0x27, b"\xff", "bc270100ff00ff"),
         (0x25, b"\x02", "bc250100" + "3e81" + "02"),
     ],
 )
@@ -78,3 +78,9 @@ def test_assembler_ignores_non_bigdata_bytes_without_magic() -> None:
     asm = FrameAssembler()
     assert asm.feed(b"\x01\x02\x03") == []
     assert asm.feed(_frame(b"y")) == [BigFrame(0x25, b"y")]
+
+
+def test_assembler_resyncs_when_length_field_is_implausible() -> None:
+    bogus = bytes([0xBC, 0x25, 0xFF, 0xFF, 0x00, 0x00])
+    asm = FrameAssembler()
+    assert asm.feed(bogus + _frame(b"after")) == [BigFrame(0x25, b"after")]
