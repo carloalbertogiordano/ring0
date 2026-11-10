@@ -14,15 +14,13 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 from ringproto.client import RingClient
+from ringproto.commands.split_array import MINUTES_PER_DAY, SUB_NO_DATA, is_complete
 from ringproto.packet import Packet
 
 CMD_HR_LOG = 0x15
-SUB_HEADER = 0
 SUB_FIRST = 1
-SUB_NO_DATA = 0xFF
 FIRST_BLOCK = 9
 NEXT_BLOCK = 13
-MINUTES_PER_DAY = 24 * 60
 
 
 @dataclass(frozen=True)
@@ -43,17 +41,6 @@ def encode_request(day_start: datetime) -> bytes:
         msg = "datetime must carry a timezone"
         raise ValueError(msg)
     return struct.pack("<I", int(day_start.timestamp()))
-
-
-def is_last(packets: list[Packet]) -> bool:
-    """Vero quando la risposta e' completa (nessun dato, o ultimo blocco annunciato dall'header)."""
-    sub = packets[-1].payload[0]
-    if sub == SUB_NO_DATA:
-        return True
-    first = packets[0]
-    if first.payload[0] != SUB_HEADER:
-        return False
-    return sub >= first.payload[1] - 1
 
 
 def decode(packets: list[Packet]) -> HeartRateLog | None:
@@ -79,5 +66,5 @@ def decode(packets: list[Packet]) -> HeartRateLog | None:
 
 async def read_hr_log(client: RingClient, day_start: datetime) -> HeartRateLog | None:
     """Scarica il log HR del giorno che inizia a `day_start`."""
-    packets = await client.request_many(CMD_HR_LOG, encode_request(day_start), is_last=is_last)
+    packets = await client.request_many(CMD_HR_LOG, encode_request(day_start), is_last=is_complete)
     return decode(packets)

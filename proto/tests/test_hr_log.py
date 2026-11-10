@@ -8,9 +8,9 @@ from ringproto.commands.hr_log import (
     HeartRateLog,
     decode,
     encode_request,
-    is_last,
     read_hr_log,
 )
+from ringproto.commands.split_array import is_complete as is_last
 from ringproto.packet import Packet, build, parse
 from tests.fakes import FakeTransport
 

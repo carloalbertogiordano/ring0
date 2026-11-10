@@ -11,10 +11,10 @@ from ringproto.commands.slot_log import (
     decode,
     encode_hrv_request,
     encode_stress_request,
-    is_last,
     read_hrv_log,
     read_stress_log,
 )
+from ringproto.commands.split_array import is_complete as is_last
 from ringproto.packet import Packet, build, parse
 from tests.fakes import FakeTransport
 
@@ -120,3 +120,7 @@ async def test_read_hrv_log_sends_days_ago() -> None:
 
     assert await read_hrv_log(RingClient(tr), days_ago=2) is None
     assert tr.sent == [build(CMD_HRV, struct.pack("<I", 2))]
+
+
+def test_decode_header_only_returns_none() -> None:
+    assert decode(pkts(header(CMD_STRESS, total=1))) is None
