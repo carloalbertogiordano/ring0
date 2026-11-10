@@ -9,3 +9,4 @@ captures/*.pcap*
 android/build/
 android/.gradle/
 captures/*.btsnoop
+refs/
