@@ -52,12 +52,25 @@ async def _hr_log(ring: RingClient, args: argparse.Namespace) -> object:
     return f"{len(log.readings())} readings"
 
 
+async def _raw(ring: RingClient, args: argparse.Namespace) -> str:
+    """Esplora un comando V1: invia `--cmd/--payload` e raccoglie fino a `--count` pacchetti."""
+    count = args.count
+    packets = await ring.request_many(
+        args.cmd,
+        bytes.fromhex(args.payload),
+        is_last=lambda p: len(p) >= count or p[-1].payload[0] == 0xFF,
+        timeout=3,
+    )
+    return "\n".join(f"{p.cmd:#04x} {p.payload.hex()}" for p in packets)
+
+
 COMMANDS: dict[str, Handler] = {
     "battery": _battery,
     "set-time": _set_time,
     "hr-settings": _hr_settings,
     "hr-log": _hr_log,
     "monitors": _monitors,
+    "raw": _raw,
 }
 
 
@@ -79,6 +92,8 @@ def main() -> None:
     parser.add_argument("address")
     parser.add_argument("--interval", type=int, help="hr-settings: abilita e imposta i minuti")
     parser.add_argument("--enable", nargs="+", help="monitors: spo2 stress hrv temperature")
+    parser.add_argument("--cmd", type=lambda v: int(v, 0), help="raw: id comando V1")
+    parser.add_argument("--count", type=int, default=1, help="raw: pacchetti da attendere")
     parser.add_argument("--disable", action="store_true", help="hr-settings: disabilita")
     parser.add_argument("--date", type=date.fromisoformat, help="hr-log: giorno YYYY-MM-DD (UTC)")
     parser.add_argument("--type", type=lambda v: int(v, 0), help="bigdata: tipo (es. 0x25)")
