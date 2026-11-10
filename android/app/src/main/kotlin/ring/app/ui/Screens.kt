@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
@@ -161,6 +162,7 @@ private fun HomeScreen(graph: Graph) {
         recentAlert?.let { a -> item { Banner(a.message, DAY_TIME.format(Instant.ofEpochSecond(a.ts)), Term.warn) } }
         if (!status.connected && !status.syncing && status.connectFailures >= 2) item { NotFoundCard(graph) }
         item { LiveCard(graph) }
+        item { ReadinessCard(graph) }
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -204,9 +206,46 @@ private fun LiveCard(graph: Graph) {
                 Num(live?.rmssd?.let { "%.0f".format(it) } ?: "—", "ms", 22.sp)
             }
         }
+        live?.breathsPerMinute?.let {
+            T("Respiro: %.0f/min (affidabilita' %d%%)".format(it, (live.breathConfidence * 100).toInt()), size = 12.sp, color = Term.info)
+        }
         Ecg(active = status.measuring)
-        if (status.measuring) T("Misuro… tieni il dito fermo, ci vogliono 30-60 s", size = 11.sp, color = Term.dim)
-        TButton(if (status.measuring) "Misuro…" else "Misura ora", { graph.measureLive() }, Modifier.fillMaxWidth(), enabled = !status.measuring)
+        if (status.measuring) T("Misuro… tieni il dito fermo (30-60 s per agganciare, poi i battiti)", size = 11.sp, color = Term.dim)
+        TButton(if (status.measuring) "Misuro…" else "Misura ora", { graph.measureLive(false) }, Modifier.fillMaxWidth(), enabled = !status.measuring)
+        TButton("Con respirazione (~2 min)", { graph.measureLive(true) }, Modifier.fillMaxWidth(), BtnKind.GHOST, enabled = !status.measuring)
+    }
+}
+
+@Composable
+private fun ReadinessCard(graph: Graph) {
+    val status by graph.status.collectAsStateWithLifecycle()
+    val report = status.readiness
+    val r = report?.readiness
+    TCard(hot = r != null) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Label("Recupero")
+            if (r != null) T("baseline ${(r.confidence * 100).toInt()}%", size = 10.sp, color = Term.dim)
+        }
+        if (r == null) {
+            T("Servono ancora dati: almeno 5 giorni di HRV o una notte di sonno per calcolare il punteggio.", size = 12.sp, color = Term.dim)
+            T("Giorni con HRV finora: ${report?.baselineDays ?: 0}", size = 11.sp, color = Term.dim)
+        } else {
+            val color = when (r.level) { ring.domain.ReadinessLevel.HIGH -> Term.accent; ring.domain.ReadinessLevel.GOOD -> Term.accent; ring.domain.ReadinessLevel.MODERATE -> Term.warn; ring.domain.ReadinessLevel.LOW -> Term.crit }
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Num("${r.score}", "/100", 40.sp, color)
+                T(r.level.label, size = 14.sp, color = color, weight = FontWeight.Bold)
+            }
+            r.components.forEach { (name, v) ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    T(mapOf("hrv" to "HRV", "fc_riposo" to "FC riposo", "sonno" to "Sonno")[name] ?: name, Modifier.width(78.dp), 11.sp, Term.dim)
+                    Box(Modifier.weight(1f).height(6.dp).background(Term.bg).border(BorderStroke(1.dp, Term.line2))) {
+                        Box(Modifier.fillMaxWidth(v / 100f).height(6.dp).background(color.copy(alpha = 0.85f)))
+                    }
+                    T("$v", Modifier.width(26.dp), 11.sp, align = TextAlign.End)
+                }
+            }
+            T("Indicativo, non e' un dispositivo medico.", size = 10.sp, color = Term.faint)
+        }
     }
 }
 
@@ -272,6 +311,7 @@ private fun HistoryScreen(graph: Graph) {
         item { HistoryPanel(graph, "Stress", SampleType.STRESS, "", from, to, Term.rem, 20.0, 0, thresholds.stressHigh.toDouble()) }
         item { HistoryPanel(graph, "HRV (anello)", SampleType.HRV, " ms", from, to, Term.info, 20.0, 0, null) }
         item { HistoryPanel(graph, "HRV live (RMSSD)", SampleType.HRV_LIVE, " ms", from, to, Term.rem, 20.0, 0, null) }
+        item { HistoryPanel(graph, "Respirazione", SampleType.RESP, " /min", from, to, Term.info, 4.0, 0, null) }
         item { HistoryPanel(graph, "SpO2", SampleType.SPO2, " %", from, to, Term.accent, 4.0, 0, thresholds.spo2Low.toDouble()) }
         if (sleep.isNotEmpty()) {
             item { Label("Sonno") }
@@ -371,6 +411,15 @@ private fun SettingsScreen(graph: Graph, onForget: () -> Unit) {
                 Stepper("SpO2 bassa (%)", "${thresholds.spo2Low}", { set(thresholds.copy(spo2Low = thresholds.spo2Low - 1)) }, { set(thresholds.copy(spo2Low = thresholds.spo2Low + 1)) })
                 Stepper("Batteria bassa (%)", "${thresholds.batteryLow}", { set(thresholds.copy(batteryLow = thresholds.batteryLow - 5)) }, { set(thresholds.copy(batteryLow = thresholds.batteryLow + 5)) })
                 TButton("Cancella storico alert (${alerts.size})", { scope.launch { graph.dao.clearAlerts() } }, Modifier.fillMaxWidth(), BtnKind.GHOST, enabled = alerts.isNotEmpty())
+            }
+        }
+        item {
+            TCard {
+                Label("Dati di esempio")
+                T("Carica 14 giorni di dati finti (marcati demo) per vedere grafici, recupero e allarmi. Si rimuovono con un tocco; i dati veri non vengono toccati.", size = 11.sp, color = Term.dim)
+                TButton("Carica demo · sano", { graph.loadDemo(false) }, Modifier.fillMaxWidth(), BtnKind.GHOST)
+                TButton("Carica demo · malessere", { graph.loadDemo(true) }, Modifier.fillMaxWidth(), BtnKind.GHOST)
+                TButton("Rimuovi dati demo", { graph.clearDemo() }, Modifier.fillMaxWidth(), BtnKind.CRIT)
             }
         }
         item {

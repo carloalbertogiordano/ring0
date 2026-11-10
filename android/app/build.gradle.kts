@@ -26,6 +26,7 @@ kotlin { jvmToolchain(21) }
 
 dependencies {
     implementation(project(":protocol"))
+    implementation(project(":domain"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.compose.bom))

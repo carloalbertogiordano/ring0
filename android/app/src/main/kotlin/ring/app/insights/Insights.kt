@@ -1,0 +1,92 @@
+package ring.app.insights
+
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
+import ring.app.data.RingDao
+import ring.app.data.Sample
+import ring.app.data.SampleType
+import ring.domain.IllnessAssessment
+import ring.domain.IllnessWarning
+import ring.domain.NightSignals
+import ring.domain.Readiness
+import ring.domain.ReadinessInput
+import ring.domain.ReadinessScore
+import ring.domain.RestingHr
+import ring.domain.Stats
+import ring.domain.TimedValue
+import ring.domain.Baseline
+
+data class ReadinessReport(val readiness: Readiness?, val baselineDays: Int)
+
+/** Calcola recupero e allarme malessere dai dati salvati (tutto locale). */
+class Insights(private val dao: RingDao, private val zone: ZoneId = ZoneId.systemDefault()) {
+    private fun List<Sample>.timed() = map { TimedValue(it.ts, it.value) }
+
+    private class Night(val temp: Double?, val rhr: Double?, val hrv: Double?)
+
+    /** Notte che finisce alle 06:00 locali del giorno `endDay`: temperatura media, FC a riposo e HRV mediana. */
+    private suspend fun night(endDay: LocalDate): Night {
+        val end = endDay.atTime(LocalTime.of(6, 0)).atZone(zone).toEpochSecond()
+        val start = endDay.minusDays(1).atTime(LocalTime.of(22, 0)).atZone(zone).toEpochSecond()
+        val temp = dao.range(SampleType.TEMP, start, end).map(Sample::value)
+        val hrv = dao.range(SampleType.HRV, start, end).map(Sample::value)
+        return Night(
+            temp = temp.takeIf { it.isNotEmpty() }?.let(Stats::mean),
+            rhr = RestingHr.estimate(dao.range(SampleType.HR, start, end).timed(), start, end),
+            hrv = hrv.takeIf { it.isNotEmpty() }?.let(Stats::median),
+        )
+    }
+
+    /** Ultime `count` notti complete in ordine cronologico (l'ultima e' la piu' recente). */
+    private suspend fun nights(now: Long, count: Int): List<Night> {
+        val local = Instant.ofEpochSecond(now).atZone(zone)
+        val latestEnd = if (local.toLocalTime() >= LocalTime.of(6, 0)) local.toLocalDate() else local.toLocalDate().minusDays(1)
+        return (count - 1 downTo 0).map { night(latestEnd.minusDays(it.toLong())) }
+    }
+
+    /** Recupero: ultima notte (HRV e FC a riposo) contro la baseline delle notti precedenti, piu' il sonno. */
+    suspend fun readiness(now: Long = Instant.now().epochSecond): ReadinessReport {
+        val all = nights(now, HISTORY_NIGHTS + 1)
+        val last = all.last()
+        val history = all.dropLast(1)
+        val sleep = dao.sleepSince(now - 2 * DAY).lastOrNull()
+        val summary = sleep?.let {
+            val asleep = it.lightMin + it.deepMin + it.remMin
+            val inBed = ((it.end - it.start) / SECONDS_PER_MINUTE).toInt().coerceAtLeast(1)
+            asleep to (asleep.toDouble() / inBed)
+        }
+        val input = ReadinessInput(
+            rmssdToday = last.hrv,
+            rmssdHistory = history.mapNotNull { it.hrv },
+            restingHrToday = last.rhr,
+            restingHrHistory = history.mapNotNull { it.rhr },
+            sleepMinutes = summary?.first,
+            sleepEfficiency = summary?.second,
+        )
+        return ReadinessReport(ReadinessScore.compute(input), all.count { it.hrv != null })
+    }
+
+    /** Allarme precoce: ultime due notti contro la baseline delle notti precedenti. */
+    suspend fun illness(now: Long = Instant.now().epochSecond): IllnessAssessment {
+        val all = nights(now, ILLNESS_NIGHTS)
+        val tempBase = Baseline.of(all.dropLast(2).mapNotNull { it.temp }, minSpread = MIN_TEMP_SPREAD)
+        val rhrBase = Baseline.of(all.dropLast(2).mapNotNull { it.rhr }, minSpread = MIN_RHR_SPREAD)
+        val hrvBase = Baseline.of(all.dropLast(2).mapNotNull { it.hrv }, minSpread = MIN_HRV_SPREAD)
+        val signals = all.takeLast(2).map { n ->
+            NightSignals(n.temp?.let { tempBase?.z(it) }, n.rhr?.let { rhrBase?.z(it) }, n.hrv?.let { hrvBase?.z(it) })
+        }
+        return IllnessWarning.assess(signals)
+    }
+
+    private companion object {
+        const val DAY = 86_400L
+        const val SECONDS_PER_MINUTE = 60
+        const val HISTORY_NIGHTS = 28
+        const val ILLNESS_NIGHTS = 9
+        const val MIN_TEMP_SPREAD = 0.15
+        const val MIN_RHR_SPREAD = 1.5
+        const val MIN_HRV_SPREAD = 3.0
+    }
+}

@@ -8,6 +8,8 @@ import androidx.room.OnConflictStrategy
 import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.flow.Flow
 
 /** Tipi di misura salvati nella tabella `samples`. */
@@ -17,13 +19,14 @@ object SampleType {
     const val STRESS = "stress"
     const val HRV = "hrv"
     const val HRV_LIVE = "hrv_live"
+    const val RESP = "resp"
     const val SPO2 = "spo2"
     const val BATTERY = "battery"
 }
 
 /** Una misura: istante (epoch secondi, UTC) e valore. Chiave (type, ts): le risincronizzazioni sono idempotenti. */
 @Entity(tableName = "samples", primaryKeys = ["type", "ts"])
-data class Sample(val type: String, val ts: Long, val value: Double)
+data class Sample(val type: String, val ts: Long, val value: Double, val demo: Boolean = false)
 
 @Entity(tableName = "sleep_sessions")
 data class SleepEntity(
@@ -33,6 +36,7 @@ data class SleepEntity(
     val deepMin: Int,
     val remMin: Int,
     val awakeMin: Int,
+    val demo: Boolean = false,
 )
 
 @Entity(tableName = "alerts")
@@ -55,6 +59,12 @@ interface RingDao {
     @Query("SELECT * FROM samples WHERE type = :type ORDER BY ts DESC LIMIT 1")
     fun observeLatest(type: String): Flow<Sample?>
 
+    @Query("SELECT * FROM samples WHERE type = :type AND ts BETWEEN :from AND :to ORDER BY ts")
+    suspend fun range(type: String, from: Long, to: Long): List<Sample>
+
+    @Query("SELECT * FROM sleep_sessions WHERE start >= :from ORDER BY start")
+    suspend fun sleepSince(from: Long): List<SleepEntity>
+
     @Query("SELECT * FROM samples WHERE type = :type AND ts > :after ORDER BY ts")
     suspend fun since(type: String, after: Long): List<Sample>
 
@@ -69,9 +79,23 @@ interface RingDao {
 
     @Query("DELETE FROM alerts")
     suspend fun clearAlerts()
+
+    @Query("DELETE FROM samples WHERE demo = 1")
+    suspend fun deleteDemoSamples()
+
+    @Query("DELETE FROM sleep_sessions WHERE demo = 1")
+    suspend fun deleteDemoSleep()
 }
 
-@Database(entities = [Sample::class, SleepEntity::class, AlertEntity::class], version = 1, exportSchema = false)
+@Database(entities = [Sample::class, SleepEntity::class, AlertEntity::class], version = 2, exportSchema = false)
 abstract class RingDb : RoomDatabase() {
     abstract fun dao(): RingDao
+}
+
+/** v1 -> v2: marcatura dei dati demo. */
+val MIGRATION_1_2 = object : Migration(1, 2) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE samples ADD COLUMN demo INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE sleep_sessions ADD COLUMN demo INTEGER NOT NULL DEFAULT 0")
+    }
 }

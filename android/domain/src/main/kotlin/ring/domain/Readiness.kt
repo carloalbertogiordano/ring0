@@ -32,7 +32,7 @@ object ReadinessScore {
     private const val W_RHR = 0.25
     private const val W_SLEEP = 0.30
     private const val Z_TO_POINTS = 25.0
-    private const val MIN_SPREAD_LN = 0.05
+    private const val MIN_SPREAD_LN = 0.10
     private const val MIN_SPREAD_RHR = 1.5
     private const val FULL_CONFIDENCE_DAYS = 14.0
     private const val SLEEP_DURATION_WEIGHT = 0.7
