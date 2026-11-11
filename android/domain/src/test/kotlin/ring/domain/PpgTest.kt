@@ -92,6 +92,14 @@ class PpgTest {
         assertTrue(beats.lostShare > 0.05)
     }
 
+    @Test fun `rmssd and sdnn never use the step between two segments`() {
+        val segments = listOf(listOf(800.0, 810.0, 800.0), listOf(1000.0, 1010.0, 1000.0))
+        val beats = PpgBeats(emptyList(), segments.flatten(), 30.0, 0.0, segments, 0.0, 0.9)
+        assertEquals(10.0, beats.rmssd!!, 1e-9) // the 190 ms step between the segments is not a heartbeat difference
+        assertEquals(100.0, beats.sdnn!!, 15.0)
+        assertEquals(null, PpgBeats(emptyList(), emptyList(), 30.0, 0.0, emptyList(), 0.0, 0.0).rmssd)
+    }
+
     @Test fun `an inverted signal gives the same beats`() {
         val rr = rsa(90)
         val normal = Ppg.analyze(Synth(rr).samples())
@@ -138,5 +146,6 @@ class PpgTest {
         assertTrue(beats.rrMs.size in 115..160, "intervals ${beats.rrMs.size}")
         assertTrue(jumps.toDouble() / beats.rrMs.size < 0.08, "jumps $jumps of ${beats.rrMs.size}")
         assertTrue(beats.segments.size >= 2, "a 5.7 s stall in the recording must cut the series")
+        assertTrue(RhythmCheck.analyze(beats.segments).level != RhythmLevel.IRREGULAR, "a resting pulse must not be called irregular")
     }
 }

@@ -103,25 +103,27 @@ centrale limitati. Decisione: funzione opzionale e disattivata di default, solo 
   positivi se si guarda a lungo**.
 - **Vincolo specifico**: abbiamo gli RR solo durante una misura live (~1-3 minuti da fermi). Lo screening e' quindi un "controllo del ritmo"
   a richiesta (e, se l'utente vuole, programmato di notte/a riposo), non un monitor continuo.
-- Piano: controllo di 2 minuti a riposo, pulizia artefatti, caratteristiche normalizzate (RMSSD/RR medio, entropia campionaria,
+- Piano iniziale: controllo di 2 minuti a riposo, pulizia artefatti, caratteristiche normalizzate (RMSSD/RR medio, entropia campionaria,
   frazione di punti di svolta), soglie **calibrate su PhysioNet (MIT-BIH Atrial Fibrillation DB, scaricabile)** piu' i tuoi ritmi sinusali
   reali, e risultato a tre livelli (regolare / irregolare, riprova / irregolare ripetuto: sentire un medico). Extrasistoli e
   movimento danno falsi positivi: ripetere prima di avvisare. Testo sempre: "non e' una diagnosi; se hai palpitazioni o sintomi, ECG".
-- **Vincolo scoperto sull'anello (2026-11-11, log per pacchetto)**: lo stream real-time dell'R09 manda un pacchetto ogni ~0,5 s, il primo RR
-  arriva a ~13,8 s, e l'anello **chiude da solo lo stream a ~30 s** senza errori (17-20 battiti utili per sessione). Riavviando lo stream il
-  tempo di aggancio si ripete (~14 s ogni volta). Quindi non esistono 64 battiti contigui: un controllo = 6 sessioni da ~30 s (circa 3 minuti)
-  e ogni sessione e' un segmento da 18 battiti.
-- **Algoritmo adottato**: segmento segnalato se nRMSSD (RMSSD/RR medio) > 0,21 e piu' della meta' dei battiti sono punti di svolta (TPR > 0,5);
-  controllo irregolare se almeno 4 segmenti (e 2/3 di quelli utili) sono segnalati. Soglie scelte su meta' delle registrazioni del MIT-BIH
-  Atrial Fibrillation Database (PhysioNet, ODC-By; 23 registrazioni, 16.366 finestre da 64 battiti da cui 49.098 finestre da 18), valutate sull'altra
-  meta'. Su 6 segmenti contigui: con "almeno 4 su 6" sensibilita' 67-73% e specificita' 93-97% (piu' rumore di temporizzazione, specificita'
-  piu' bassa); con "almeno 3 su 6" 81-83% e 89-94%. E' un risultato su pazienti con FA (caso difficile: i tratti "normali" contengono molta
-  ectopia), quindi la specificita' su persone sane e' probabilmente migliore. Una variante con 128 battiti contigui (RMSSD + entropia campionaria)
-  dava 87% / 99,6% ma non e' realizzabile con questo anello.
-- **Prova reale sul tuo anello (2026-11-11)**: 6 segmenti da 17-21 battiti, nRMSSD 0,04-0,06, TPR 0,62-0,75, nessun segmento segnalato -> "polso
-  regolare". Il ritmo sinusale a riposo non viene scambiato per irregolare. Resta da verificare con un ritmo irregolare reale.
-- Il test Kotlin riproduce i valori di riferimento di Python e usa 20 estratti casuali (10 FA, 10 sinusali) divisi in segmenti da 18 battiti:
-  nessun sinusale irregolare, 7 FA su 10 irregolari.
+- **Vincolo dello stream RR dell'anello (2026-11-11)**: lo stream real-time standard dell'R09 chiude da solo a ~30 s e ci mette ~14 s ad agganciare
+  (17-20 battiti utili per sessione): con quello un controllo era 6 sessioni da 18 battiti (sensibilita' 67-73%, specificita' 93-97%).
+  **Superato** con il PPG grezzo (tipo 13, ~25 Hz, durata a scelta): vedi `docs/protocol.md`. I battiti li troviamo noi (`Ppg`) in una sola registrazione.
+- **Algoritmo adottato (dal PPG grezzo)**: una registrazione da 3 minuti a riposo; battiti rilevati con filtro passa-banda 0,6-3,5 Hz e inseguimento
+  battito per battito (`Ppg`). La serie viene **spezzata** dove mancano pacchetti (cadute di segnale reali, fino a ~6 s in una registrazione) e dove un
+  intervallo e' circa il doppio o la meta' dei vicini (battito perso o diviso): ogni segmento e' una serie contigua. Finestre di 32 battiti (passo 8)
+  dentro ogni segmento; finestra segnalata se nRMSSD (RMSSD/RR medio) > 0,17 e entropia campionaria (m=2, r=0,2 SD) > 1,2; controllo irregolare se
+  almeno meta' delle finestre e' segnalata. Inconcludente con meno di 96 battiti utili, piu' del 15% di intervalli impossibili o braccio in movimento
+  per piu' del 20% della registrazione (accelerometro).
+- **Taratura (MIT-BIH Atrial Fibrillation Database, PhysioNet, ODC-By)**: su 700 gruppi da 2 segmenti di 64 battiti (350 FA, 350 non FA), griglia
+  di soglie con specificita' >= 95%: senza rumore sensibilita' ~97% e specificita' ~97%; con 20 ms di rumore di temporizzazione aggiunto (peggio del
+  PPG) sensibilita' ~93% e specificita' ~96%. Finestre di 24 battiti: ~89-91%. E' un risultato su pazienti con FA (i tratti "normali" contengono molta
+  ectopia). Il test Kotlin usa 20 estratti da 128 battiti (10 FA, 10 sinusali) divisi in segmenti da 64: sinusali tutti regolari, 8 FA su 10
+  irregolari (le altre hanno battiti oltre 200 bpm, che un sensore ottico non sa temporizzare e che vengono scartati).
+- **Prova reale sul tuo anello (2026-11-11, PPG grezzo, 120 s a riposo)**: 133 intervalli, 5 segmenti separati da cadute di segnale; il ritmo
+  sinusale non viene segnalato irregolare. Con 120 s i battiti utili sono meno di 96 ("inconcludente"): da qui i 3 minuti. Resta da verificare con
+  un ritmo irregolare reale e con una registrazione da 3 minuti.
 - Rischio: non possiamo validare la sensibilita' su FA reale con questo anello, solo l'algoritmo su dataset pubblici. Va detto.
 
 ## 15. Idratazione: quanto e' stimabile?

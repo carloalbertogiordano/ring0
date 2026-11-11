@@ -132,10 +132,10 @@ fun CheckScreen(graph: Graph, onClose: () -> Unit) {
                 CheckPhase.HEART -> {
                     TCard(hot = true) {
                         T(
-                            if (status.liveBeats == 0) {
+                            if (status.liveSeconds == 0) {
                                 stringResource(R.string.check_step_heart_lock)
                             } else {
-                                stringResource(R.string.check_step_heart, status.liveBeats, status.liveTarget)
+                                stringResource(R.string.check_step_heart, status.liveSeconds, status.liveTarget)
                             },
                             color = Term.accent,
                         )

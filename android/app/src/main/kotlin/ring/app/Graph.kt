@@ -35,12 +35,13 @@ import ring.app.insights.InsightsSnapshot
 import ring.app.insights.SleepInsights
 import ring.app.lab.LabReceiver
 import ring.app.sync.AlertEngine
+import ring.app.sync.HeartMeter
 import ring.app.sync.IncidentRecorder
+import ring.app.sync.PpgRecorder
 import ring.app.sync.RhythmOutcome
 import ring.app.sync.RhythmRunner
 import ring.app.sync.SummaryNotifier
 import ring.app.sync.SyncEngine
-import ring.domain.RespirationRate
 import ring.domain.Symptom
 import ring.domain.Triage
 import ring.domain.TriageInput
@@ -53,7 +54,6 @@ import ring.protocol.commands.Feature
 import ring.protocol.commands.FindRingCommand
 import ring.protocol.commands.HeartRateSettings
 import ring.protocol.commands.HrSettingsCommand
-import ring.protocol.commands.Hrv
 import ring.protocol.commands.RealTimeCommand
 import java.time.Instant
 
@@ -97,14 +97,14 @@ data class Status(
     val lastSyncEpoch: Long = 0,
     val lastError: String? = null,
     val live: LiveResult? = null,
-    val liveBeats: Int = 0,
+    val liveSeconds: Int = 0,
     val measuring: Boolean = false,
     val monitors: Map<String, Boolean> = emptyMap(),
     val insights: InsightsSnapshot = InsightsSnapshot(),
     val rhythmMeasuring: Boolean = false,
-    val rhythmSession: Int = 0,
+    val rhythmSeconds: Int = 0,
     val rhythm: RhythmOutcome? = null,
-    val liveTarget: Int = 12,
+    val liveTarget: Int = 0,
     val spo2Measuring: Boolean = false,
     val liveSpo2: Int? = null,
     val stressMeasuring: Boolean = false,
@@ -129,7 +129,10 @@ class Graph(private val context: Context) {
     val incidents = IncidentRecorder(dao)
     val alerts = AlertEngine(context, dao, settings, insights, incidents)
     private val summaries = SummaryNotifier(context, settings)
-    private val rhythmRunner = RhythmRunner(dao, RhythmRunner.isDebuggable(context.applicationInfo.flags))
+    private val debuggable = PpgRecorder.isDebuggable(context.applicationInfo.flags)
+    private val recorder = PpgRecorder(debuggable)
+    private val rhythmRunner = RhythmRunner(dao, recorder)
+    private val heartMeter = HeartMeter(recorder)
     private val _checkRequested = MutableStateFlow(false)
     val checkRequested: StateFlow<Boolean> = _checkRequested
     private val _status = MutableStateFlow(Status(lastSyncEpoch = settings.lastSyncEpoch))
@@ -138,7 +141,7 @@ class Graph(private val context: Context) {
 
     init {
         scope.launch { refreshInsights() }
-        if (RhythmRunner.isDebuggable(context.applicationInfo.flags)) {
+        if (debuggable) {
             val lab = LabReceiver(scope) { start, max, silence, onPacket -> probeRealTime(start, max, silence, onPacket) }
             ContextCompat.registerReceiver(context, lab, IntentFilter(LabReceiver.ACTION), ContextCompat.RECEIVER_EXPORTED)
         }
@@ -216,10 +219,10 @@ class Graph(private val context: Context) {
     /** Rhythm check: about two minutes of RR intervals at rest, screened for pulse irregularity (not a diagnosis). */
     fun rhythmCheck() {
         scope.launch {
-            _status.update { it.copy(rhythmMeasuring = true, rhythmSession = 0, rhythm = null, lastError = null) }
+            _status.update { it.copy(rhythmMeasuring = true, rhythmSeconds = 0, rhythm = null, lastError = null) }
             try {
                 ensureConnected()
-                val outcome = rhythmRunner.run(session) { n -> _status.update { it.copy(rhythmSession = n) } }
+                val outcome = rhythmRunner.run(session) { n -> _status.update { it.copy(rhythmSeconds = n) } }
                 if (outcome == null) _status.update { it.copy(lastError = context.getString(R.string.measure_failed)) }
                 _status.update { it.copy(rhythm = outcome) }
             } catch (e: Exception) {
@@ -251,30 +254,26 @@ class Graph(private val context: Context) {
     }
 
     /**
-     * Live heart measurement: bpm and HRV (RMSSD/SDNN) from the RR beats; the sensor needs ~30-60 s to lock on.
-     * With `withRespiration` it collects more beats (~70) to also estimate the breathing rate.
+     * Live heart measurement from the raw optical stream (30 s, or 90 s with the breathing rate): bpm and HRV (RMSSD/SDNN).
+     * The ring's own RR stream is the fallback when the raw pulse is not usable.
      */
     private suspend fun heartMeasure(withRespiration: Boolean): LiveResult? {
-        val target = if (withRespiration) RESPIRATION_BEATS else QUICK_BEATS
-        _status.update { it.copy(measuring = true, live = null, liveBeats = 0, liveTarget = target, lastError = null) }
+        _status.update { it.copy(measuring = true, live = null, liveSeconds = 0, liveTarget = 0, lastError = null) }
         try {
             ensureConnected()
-            val m = RealTimeCommand.measure(session.v1, maxPackets = target * PACKETS_PER_BEAT_BUDGET, targetBeats = target) { n ->
-                _status.update { it.copy(liveBeats = n) }
+            val result = heartMeter.measure(session, withRespiration) { done, target ->
+                _status.update { it.copy(liveSeconds = done, liveTarget = target) }
             }
-            if (m == null) {
+            if (result == null) {
                 _status.update { it.copy(lastError = context.getString(R.string.measure_failed)) }
                 return null
             }
-            val rr = Hrv.clean(m.rr)
-            val breath = if (withRespiration) RespirationRate.fromRr(m.rr) else null
-            val result = LiveResult(m.bpm, Hrv.rmssd(rr), Hrv.sdnn(rr), rr.size, breath?.breathsPerMinute, breath?.confidence ?: 0.0)
             _status.update { it.copy(live = result) }
             val now = Instant.now().epochSecond
-            m.bpm?.let { dao.upsertSamples(listOf(Sample(SampleType.HR, now, it.toDouble()))) }
+            result.bpm?.let { dao.upsertSamples(listOf(Sample(SampleType.HR, now, it.toDouble()))) }
             result.rmssd?.let { dao.upsertSamples(listOf(Sample(SampleType.HRV_LIVE, now, it))) }
-            breath?.takeIf { it.confidence >= MIN_BREATH_CONFIDENCE }?.let {
-                dao.upsertSamples(listOf(Sample(SampleType.RESP, now, it.breathsPerMinute)))
+            result.breathsPerMinute?.takeIf { result.breathConfidence >= MIN_BREATH_CONFIDENCE }?.let {
+                dao.upsertSamples(listOf(Sample(SampleType.RESP, now, it)))
             }
             return result
         } catch (e: Exception) {
@@ -440,9 +439,6 @@ class Graph(private val context: Context) {
         const val FIRST_SYNC_DAYS = 7
         const val REGULAR_SYNC_DAYS = 2
         const val HR_INTERVAL_MIN = 5
-        const val QUICK_BEATS = 12
-        const val RESPIRATION_BEATS = 70
-        const val PACKETS_PER_BEAT_BUDGET = 4
         const val MIN_BREATH_CONFIDENCE = 0.3
     }
 }

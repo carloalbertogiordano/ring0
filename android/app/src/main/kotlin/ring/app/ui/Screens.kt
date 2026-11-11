@@ -324,7 +324,7 @@ private fun LiveCard(graph: Graph) {
             Label(stringResource(R.string.live_title))
             T(
                 if (status.measuring) {
-                    stringResource(R.string.live_beats_progress, status.liveBeats, status.liveTarget)
+                    stringResource(R.string.live_beats_progress, status.liveSeconds, status.liveTarget)
                 } else {
                     live?.let { stringResource(R.string.live_beats, it.beats) }
                         ?: ""
@@ -346,10 +346,10 @@ private fun LiveCard(graph: Graph) {
         Ecg(active = status.measuring)
         if (status.measuring) {
             T(
-                if (status.liveBeats == 0) {
+                if (status.liveSeconds == 0) {
                     stringResource(R.string.live_phase1)
                 } else {
-                    stringResource(R.string.live_phase2, status.liveBeats, status.liveTarget)
+                    stringResource(R.string.live_phase2, status.liveSeconds, status.liveTarget)
                 },
                 size = 11.sp,
                 color = Term.accent,

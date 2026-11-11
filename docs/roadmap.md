@@ -73,7 +73,7 @@ settimanale sia sull'app sia sulla webapp; niente widget.
 - Non previsti: widget e tile rapida, test di idratazione (per ora), CSV dall'app.
 
 ## Scoperte del 2026-11-11 che cambiano le priorita'
-- 39. **PPG grezzo continuo a ~25 Hz** con i tipi real-time 13/14 (durata a scelta, fino a 65535 s), senza modificare il firmware. Da verificare con una
-  registrazione a mano ferma. Se il segnale e' buono: RR calcolati da noi, HRV e controllo del ritmo veri (128+ battiti contigui, sensibilita' 87%,
-  specificita' 99,6% sui dati di taratura), respirazione guidata con biofeedback continuo, HRV notturno. Costo atteso: batteria (LED sempre acceso).
+- 39. **PPG grezzo continuo a ~25 Hz** con i tipi real-time 13/14 (durata a scelta, fino a 65535 s), senza modificare il firmware. Segnale verificato a riposo. **Fatto (app)**: misura cuore/HRV/respirazione e controllo del ritmo (3 min, finestre da 32 battiti,
+  sensibilita' ~93% / specificita' ~96% sui dati di taratura con rumore) ora usano il PPG grezzo, con ripiego sullo stream RR dell'anello. Da provare
+  sull'anello al dito. Prossimo: respirazione guidata con biofeedback continuo, HRV notturno. Costo atteso: batteria (LED sempre acceso).
 - Il punto 35 (firmware) e' ridotto ad analisi: la modifica non serve per superare i 30 s.

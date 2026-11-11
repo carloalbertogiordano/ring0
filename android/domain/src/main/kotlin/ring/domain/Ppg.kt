@@ -25,6 +25,17 @@ data class PpgBeats(
     /** 0..1: how trustworthy the beats are (plausible intervals, steadiness, no motion). */
     val quality: Double,
 ) {
+    /** The longest contiguous beat series: what a breathing-rate estimate needs. */
+    val longestSegment: List<Double> get() = segments.maxByOrNull { it.size }.orEmpty()
+
+    /** RMSSD over the successive differences inside each segment only: a difference across a cut is not a heartbeat difference. */
+    val rmssd: Double? get() {
+        val diffs = segments.flatMap { seg -> seg.zipWithNext { a, b -> b - a } }
+        return if (diffs.size < 2) null else sqrt(diffs.sumOf { it * it } / diffs.size)
+    }
+
+    val sdnn: Double? get() = rrMs.filter(Ppg::plausible).let { if (it.size < 2) null else Stats.sd(it) }
+
     val bpm: Double? get() = if (rrMs.isEmpty()) null else 60_000.0 / Stats.median(rrMs.filter(Ppg::plausible).ifEmpty { rrMs })
 }
 
