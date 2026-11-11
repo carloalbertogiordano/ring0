@@ -6,9 +6,10 @@ import ring.app.ble.RingSession
 import ring.domain.Ppg
 import ring.domain.PpgBeats
 import ring.protocol.commands.RawStream
+import java.io.File
 
 /** Records the ring's raw optical stream for a chosen time and turns it into beats. */
-class PpgRecorder(private val debuggable: Boolean) {
+class PpgRecorder(private val debuggable: Boolean, private val dump: File? = null) {
     /** Null when too few packets arrived (ring not worn, link lost). `onSecond` receives the seconds recorded so far. */
     suspend fun record(session: RingSession, seconds: Int, onSecond: (Int) -> Unit = {}): PpgBeats? {
         var received = 0
@@ -18,6 +19,8 @@ class PpgRecorder(private val debuggable: Boolean) {
         }
         if (samples.size < seconds * RawStream.SAMPLE_RATE_HZ * MIN_RECEIVED_SHARE) return null
         val beats = Ppg.analyze(samples)
+        // debug builds keep the last recording (seq,status,a,b,x,y,z per line) so a bad result can be analysed offline
+        if (debuggable) dump?.writeText(samples.joinToString("\n") { "${it.seq},${it.status},${it.a},${it.b},${it.x},${it.y},${it.z}" })
         // counts only: the intervals themselves are health data and stay out of release logs
         if (debuggable) {
             Log.i(

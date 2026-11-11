@@ -56,6 +56,7 @@ import ring.protocol.commands.FindRingCommand
 import ring.protocol.commands.HeartRateSettings
 import ring.protocol.commands.HrSettingsCommand
 import ring.protocol.commands.RealTimeCommand
+import java.io.File
 import java.time.Instant
 
 class RingApp : Application() {
@@ -131,7 +132,7 @@ class Graph(private val context: Context) {
     val alerts = AlertEngine(context, dao, settings, insights, incidents)
     private val summaries = SummaryNotifier(context, settings)
     private val debuggable = PpgRecorder.isDebuggable(context.applicationInfo.flags)
-    private val recorder = PpgRecorder(debuggable)
+    private val recorder = PpgRecorder(debuggable, File(context.filesDir, "ppg_last.csv"))
     private val rhythmRunner = RhythmRunner(dao, recorder)
     private val heartMeter = HeartMeter(recorder)
     private val _checkRequested = MutableStateFlow(false)
