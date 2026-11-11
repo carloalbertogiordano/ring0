@@ -14,14 +14,20 @@ class SleepStageCheckTest {
         assertEquals(90.0 / 420, r.getValue(SleepStageCheck.Stage.DEEP).share, 1e-9)
     }
 
-    @Test fun `a typical night is fine in every stage`() {
+    @Test fun `a typical night is fine in the judged stages`() {
         val r = byStage(light = 230, deep = 90, rem = 100) // 55 / 21 / 24 %
-        assertEquals(setOf(SleepStageCheck.Verdict.OK), r.values.map { it.verdict }.toSet())
+        assertEquals(SleepStageCheck.Verdict.OK, r.getValue(SleepStageCheck.Stage.DEEP).verdict)
+        assertEquals(SleepStageCheck.Verdict.OK, r.getValue(SleepStageCheck.Stage.REM).verdict)
     }
 
-    @Test fun `too little deep sleep and too much light sleep are called out`() {
+    @Test fun `light sleep is shown but never judged because it is the remainder and absorbs unreported wakefulness`() {
+        val r = byStage(light = 330, deep = 30, rem = 60) // 79 % light
+        assertEquals(SleepStageCheck.Verdict.UNJUDGED, r.getValue(SleepStageCheck.Stage.LIGHT).verdict)
+        assertEquals(330, r.getValue(SleepStageCheck.Stage.LIGHT).minutes)
+    }
+
+    @Test fun `too little deep sleep and too little rem are called out`() {
         val r = byStage(light = 330, deep = 30, rem = 60) // 79 / 7 / 14 %
-        assertEquals(SleepStageCheck.Verdict.HIGH, r.getValue(SleepStageCheck.Stage.LIGHT).verdict)
         assertEquals(SleepStageCheck.Verdict.LOW, r.getValue(SleepStageCheck.Stage.DEEP).verdict)
         assertEquals(SleepStageCheck.Verdict.LOW, r.getValue(SleepStageCheck.Stage.REM).verdict)
     }

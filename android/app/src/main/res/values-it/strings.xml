@@ -132,7 +132,8 @@ Controlla che l\'anello sia carico, fuori dalla custodia e non collegato ad altr
     <string name="sleep_enough_title">Basta?</string>
     <string name="sleep_enough_row">%1$d min · %2$d%% (tipico %3$d-%4$d%%)</string>
     <string name="sleep_enough_short">Sonno troppo breve per giudicare le fasi.</string>
-    <string name="sleep_enough_hint">Quote del tempo addormentato, rispetto agli intervalli tipici di adulti sani della tua età. L\'anello stima le fasi soltanto e le persone differiscono molto: una guida approssimativa, non un esito.</string>
+    <string name="sleep_enough_hint">Quote del tempo addormentato, rispetto agli intervalli tipici di adulti sani della tua età. Il leggero non è giudicato: l\'anello non segnala mai la veglia, quindi il tempo da svegli finisce lì. L\'anello stima le fasi soltanto e le persone differiscono molto: una guida approssimativa, non un esito.</string>
+    <string name="sleep_verdict_none">resto</string>
     <string name="sleep_verdict_low">poco</string>
     <string name="sleep_verdict_ok">ok</string>
     <string name="sleep_verdict_high">troppo</string>

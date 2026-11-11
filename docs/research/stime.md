@@ -157,4 +157,4 @@ PPG senza calibrazione non e' affidabile: nessun numero.
   con una nota: un allenamento senza anello non e' contato.
 - Il TRIMP (Banister) sommava ogni campione sopra la FC a riposo: da seduti 845 min "a riposo" davano ~100 punti. Ora conta solo lo sforzo (dal 50% della FC max).
   Cambia anche il consumo della batteria corporea, che usa il TRIMP.
-- Fasi del sonno: quote del tempo addormentato contro intervalli tipici (Ohayon 2004): profondo 13-23% (8-18% dai 40 anni, 5-15% dai 60), REM 18-28%, leggero 45-60%.
+- Fasi del sonno: quote del tempo addormentato contro intervalli tipici (Ohayon 2004): profondo 13-23% (8-18% dai 40 anni, 5-15% dai 60), REM 18-28%; il leggero e' mostrato ma non giudicato (l'anello non segnala mai la veglia: finisce nel leggero).

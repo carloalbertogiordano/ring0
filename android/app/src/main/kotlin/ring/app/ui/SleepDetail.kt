@@ -105,6 +105,7 @@ private fun StageAdequacy(assessments: List<SleepStageCheck.Assessment>?) {
             SleepStageCheck.Verdict.LOW -> R.string.sleep_verdict_low to Term.warn
             SleepStageCheck.Verdict.OK -> R.string.sleep_verdict_ok to Term.accent
             SleepStageCheck.Verdict.HIGH -> R.string.sleep_verdict_high to Term.warn
+            SleepStageCheck.Verdict.UNJUDGED -> R.string.sleep_verdict_none to Term.dim
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             T(stringResource(stageName(a.stage)), size = 12.sp)

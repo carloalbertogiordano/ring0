@@ -3,13 +3,14 @@ package ring.domain
 /**
  * Whether the time spent in each sleep stage is in the range typical of healthy adults. Shares are of the time asleep. The ranges come from
  * the sleep-stage norms across the lifespan (Ohayon et al. 2004, Sleep 27(7): deep sleep about 13-23% in young adults and falling with age,
- * REM about 18-28%, light sleep N1+N2 about 45-60%). Individual variation is large and the ring estimates its stages (agreement with a sleep
- * lab is only moderate), so this is a rough guide, not a finding.
+ * REM about 18-28%, light sleep N1+N2 about 45-60%, shown but not judged). Individual variation is large and the ring estimates its
+ * stages (agreement with a sleep lab is only moderate), so this is a rough guide, not a finding.
  */
 object SleepStageCheck {
     enum class Stage { LIGHT, DEEP, REM }
 
-    enum class Verdict { LOW, OK, HIGH }
+    /** Light sleep is UNJUDGED: the ring never reports being awake, so every minute of the window is a stage and wakefulness ends up in light. */
+    enum class Verdict { LOW, OK, HIGH, UNJUDGED }
 
     data class Assessment(val stage: Stage, val minutes: Int, val share: Double, val typicalPercent: ClosedFloatingPointRange<Double>, val verdict: Verdict)
 
@@ -33,7 +34,7 @@ object SleepStageCheck {
             else -> DEEP_YOUNG
         }
         return listOf(
-            assessment(Stage.LIGHT, lightMin, asleep, LIGHT_RANGE),
+            Assessment(Stage.LIGHT, lightMin, lightMin.toDouble() / asleep, LIGHT_RANGE, Verdict.UNJUDGED),
             assessment(Stage.DEEP, deepMin, asleep, deepRange),
             assessment(Stage.REM, remMin, asleep, REM_RANGE),
         )

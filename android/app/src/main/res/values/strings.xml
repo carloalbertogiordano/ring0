@@ -132,7 +132,8 @@ Check that the ring is charged, out of its case and not connected to anything el
     <string name="sleep_enough_title">Is it enough?</string>
     <string name="sleep_enough_row">%1$d min · %2$d%% (typical %3$d-%4$d%%)</string>
     <string name="sleep_enough_short">Too short a sleep to judge the stages.</string>
-    <string name="sleep_enough_hint">Shares of the time asleep, against ranges typical of healthy adults of your age. The ring only estimates its stages and people differ a lot: a rough guide, not a finding.</string>
+    <string name="sleep_enough_hint">Shares of the time asleep, against ranges typical of healthy adults of your age. Light sleep is not judged: the ring never reports being awake, so any time awake is counted in it. The ring only estimates its stages and people differ a lot: a rough guide, not a finding.</string>
+    <string name="sleep_verdict_none">remainder</string>
     <string name="sleep_verdict_low">low</string>
     <string name="sleep_verdict_ok">ok</string>
     <string name="sleep_verdict_high">high</string>
