@@ -8,9 +8,11 @@ object BatteryForecast {
     private const val CHARGE_RISE = 1.0
     private const val MIN_SAMPLES = 4
     private const val MIN_SPAN_HOURS = 3.0
+    private const val RECENT_HOURS = 12.0
 
     /**
-     * Least-squares slope over the current discharge: the samples since the last charge (a rise of more than one point).
+     * Least-squares slope over the current discharge: the samples of the last 12 hours since the last charge (a rise of more
+     * than one point), so that the recent drain counts more than a flat night.
      * Null when there are too few samples, too short a span, or the level is not falling.
      */
     fun estimate(samples: List<TimedValue>): BatteryEstimate? {
@@ -22,7 +24,8 @@ object BatteryForecast {
     private fun currentDischarge(samples: List<TimedValue>): List<TimedValue> {
         val sorted = samples.sortedBy { it.ts }
         val lastRise = (1 until sorted.size).lastOrNull { sorted[it].value > sorted[it - 1].value + CHARGE_RISE }
-        val segment = if (lastRise == null) sorted else sorted.drop(lastRise)
+        val sinceCharge = if (lastRise == null) sorted else sorted.drop(lastRise)
+        val segment = sinceCharge.filter { it.ts >= sinceCharge.last().ts - RECENT_HOURS * SECONDS_PER_HOUR }
         val spanHours = if (segment.isEmpty()) 0.0 else (segment.last().ts - segment.first().ts) / SECONDS_PER_HOUR
         return if (segment.size >= MIN_SAMPLES && spanHours >= MIN_SPAN_HOURS) segment else emptyList()
     }

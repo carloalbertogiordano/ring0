@@ -25,7 +25,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -152,12 +154,13 @@ private fun PermissionDenied() {
 private fun MainScaffold(graph: Graph, onOpenCheck: () -> Unit, onForget: () -> Unit) {
     var tab by remember { mutableIntStateOf(0) }
     var detail by remember { mutableStateOf<MetricSpec?>(null) }
+    val homeList = rememberLazyListState()
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
         Box(Modifier.weight(1f)) {
             val open = detail
             when {
                 open != null -> MetricDetailScreen(graph, open) { detail = null }
-                tab == 0 -> HomeScreen(graph, onOpenCheck) { detail = it }
+                tab == 0 -> HomeScreen(graph, onOpenCheck, homeList) { detail = it }
                 tab == 1 -> HistoryScreen(graph)
                 else -> SettingsScreen(graph, onForget)
             }
@@ -181,7 +184,7 @@ private fun MainScaffold(graph: Graph, onOpenCheck: () -> Unit, onForget: () -> 
 private val PAD = PaddingValues(horizontal = 14.dp, vertical = 10.dp)
 
 @Composable
-private fun HomeScreen(graph: Graph, onOpenCheck: () -> Unit, onOpenMetric: (MetricSpec) -> Unit) {
+private fun HomeScreen(graph: Graph, onOpenCheck: () -> Unit, listState: LazyListState, onOpenMetric: (MetricSpec) -> Unit) {
     val status by graph.status.collectAsStateWithLifecycle()
     val thresholds by graph.settings.thresholds.collectAsStateWithLifecycle()
     val alerts by graph.dao.observeAlerts().collectAsStateWithLifecycle(emptyList())
@@ -189,7 +192,7 @@ private fun HomeScreen(graph: Graph, onOpenCheck: () -> Unit, onOpenMetric: (Met
     val battery = status.battery
     val lowBattery = battery != null && !battery.charging && battery.level <= thresholds.batteryLow
     val recentAlert = alerts.firstOrNull { Instant.now().epochSecond - it.ts < 24 * 3600 && it.kind != "battery_low" }
-    LazyColumn(contentPadding = PAD, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    LazyColumn(state = listState, contentPadding = PAD, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 T(stringResource(R.string.app_name).uppercase(), size = 15.sp, weight = FontWeight.Bold, spacing = 4.sp)

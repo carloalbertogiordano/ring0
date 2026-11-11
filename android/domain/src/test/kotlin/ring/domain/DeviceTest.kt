@@ -35,6 +35,14 @@ class BatteryForecastTest {
         assertNull(BatteryForecast.estimate(emptyList()))
     }
 
+    @Test fun `only the last twelve hours count so a flat night does not hide the current drain`() {
+        val levels = List(24) { 76.0 } + listOf(74.0, 72.0, 70.0, 68.0)
+        val forecast = assertNotNull(BatteryForecast.estimate(hourly(*levels.toDoubleArray())))
+        // the window holds 13 hourly samples (both ends of the 12 hours): 9 flat, then 4 falling
+        assertEquals(0.5495, forecast.percentPerHour, 0.001)
+        assertEquals(123.75, forecast.hoursLeft, 0.1)
+    }
+
     @Test fun `a short span is not enough`() {
         val quick = listOf(TimedValue(0, 90.0), TimedValue(600, 89.0), TimedValue(1200, 88.0), TimedValue(1800, 87.0))
         assertNull(BatteryForecast.estimate(quick))
