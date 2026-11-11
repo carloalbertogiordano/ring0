@@ -188,6 +188,19 @@ class CommandsTest {
         assertEquals(listOf(800, 810, 790, 805, 795), seen.map { it.rrMs })
     }
 
+    @Test fun `probe sends the raw start payload, reports packets and stops`() = runTest {
+        fun pkt(bpm: Int) = Packet.build(0x69, byteArrayOf(13, 0, bpm.toByte(), 0, 0, 0, 0))
+        val tr = FakeTransport().apply { responses[0x69] = listOf(70, 71, 72, 73).map(::pkt) }
+        val seen = mutableListOf<Packet>()
+        val packets = RealTimeCommand.probe(RingClient(tr), byteArrayOf(13, 120, 0), maxPackets = 3) { seen += it }
+        assertEquals(listOf(70, 71, 72), packets.map { RealTimeCommand.decode(it).value })
+        assertEquals(packets, seen)
+        assertEquals(0x69, tr.sent.first()[0].toInt())
+        assertContentEquals(byteArrayOf(13, 120, 0), tr.sent.first().copyOfRange(1, 4))
+        assertEquals(0x6A, tr.sent.last()[0].toInt())
+        assertEquals(13, tr.sent.last()[1].toInt())
+    }
+
     @Test fun `real time with too few beats and silence gives null`() = runTest {
         val tr = FakeTransport().apply { responses[0x69] = listOf(Packet.build(0x69, byteArrayOf(1, 0, 0, 0, 0, 0x20, 0x03))) }
         assertNull(RealTimeCommand.measure(RingClient(tr), targetBeats = 50))

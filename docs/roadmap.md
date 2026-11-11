@@ -57,7 +57,7 @@ settimanale sia sull'app sia sulla webapp; niente widget.
   solo dei dati gia' confermati dal server e piu' vecchi di 6 mesi; riepiloghi giornalieri e per notte tenuti per sempre.
 - 28. Autenticazione dispositivo (coppia di chiavi nel Keystore, associazione con QR e codice di confronto SAS) e utente (passkey WebAuthn); TLS obbligatorio.
 - 29. Cifratura end-to-end (X-Wing in HPKE + AES-256-GCM) verso la webapp, **chiavi di epoca con radice fredda** per la forward secrecy, manifesti firmati dal telefono, bundle web firmato; backup/ripristino cifrato con passphrase (Argon2id + AES-256-GCM). Modello di minaccia: server compromesso. Vedi docs/design/archive-crypto.md.
-- 30. Server in Go e webapp self-hosted zero-knowledge (grafici interattivi, confronto periodi, CSV, report settimanale); in seguito decifratore nativo.
+- 30. Server in Go (solo blob store cifrati + pairing + firme) e **decifratore nativo `ring0-viewer`** in Go con UI locale incorporata (grafici, confronto periodi, CSV, report settimanale). Nessun client web che decifra.
 - 31. Report settimanale anche sul telefono.
 - 32. [PREREQUISITO, da fare quando si cambia lo schema per l'archivio] Test delle migrazioni del database (Room: schema esportato e
   MigrationTestHelper), in particolare 6->7, 7->8 e le nuove (watermark di sync, riepiloghi giornalieri, sequenza ordinata delle fasi del sonno).
@@ -71,3 +71,9 @@ settimanale sia sull'app sia sulla webapp; niente widget.
 - 37. Consumo della batteria: scelta degli intervalli di misura (profili) con autonomia stimata.
 - 38. Rhythm check con ritmo irregolare reale e stima del ciclo: chiedere feedback su GitHub (README gia' aggiornato).
 - Non previsti: widget e tile rapida, test di idratazione (per ora), CSV dall'app.
+
+## Scoperte del 2026-11-11 che cambiano le priorita'
+- 39. **PPG grezzo continuo a ~25 Hz** con i tipi real-time 13/14 (durata a scelta, fino a 65535 s), senza modificare il firmware. Da verificare con una
+  registrazione a mano ferma. Se il segnale e' buono: RR calcolati da noi, HRV e controllo del ritmo veri (128+ battiti contigui, sensibilita' 87%,
+  specificita' 99,6% sui dati di taratura), respirazione guidata con biofeedback continuo, HRV notturno. Costo atteso: batteria (LED sempre acceso).
+- Il punto 35 (firmware) e' ridotto ad analisi: la modifica non serve per superare i 30 s.

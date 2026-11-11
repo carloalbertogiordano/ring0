@@ -88,6 +88,31 @@ object RealTimeCommand {
         }
     }
 
+    /**
+     * Diagnostics: sends `start` as the raw payload of CMD 0x69 (for example `[13, durationLo, durationHi]` for a kind with a
+     * custom duration), collects up to `maxPackets` packets or until the ring stops or goes silent, then sends the stop.
+     */
+    suspend fun probe(
+        client: RingClient,
+        start: ByteArray,
+        maxPackets: Int,
+        silenceMs: Long = PACKET_TIMEOUT_MS,
+        onPacket: (Packet) -> Unit = {},
+    ): List<Packet> {
+        var latest: List<Packet> = emptyList()
+        try {
+            return client.requestMany(CMD_START, start, timeoutMs = silenceMs) { received ->
+                latest = received
+                onPacket(received.last())
+                decode(received.last()).errorCode != 0 || received.size >= maxPackets
+            }
+        } catch (_: RingTimeoutException) {
+            return latest
+        } finally {
+            withContext(NonCancellable) { runCatching { client.send(CMD_STOP, byteArrayOf(start[0], 0, 0)) } }
+        }
+    }
+
     private fun summarize(readings: List<RealTimeReading>): LiveMeasurement? {
         if (readings.isEmpty() || readings.last().errorCode != 0) return null
         val rr = beats(readings)

@@ -1,6 +1,6 @@
 # Archivio, webapp zero-knowledge e cifratura (progetto, 2026-11-11)
 
-Stato: **progetto approvato nelle linee generali (2026-11-11), nessun codice ancora**; aggiornato dopo la richiesta di difendersi anche da un server compromesso e di avere almeno la forward secrecy. Decisioni gia' prese dall'utente: l'app puo' avere il permesso INTERNET (build
+Stato: **progetto approvato nelle linee generali (2026-11-11), nessun codice ancora; decisione: niente client web che decifra, si implementa subito il decifratore nativo (`ring0-viewer`, in Go)**; aggiornato dopo la richiesta di difendersi anche da un server compromesso e di avere almeno la forward secrecy. Decisioni gia' prese dall'utente: l'app puo' avere il permesso INTERNET (build
 `offline` senza permesso e build `sync`); webapp self-hosted raggiungibile (container Proxmox, dietro NPM, firewall e Cloudflare); TLS
 obbligatorio sempre; **zero-knowledge** (il server non decifra mai); cifratura forte e resistente ai computer quantistici; il telefono tiene
 6 mesi di dati grezzi; l'app manda solo cio' che il server non ha; backup e ripristino cifrati; tutto cifrato, anche gli incidenti.
@@ -50,8 +50,11 @@ riduce con 3.2 (il codice del client non lo decide piu' il server) o evitando il
   offline del maintainer) prima di eseguire una versione nuova; l'impronta della chiave e' pubblicata nelle release (attestate dalla CI). Il server consegna
   solo cifrato e il bundle; non puo' cambiare il codice senza la chiave di firma. Limite: fiducia al primo uso (si verifica l'impronta) e storage del browser.
 - CSP rigorosa (`script-src` con hash, niente inline, Trusted Types), SRI, nessuna dipendenza esterna a runtime.
-- **Alternativa piu' forte, prevista:** un decifratore **nativo** (app desktop/CLI `ring0-viewer`) che scarica solo blocchi cifrati: elimina del tutto la
-  consegna di codice dal server. La webapp resta per comodita'.
+- **Deciso: decifratore nativo `ring0-viewer` (Go, binario firmato e attestato dalla CI).** Scarica solo blocchi cifrati, li decifra **in locale**, e
+  mostra grafici, CSV e report settimanale con una UI web *incorporata nel binario* servita su `127.0.0.1` (porta e token casuali): il codice non arriva
+  mai dal server e le chiavi restano nel processo Go, non nel JavaScript. Il server non ha nessuna interfaccia web con i dati. Il bundle web firmato e le
+  passkey WebAuthn non servono piu'; l'utente si autentica con la chiave di firma del viewer (registrata al pairing, custodita dal keyring del sistema
+  o da una chiave FIDO2 con hmac-secret per la KEK).
 
 ### 3.3 Pairing sicuro
 Il QR contiene la chiave pubblica dell'archivio e l'URL. Il telefono invia la propria chiave di firma e **entrambi mostrano un codice di confronto breve

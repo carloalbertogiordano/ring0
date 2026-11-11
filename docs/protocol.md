@@ -161,3 +161,17 @@ The request payload is a single byte. N >= 1 returns the completed days (at most
 the history sync with 2 or 6) and confirmed on the ring: the same sync that returned only `daysAgo=1` for N=2 returned `daysAgo=0` with 18
 values (00:00-09:30 UTC+1... i.e. the whole night, 36.7-36.9 C every 30 minutes) for N=0. Always request both. The ring measured all night:
 the "missing" temperature was only the unrequested block.
+
+## 0x69 types 13 and 14: raw streaming with a custom duration (R09, found in the firmware, VERIFIED on the ring 2026-11-11)
+Found by reading the R09 firmware (see docs/research/firmware.md): the start handler treats types `0x0d` (13) and `0x0e` (14) differently
+from the 30-second types. The start payload is `[type][duration u16 LE]` (duration in seconds, minimum 10): for example `0d 78 00` = 120 s.
+The session timer ticks every 500 ms and the ring stops by itself when the tick counter exceeds `duration x 2`; the counter is 16-bit, so the
+duration can be up to 65535 s. `0x6A [type][0][0]` stops it earlier.
+Observed on the ring (type 13, 120 s): **2991 packets in 120 s (about 25 per second)**, sequence number continuous (only 2 gaps), the stream
+ends right at 120 s. Packet payload (14 bytes after the command byte):
+`[0]=type [1]=error [2]=sequence (wraps at 256) [3]=status/gain byte (0x60-0x63, changes every ~10-50 packets) [4..5]=u16 LE optical value A
+[6..7]=u16 LE optical value B [8..9],[10..11],[12..13]=s16 LE, small values near zero: probably the accelerometer (g-sensor LIS3DH)`.
+Type 14 streams the same way (values like 65535 suggest saturation of an optical channel; probably the SpO2 pair).
+Not yet verified: that A/B are PPG with a clean pulse. The first recording was taken while the arm was moving (accelerometer SD 20-76) and the
+spectral peak was weak and unstable (10 s windows: 0.12-0.29 of the 0.7-3 Hz band power); it needs a recording with the hand at rest.
+If confirmed, this gives continuous raw PPG at about 25 Hz for as long as we want, without modifying the firmware.

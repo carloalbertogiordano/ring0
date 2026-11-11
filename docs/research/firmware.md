@@ -45,3 +45,18 @@ L'immagine dell'**R09 (RT09CR2_3.00.03)** non e' pubblica. L'endpoint del produt
 risponde `401 Not logged in yet or token has expired`: serve un account del produttore (token dopo registrazione/login nell'app).
 Alternative: copiare il file dalla cache dell'app ufficiale se un aggiornamento viene scaricato; analizzare solo l'R02 e verificare
 sull'R09 per comportamento (stessa famiglia di firmware 3.00.xx, stesso limite di 30 s e stesso periodo di 500 ms osservati).
+
+## R09 (RT09CR2_3.00.03_260929) - image obtained and analysed (2026-11-11)
+The image was downloaded with `scripts/fetch-r09-firmware.sh` (run by the user) into `refs/firmware/` (git-ignored).
+- Container: header magic `e5c3bd81`, version/hardware strings at 0x10/0x30, a second header at 0x50 (payload length 0x21a0c, **load address
+  0x826400**, a 16-byte hash), payload at file offset **0x450**, plain (entropy 6.5-7.0, no encryption), readable strings. Different from the R02
+  container (`78563412`, payload at 0x100, base 0x803000): same code family, different chip/board.
+- Hardware seen in strings: accelerometer **LIS3DH over SPI**, optical sensor **VC30Fx** (`vc30fx_sc`, `spo2_VC30F_S_int_limit`), the on-chip HRV
+  algorithm `VC_HRV_16Bit_integration_6.0_addRMSSD`, SDK 1.4.1.0, source tree `qc_code\app_module\hr\hr_module.c`. The payload starts with a
+  trampoline (`ldr r0,[pc]; bx r0` -> 0x826664), no vector table at the start.
+- Ghidra: 1024 functions with `tools/ghidra/DisasmAt.java`. Command dispatcher `FUN_0082b8a4`; `0x69` start = `FUN_0082b2a8`, stop = `FUN_0082b13c`,
+  session timer callback `FUN_0082a0d6` (500 ms timer, counter is a **16-bit** value, unlike the 8-bit one of the R02).
+- The R09 firmware has more real-time types than the official app we decompiled: 3 (SpO2), 6 (real-time heart rate), 8, 9, 10, 11, 12, **13 and 14 with
+  a duration set by the app**. Types 13/14 are what makes long streams possible: see docs/protocol.md. **No firmware modification is needed**
+  to go beyond 30 s, which makes the patching idea unnecessary for now (and avoids all flashing risk).
+- The "type 6" probe (`06 01 00`) answered with a single acknowledgement and then silence for 4 s (not investigated further).

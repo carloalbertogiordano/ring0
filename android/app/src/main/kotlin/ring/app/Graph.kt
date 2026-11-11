@@ -3,6 +3,8 @@ package ring.app
 import android.app.Application
 import android.bluetooth.BluetoothManager
 import android.content.Context
+import android.content.IntentFilter
+import androidx.core.content.ContextCompat
 import androidx.room.Room
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -31,6 +33,7 @@ import ring.app.insights.Insights
 import ring.app.insights.InsightsHub
 import ring.app.insights.InsightsSnapshot
 import ring.app.insights.SleepInsights
+import ring.app.lab.LabReceiver
 import ring.app.sync.AlertEngine
 import ring.app.sync.IncidentRecorder
 import ring.app.sync.RhythmOutcome
@@ -42,6 +45,7 @@ import ring.domain.Symptom
 import ring.domain.Triage
 import ring.domain.TriageInput
 import ring.domain.TriageResult
+import ring.protocol.Packet
 import ring.protocol.commands.AutoMonitorCommand
 import ring.protocol.commands.Battery
 import ring.protocol.commands.Capabilities
@@ -134,6 +138,16 @@ class Graph(private val context: Context) {
 
     init {
         scope.launch { refreshInsights() }
+        if (RhythmRunner.isDebuggable(context.applicationInfo.flags)) {
+            val lab = LabReceiver(scope) { start, max, silence, onPacket -> probeRealTime(start, max, silence, onPacket) }
+            ContextCompat.registerReceiver(context, lab, IntentFilter(LabReceiver.ACTION), ContextCompat.RECEIVER_EXPORTED)
+        }
+    }
+
+    /** Diagnostics for debug builds: streams the raw real-time packets of an arbitrary start payload. */
+    private suspend fun probeRealTime(start: ByteArray, max: Int, silenceMs: Long, onPacket: (Packet) -> Unit) {
+        ensureConnected()
+        RealTimeCommand.probe(session.v1, start, max, silenceMs, onPacket)
     }
 
     private suspend fun ensureConnected() {
