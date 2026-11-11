@@ -1,5 +1,7 @@
 package ring.domain
 
+import kotlin.math.abs
+
 /** Helpers to draw and analyse a series that has holes where the ring was not worn. */
 object Series {
     private const val MIN_GAP_SECONDS = 1800L
@@ -19,6 +21,19 @@ object Series {
             if (point.ts - previous.ts > limit) segments += mutableListOf(point) else segments.last() += point
         }
         return segments
+    }
+
+    /**
+     * The sample closest to `ts`, for a touch on a chart; null when the touch is more than half a gap limit away from it, that
+     * is over a stretch without data. `points` need not be sorted.
+     */
+    fun nearest(points: List<TimedValue>, ts: Long): TimedValue? {
+        if (points.isEmpty()) return null
+        val sorted = points.sortedBy { it.ts }
+        val spacing = if (sorted.size < 2) 0.0 else Stats.median(sorted.zipWithNext { a, b -> (b.ts - a.ts).toDouble() })
+        val tolerance = maxOf(MIN_GAP_SECONDS.toDouble(), SPACING_FACTOR * spacing) / 2
+        val best = sorted.minBy { abs(it.ts - ts) }
+        return best.takeIf { abs(it.ts - ts) <= tolerance }
     }
 
     /**

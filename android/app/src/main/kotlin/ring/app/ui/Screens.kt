@@ -610,7 +610,7 @@ private fun HistoryPanel(
                 color = Term.dim,
             )
         }
-        TermChart(samples, from, to, color, minSpan = minSpan, threshold = threshold, format = fmt)
+        TermChart(samples, from, to, color, minSpan = minSpan, threshold = threshold, unit = unit, format = fmt)
     }
 }
 

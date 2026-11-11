@@ -62,3 +62,33 @@ class WearContainsTest {
         assertEquals(false, Wear.inGap(3000, gaps))
     }
 }
+
+class SeriesNearestTest {
+    private val dense = (0L until 12).map { TimedValue(it * 300, it.toDouble()) } + (60L until 66).map { TimedValue(it * 300, it.toDouble()) }
+
+    @Test fun `a touch snaps to the nearest sample`() {
+        assertEquals(3.0, Series.nearest(dense, 3 * 300 + 100)?.value)
+        assertEquals(4.0, Series.nearest(dense, 3 * 300 + 200)?.value)
+        assertEquals(0.0, Series.nearest(dense, 0)?.value)
+    }
+
+    @Test fun `a touch in the middle of a hole finds nothing`() {
+        assertEquals(null, Series.nearest(dense, 30 * 300))
+    }
+
+    @Test fun `near the edge of a hole it still snaps to the last sample`() {
+        assertEquals(11.0, Series.nearest(dense, 11 * 300 + 400)?.value)
+    }
+
+    @Test fun `before the first and after the last sample`() {
+        assertEquals(0.0, Series.nearest(dense, -500)?.value)
+        assertEquals(null, Series.nearest(dense, -20_000))
+        assertEquals(null, Series.nearest(dense, 90_000 * 10))
+    }
+
+    @Test fun `empty and single point series are safe`() {
+        assertEquals(null, Series.nearest(emptyList(), 100))
+        assertEquals(7.0, Series.nearest(listOf(TimedValue(1000, 7.0)), 1100)?.value)
+        assertEquals(null, Series.nearest(listOf(TimedValue(1000, 7.0)), 1000 + 5000))
+    }
+}

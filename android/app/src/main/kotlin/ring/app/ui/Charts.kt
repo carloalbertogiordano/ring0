@@ -7,11 +7,16 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -24,6 +29,9 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
@@ -40,6 +48,7 @@ import ring.domain.WearGap
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import kotlin.math.abs
 
 private const val GRID_LINES = 3
 private const val TWO_DAYS = 2 * 86_400L
@@ -104,6 +113,7 @@ fun TermChart(
     height: Dp = 120.dp,
     minSpan: Double = 1.0,
     threshold: Double? = null,
+    unit: String = "",
     format: (Double) -> String = { "%.0f".format(it) },
 ) {
     val measurer = rememberTextMeasurer()
@@ -117,10 +127,50 @@ fun TermChart(
         "HH:mm"
     }
     val fmt = DateTimeFormatter.ofPattern(pattern).withZone(ZoneId.systemDefault())
-    Canvas(modifier.fillMaxWidth().height(height)) {
-        val left = 34.dp.toPx()
+    val tooltipFmt = DateTimeFormatter.ofPattern(if (to - from <= DAY_MINUS) "HH:mm" else "d MMM HH:mm").withZone(ZoneId.systemDefault())
+    val noDataHere = stringResource(R.string.chart_no_data_here)
+    val points = remember(samples) { samples.map { TimedValue(it.ts, it.value) } }
+    var touch by remember(points, from, to) { mutableStateOf<ChartTouch?>(null) }
+    val haptic = LocalHapticFeedback.current
+    val interactive = Modifier.pointerInput(points, from, to) {
+        val plotLeft = PLOT_LEFT.dp.toPx()
+        val plotRight = PLOT_RIGHT.dp.toPx()
+
+        fun select(x: Float) {
+            val width = size.width - plotLeft - plotRight
+            val ts = from + ((x - plotLeft).coerceIn(0f, width) / width * (to - from)).toLong()
+            val hit = Series.nearest(points, ts)
+            if (hit?.ts != touch?.sample?.ts) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            touch = ChartTouch(ts, hit)
+        }
+        awaitEachGesture {
+            val down = awaitFirstDown(requireUnconsumed = false)
+            val before = touch?.sample?.ts
+            select(down.position.x)
+            var engaged = false
+            var tracking = true
+            while (tracking) {
+                val change = awaitPointerEvent().changes.firstOrNull { it.id == down.id }
+                val dx = (change?.position?.x ?: 0f) - down.position.x
+                val dy = (change?.position?.y ?: 0f) - down.position.y
+                val scrolling = !engaged && abs(dy) > viewConfiguration.touchSlop && abs(dy) > abs(dx)
+                tracking = change != null && change.pressed && !change.isConsumed && !scrolling
+                if (tracking && change != null) {
+                    engaged = engaged || abs(dx) > viewConfiguration.touchSlop
+                    if (engaged) {
+                        select(change.position.x)
+                        change.consume()
+                    }
+                }
+            }
+            // a second tap on the same sample dismisses the readout
+            if (!engaged && before != null && touch?.sample?.ts == before) touch = null
+        }
+    }
+    Canvas(modifier.fillMaxWidth().height(height).then(interactive)) {
+        val left = PLOT_LEFT.dp.toPx()
         val bottom = 16.dp.toPx()
-        val w = size.width - left - 4.dp.toPx()
+        val w = size.width - left - PLOT_RIGHT.dp.toPx()
         val h = size.height - bottom - 4.dp.toPx()
         if (samples.isEmpty()) {
             drawText(measurer, noDataText, Offset(left + 8.dp.toPx(), h / 2), label)
@@ -179,8 +229,31 @@ fun TermChart(
             drawPath(line, color, style = Stroke(1.8.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
         }
         drawCircle(color, 3.2.dp.toPx(), Offset(x(samples.last().ts), y(samples.last().value)))
+        touch?.let { t ->
+            val cx = x(t.sample?.ts ?: t.ts)
+            drawLine(Term.text.copy(alpha = CROSSHAIR_ALPHA), Offset(cx, top), Offset(cx, top + h), 1.dp.toPx())
+            t.sample?.let {
+                drawCircle(Term.text, 4.5.dp.toPx(), Offset(cx, y(it.value)))
+                drawCircle(color, 2.8.dp.toPx(), Offset(cx, y(it.value)))
+            }
+            val text = tooltipFmt.format(Instant.ofEpochSecond(t.sample?.ts ?: t.ts)) + "  " + (t.sample?.let { format(it.value) + unit } ?: noDataHere)
+            val readout = measurer.measure(text, TextStyle(color = Term.text, fontSize = 10.sp, fontFamily = FontFamily.Monospace))
+            val boxWidth = readout.size.width + 12.dp.toPx()
+            val boxHeight = readout.size.height + 6.dp.toPx()
+            val boxLeft = (cx - boxWidth / 2).coerceIn(left, (size.width - boxWidth).coerceAtLeast(left))
+            drawRect(Term.panel2, Offset(boxLeft, top), Size(boxWidth, boxHeight))
+            drawRect(Term.accent.copy(alpha = 0.6f), Offset(boxLeft, top), Size(boxWidth, boxHeight), style = Stroke(1.dp.toPx()))
+            drawText(readout, topLeft = Offset(boxLeft + 6.dp.toPx(), top + 3.dp.toPx()))
+        }
     }
 }
+
+/** A finger on a chart: the touched time and the sample it snapped to (null over a stretch without data). */
+private class ChartTouch(val ts: Long, val sample: TimedValue?)
+
+private const val PLOT_LEFT = 34
+private const val PLOT_RIGHT = 4
+private const val CROSSHAIR_ALPHA = 0.55f
 
 /** ECG trace that draws itself in a loop (decorative, shows that a measurement is running). */
 @Composable
