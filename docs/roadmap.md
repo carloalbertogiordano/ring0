@@ -55,9 +55,9 @@ watermark, quindi anche dopo un mese di solo uso locale parte la sincronizzazion
 settimanale sia sull'app sia sulla webapp; niente widget.
 - 27. Protocollo di sync incrementale e idempotente (chiavi (tipo, ts), watermark per tipo, ripresa dopo interruzione), potatura sul telefono
   solo dei dati gia' confermati dal server e piu' vecchi di 6 mesi; riepiloghi giornalieri e per notte tenuti per sempre.
-- 28. Autenticazione dispositivo (coppia di chiavi nel Keystore, associazione con QR) e utente (passkey WebAuthn); TLS con pinning.
-- 29. Cifratura end-to-end dei blocchi verso la webapp e backup/ripristino cifrato con passphrase (formato `age`: destinatario X25519 e scrypt).
-- 30. Webapp self-hosted (grafici interattivi, confronto periodi, esportazione CSV, report settimanale).
+- 28. Autenticazione dispositivo (coppia di chiavi nel Keystore, associazione con QR e codice di confronto SAS) e utente (passkey WebAuthn); TLS obbligatorio.
+- 29. Cifratura end-to-end (X-Wing in HPKE + AES-256-GCM) verso la webapp, **chiavi di epoca con radice fredda** per la forward secrecy, manifesti firmati dal telefono, bundle web firmato; backup/ripristino cifrato con passphrase (Argon2id + AES-256-GCM). Modello di minaccia: server compromesso. Vedi docs/design/archive-crypto.md.
+- 30. Server in Go e webapp self-hosted zero-knowledge (grafici interattivi, confronto periodi, CSV, report settimanale); in seguito decifratore nativo.
 - 31. Report settimanale anche sul telefono.
 - 32. [PREREQUISITO, da fare quando si cambia lo schema per l'archivio] Test delle migrazioni del database (Room: schema esportato e
   MigrationTestHelper), in particolare 6->7, 7->8 e le nuove (watermark di sync, riepiloghi giornalieri, sequenza ordinata delle fasi del sonno).

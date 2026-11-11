@@ -1,6 +1,6 @@
 # Archivio, webapp zero-knowledge e cifratura (progetto, 2026-11-11)
 
-Stato: **progetto da approvare**, nessun codice ancora. Decisioni gia' prese dall'utente: l'app puo' avere il permesso INTERNET (build
+Stato: **progetto approvato nelle linee generali (2026-11-11), nessun codice ancora**; aggiornato dopo la richiesta di difendersi anche da un server compromesso e di avere almeno la forward secrecy. Decisioni gia' prese dall'utente: l'app puo' avere il permesso INTERNET (build
 `offline` senza permesso e build `sync`); webapp self-hosted raggiungibile (container Proxmox, dietro NPM, firewall e Cloudflare); TLS
 obbligatorio sempre; **zero-knowledge** (il server non decifra mai); cifratura forte e resistente ai computer quantistici; il telefono tiene
 6 mesi di dati grezzi; l'app manda solo cio' che il server non ha; backup e ripristino cifrati; tutto cifrato, anche gli incidenti.
@@ -15,24 +15,66 @@ cambiare le dimensioni delle chiavi simmetriche; vedi [Valsorda](https://words.f
 ## 2. Primitive (nessuna invenzione: solo costruzioni standard)
 | Scopo | Scelta | Note |
 |---|---|---|
-| Scambio di chiavi / chiave pubblica dell'archivio | **X-Wing** (ML-KEM-768 + X25519, NIST livello 3) dentro **HPKE (RFC 9180)** | X-Wing e' ancora un draft CFRG; HPKE-PQ lo chiama `MLKEM768-X25519`. Librerie: Bouncy Castle 1.86 (Android) e `@noble/post-quantum` (`ml_kem768_x25519`, browser). Alternativa piu' alta: ibrido ML-KEM-1024 + P-384 della bozza HPKE-PQ (livello 5): richiede di verificare il supporto nelle librerie. |
+| Scambio di chiavi / chiave pubblica dell'archivio | **X-Wing** (ML-KEM-768 + X25519, NIST livello 3) dentro **HPKE (RFC 9180)** | X-Wing e' ancora un draft CFRG; HPKE-PQ lo chiama `MLKEM768-X25519`. Librerie: Bouncy Castle 1.86 (Android) e `@noble/post-quantum` (`ml_kem768_x25519`, browser). Deciso: X-Wing e' sufficiente. (Alternativa non scelta: ibrido ML-KEM-1024 + P-384 della bozza HPKE-PQ, livello 5.) |
 | Cifratura dei dati | **AES-256-GCM**, chiave per blocco derivata con HKDF-SHA-512 | nonce da 96 bit casuali; ogni blocco ha chiave e nonce propri |
 | Derivazione da password | **Argon2id** (RFC 9106: >= 64 MiB, t >= 3, p = 4) | WASM nel browser, libreria nativa su Android |
 | Autenticazione dispositivo | firma ECDSA P-256 con chiave nel **Keystore/StrongBox** (non esportabile) | le firme non hanno bisogno di protezione "harvest now, decrypt later"; le firme PQ (ML-DSA) non sono nel Keystore |
 | Autenticazione utente web | **passkey WebAuthn**; recupero con codice da 256 bit e seconda passkey | |
 | Trasporto | **TLS 1.3 sempre**; scambio ibrido `X25519MLKEM768` quando entrambi i lati lo supportano | il contenuto resta protetto anche se il trasporto fosse intercettato, perche' e' gia' cifrato end-to-end |
 
-## 3. Gerarchia delle chiavi (zero-knowledge)
-- Il **browser** genera la coppia di chiavi dell'archivio (X-Wing). La chiave privata non lascia mai il browser in chiaro.
-- La chiave privata viene cifrata ("wrapped") con una **KEK** derivata da: (a) l'uscita **PRF** della passkey WebAuthn (dove disponibile:
-  Chrome/Edge >= 128, Firefox recente, Safari 18+ con passkey di piattaforma; non su NFC) e/o (b) una **passphrase** con Argon2id; piu' (c) un
-  **codice di recupero** da 256 bit mostrato una sola volta. Il blob cifrato sta sul server, che non puo' aprirlo.
-- Al pairing la webapp mostra un **QR** con: chiave pubblica dell'archivio, impronta della chiave TLS del server, URL e token di pairing monouso. Il
-  telefono tiene **solo la chiave pubblica** + la propria chiave di firma nel Keystore. Un telefono rubato non puo' leggere l'archivio.
-- Ogni blocco inviato = `HPKE(chiave pubblica archivio, DEK casuale AES-256)` + `AES-256-GCM(DEK, dati)`; i metadati minimi (tipo, giorno) restano in
-  chiaro per l'indicizzazione, oppure si cifrano anche quelli se l'indice si costruisce nel browser (da decidere: costa piu' trasferimento).
-- Nel browser: caricamento dei blocchi, decifratura con WebCrypto + noble, grafici (uPlot), **CSV generato nel browser**, report settimanale calcolato
-  nel browser dai riepiloghi giornalieri.
+## 3. Modello di minaccia (si assume che il server possa essere compromesso)
+| Avversario | Cosa puo' fare | Difesa |
+|---|---|---|
+| A1: ruba il disco/DB del server o i backup | legge tutti i blocchi e le chiavi avvolte | tutto cifrato end-to-end; la chiave privata e' avvolta da una KEK a **due fattori**, quindi niente attacco offline sulla sola passphrase |
+| A2: **server compromesso attivo** (modifica risposte, **serve JavaScript malevolo**, scambia chiavi, cancella o ripropone dati vecchi) | e' l'avversario piu' pericoloso per un'app web zero-knowledge | **bundle web firmato e verificato** (3.2), **pairing con codice di confronto** (3.3), **manifesti firmati dal telefono** con contatore anti-rollback (3.4), metadati autenticati (AAD) |
+| A3: rete, Cloudflare, intermediari | vede traffico e metadati | TLS 1.3 + cifratura end-to-end; blocchi di dimensioni fisse (padding) e identificatori opachi |
+| A4: telefono rubato | legge il database locale | cifratura a riposo (Keystore) + il telefono ha solo la chiave pubblica dell'archivio |
+| A5: browser o sessione compromessi | legge cio' che e' decifrato in quel momento | chiavi epoca (3.5): limita il danno alle epoche calde; sessioni brevi; niente chiavi in `localStorage` |
+| A6: ruba i fattori dell'utente (passkey e passphrase e codice) | decifra tutto | non c'e' difesa crittografica; e' il limite dichiarato |
+
+**Risposta onesta alla domanda "un server compromesso puo' leggere i dati?"**: se il server e' solo *letto* (A1), no. Se e' *attivo* (A2), puo' provare a
+servire al browser codice malevolo che ruba le chiavi: e' il problema noto della cifratura end-to-end consegnata via web. Non si annulla del tutto, si
+riduce con 3.2 (il codice del client non lo decide piu' il server) o evitando il web (client nativo, vedi 3.2).
+
+### 3.1 Gerarchia delle chiavi
+- Il **browser** genera l'identita' dell'archivio: coppia X-Wing (cifratura) e coppia di firma (Ed25519, in seguito anche ML-DSA). Le chiavi private non
+  escono mai in chiaro.
+- Le chiavi private sono avvolte da una **KEK a due fattori**: `KEK = HKDF-SHA-512(PRF_passkey || Argon2id(passphrase))`. Serve la passkey (PRF a 256 bit,
+  non indovinabile) **e** la passphrase; il server non puo' fare tentativi offline. In piu' un **codice di recupero da 256 bit** (cartaceo) avvolge la
+  stessa chiave come seconda via di accesso. Se il browser non supporta PRF, si usa la passphrase piu' un segreto locale esportabile (compromesso dichiarato).
+- Al pairing il telefono riceve solo le **chiavi pubbliche** e conserva la propria chiave di firma nel Keystore. Un telefono rubato non legge l'archivio.
+- Ogni blocco = `HPKE(chiave pubblica di epoca, DEK casuale AES-256)` + `AES-256-GCM(DEK, dati)` con AAD = (tipo, giorno, id, versione, epoca).
+
+### 3.2 Contro il codice malevolo servito dal server (A2)
+- Il client web e' un **bundle statico firmato**: un guscio minimo con service worker che **verifica la firma del manifesto** (Ed25519 e ML-DSA, chiave
+  offline del maintainer) prima di eseguire una versione nuova; l'impronta della chiave e' pubblicata nelle release (attestate dalla CI). Il server consegna
+  solo cifrato e il bundle; non puo' cambiare il codice senza la chiave di firma. Limite: fiducia al primo uso (si verifica l'impronta) e storage del browser.
+- CSP rigorosa (`script-src` con hash, niente inline, Trusted Types), SRI, nessuna dipendenza esterna a runtime.
+- **Alternativa piu' forte, prevista:** un decifratore **nativo** (app desktop/CLI `ring0-viewer`) che scarica solo blocchi cifrati: elimina del tutto la
+  consegna di codice dal server. La webapp resta per comodita'.
+
+### 3.3 Pairing sicuro
+Il QR contiene la chiave pubblica dell'archivio e l'URL. Il telefono invia la propria chiave di firma e **entrambi mostrano un codice di confronto breve
+(SAS)** che l'utente verifica a vista: un server che sostituisce una chiave in mezzo produce codici diversi.
+
+### 3.4 Integrita' e anti-rollback
+Il telefono firma un **manifesto** per giorno (hash dei blocchi, numero di sequenza monotono, timestamp) e una catena di hash tra manifesti. Il browser
+verifica le firme con le chiavi del pairing: un server non puo' falsificare, cancellare di nascosto o riproporre stati vecchi (puo' solo rifiutare il servizio).
+
+### 3.5 Forward secrecy (richiesta: "almeno la PFS")
+- **Trasporto:** TLS 1.3 con scambio effimero (e ibrido X25519MLKEM768 dove disponibile): la PFS del canale c'e' per costruzione.
+- **Per messaggio:** HPKE usa gia' una chiave effimera del mittente per ogni blocco, ma questo non basta: se la chiave privata del destinatario viene rubata
+  si aprono tutti i blocchi passati. Per un archivio che si vuole poter rileggere per anni, la PFS "classica" (chiavi cancellate dopo l'uso) e' in
+  conflitto con lo scopo. La soluzione realistica:
+- **Chiavi di epoca con radice fredda.** Una **radice fredda** (256 bit, solo nel codice di recupero cartaceo / chiave hardware, mai sul server ne' online)
+  genera con HKDF una catena a senso unico: `radice_n+1 = HKDF(radice_n)` e da ogni radice la coppia X-Wing dell'epoca n (per esempio un mese). Il browser
+  pubblica le **chiavi pubbliche delle epoche future**, firmate con la chiave di firma dell'archivio (il telefono le verifica: il server non puo' sostituirle).
+  Online restano solo le chiavi delle **ultime K epoche calde** (K configurabile, per esempio 3); le epoche piu' vecchie si aprono **solo con la radice fredda**.
+  Un compromesso del lato online (server piu' browser) non apre quindi i dati piu' vecchi di K epoche; per leggerli serve l'originale offline.
+  Dopo un compromesso si ruota: nuova radice, nuove epoche (sicurezza post-compromesso), e le epoche vecchie restano protette dalla radice fredda.
+- Costo dichiarato: per la storia piu' vecchia dell'ultimo periodo serve il codice offline. Si imposta K e la scelta e' dell'utente. Sul telefono i dati restano 6 mesi.
+- Va revisionata con attenzione: sono primitive standard (HKDF, X-Wing, HPKE) in uno schema simile ai key schedule di TLS/Signal, ma lo schema e' nostro e andra'
+  descritto in un documento di sicurezza e rivisto prima del rilascio.
 
 ## 4. Backup e ripristino (sul telefono)
 File unico versionato: contenuto = database + impostazioni (profilo, soglie), **senza** le chiavi del Keystore (ci si riassocia con un nuovo QR).
@@ -56,7 +98,7 @@ documentato, con un piccolo strumento Python/JS di verifica che lo decifra senza
   Con Cloudflare, la protezione e' la cifratura end-to-end + le firme, non il canale.
 - Difese: rate-limit e blocco dopo tentativi errati, intestazioni HSTS/CSP rigorose, cookie `__Host-`, nessuna dipendenza esterna a runtime, log
   senza dati sensibili, aggiornamenti dei pacchetti, backup del database del server (sono gia' blocchi cifrati).
-- Server: **Go** (binario unico, TLS e WebAuthn robusti) oppure Python (FastAPI); SQLite per i blocchi e le chiavi avvolte. Da decidere.
+- Server: **Go** (deciso): binario unico, TLS e WebAuthn robusti; SQLite per blocchi e chiavi avvolte.
 
 ## 7. Limiti dichiarati
 - X-Wing e HPKE-PQ sono ancora bozze IETF; le librerie vanno fissate per versione e riverificate prima di ogni release.
@@ -64,9 +106,11 @@ documentato, con un piccolo strumento Python/JS di verifica che lo decifra senza
 - Zero-knowledge significa che se perdi passkey, passphrase **e** codice di recupero i dati archiviati sono persi (il telefono ne tiene comunque 6 mesi).
 - Cloudflare vede i metadati di rete e i blocchi cifrati, non i contenuti.
 
-## 8. Ordine di lavoro proposto
-1. Schema dati v9: riepiloghi per notte/giorno, watermark di sync, sequenza ordinata delle fasi del sonno **+ test delle migrazioni** (prerequisito).
-2. Backup/ripristino cifrato (autonomo, utile subito).
-3. Server (blob store + WebAuthn + pairing) e client di sync con firme dispositivo.
-4. Webapp: decifratura, grafici, CSV, report settimanale.
-5. Flavor `offline` / `sync` e CI per entrambi.
+## 8. Ordine di lavoro (aggiornato)
+1. Schema dati v9: riepiloghi per notte/giorno, watermark di sync, sequenza ordinata delle fasi del sonno, **esportazione dello schema e test delle migrazioni** (prerequisito).
+2. Backup/ripristino cifrato (autonomo, utile subito; Argon2id + AES-256-GCM).
+3. Libreria crittografica condivisa e documentata (X-Wing/HPKE, AES-256-GCM, HKDF-SHA-512, firme) con **vettori di test ufficiali**; documento di sicurezza.
+4. Server Go: blob store, WebAuthn, pairing con SAS, manifesti firmati, TLS obbligatorio (certificato dato o autofirmato).
+5. Client di sync nell'app (flavor `sync`) con firme del dispositivo e chiavi di epoca.
+6. Client web firmato (decifratura, grafici, CSV, report settimanale) e, dopo, il decifratore nativo.
+7. Flavor `offline` / `sync` e CI per entrambi; revisione di sicurezza dello schema delle epoche prima del rilascio.
