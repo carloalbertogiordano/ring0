@@ -6,7 +6,7 @@ step() { printf '\n== %s ==\n' "$1"; }
 step "ktlint + detekt"
 ./gw.sh qualityGate
 step "unit tests"
-./gw.sh :protocol:runTests :domain:runTests
+./gw.sh :protocol:runTests :domain:runTests :migrations:runTests
 step "app build"
 ./gw.sh :app:assembleDebug
 echo

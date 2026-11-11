@@ -16,7 +16,11 @@ android {
 
 kotlin { jvmToolchain(21) }
 
+// the exported schemas are what the migration tests compare against
+ksp { arg("room.schemaLocation", "$projectDir/schemas") }
+
 dependencies {
+    api(project(":migrations"))
     api(libs.androidx.room.runtime)
     api(libs.androidx.room.ktx)
     api(libs.kotlinx.coroutines.core)

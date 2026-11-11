@@ -13,6 +13,8 @@ nordicBle = "2.11.0"
 lifecycleService = "2.11.0"
 detekt = "2.0.0-alpha.6"
 ktlint = "1.8.0"
+sqliteJdbc = "3.47.1.0"
+gson = "2.11.0"
 
 [libraries]
 ktlint-cli = { module = "com.pinterest.ktlint:ktlint-cli", version.ref = "ktlint" }
@@ -26,6 +28,8 @@ compose-material3 = { module = "androidx.compose.material3:material3" }
 compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
+sqlite-jdbc = { module = "org.xerial:sqlite-jdbc", version.ref = "sqliteJdbc" }
+gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
 
 androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }

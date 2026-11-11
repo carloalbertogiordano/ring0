@@ -18,13 +18,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import ring.app.ble.RingBleManager
 import ring.app.ble.RingSession
-import ring.app.data.MIGRATION_1_2
-import ring.app.data.MIGRATION_2_3
-import ring.app.data.MIGRATION_3_4
-import ring.app.data.MIGRATION_4_5
-import ring.app.data.MIGRATION_5_6
-import ring.app.data.MIGRATION_6_7
-import ring.app.data.MIGRATION_7_8
+import ring.app.data.ALL_MIGRATIONS
 import ring.app.data.RingDb
 import ring.app.data.Sample
 import ring.app.data.SampleType
@@ -121,7 +115,7 @@ class Graph(private val context: Context) {
         context,
         RingDb::class.java,
         "ring.db",
-    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8).build().dao()
+    ).addMigrations(*ALL_MIGRATIONS).build().dao()
     val settings = SettingsStore(context)
     private val manager = RingBleManager(context)
     val session = RingSession(manager)

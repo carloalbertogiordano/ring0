@@ -11,6 +11,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.flow.Flow
+import ring.migrations.Migrations
 
 /** Measurement types stored in the `samples` table. */
 object SampleType {
@@ -41,6 +42,8 @@ data class SleepEntity(
     val remMin: Int,
     val awakeMin: Int,
     val demo: Boolean = false,
+    /** The night's stages in order, for the hypnogram: see `Hypnogram` in the domain module. Empty for nights stored before v9. */
+    val stages: String = "",
 )
 
 /**
@@ -166,68 +169,14 @@ interface RingDao {
     suspend fun deleteDemoSleep()
 }
 
-@Database(entities = [Sample::class, SleepEntity::class, AlertEntity::class, IncidentEntity::class], version = 8, exportSchema = false)
+@Database(entities = [Sample::class, SleepEntity::class, AlertEntity::class, IncidentEntity::class], version = Migrations.LATEST, exportSchema = true)
 abstract class RingDb : RoomDatabase() {
     abstract fun dao(): RingDao
 }
 
-/** v1 -> v2: demo-data flag. */
-val MIGRATION_1_2 = object : Migration(1, 2) {
-    override fun migrate(db: SupportSQLiteDatabase) {
-        db.execSQL("ALTER TABLE samples ADD COLUMN demo INTEGER NOT NULL DEFAULT 0")
-        db.execSQL("ALTER TABLE sleep_sessions ADD COLUMN demo INTEGER NOT NULL DEFAULT 0")
+/** The Room migrations, built from the plain-SQL steps of `:migrations` (which the tests run on a real SQLite). */
+val ALL_MIGRATIONS: Array<Migration> = Migrations.steps.map { step ->
+    object : Migration(step.from, step.to) {
+        override fun migrate(db: SupportSQLiteDatabase) = step.sql.forEach(db::execSQL)
     }
-}
-
-/** v2 -> v3: alerts store kind and numbers instead of localized text. */
-val MIGRATION_2_3 = object : Migration(2, 3) {
-    override fun migrate(db: SupportSQLiteDatabase) {
-        db.execSQL("ALTER TABLE alerts ADD COLUMN value REAL NOT NULL DEFAULT 0")
-        db.execSQL("ALTER TABLE alerts ADD COLUMN threshold REAL NOT NULL DEFAULT 0")
-        db.execSQL("ALTER TABLE alerts ADD COLUMN detail TEXT NOT NULL DEFAULT ''")
-    }
-}
-
-/** v3 -> v4: incident log. */
-val MIGRATION_3_4 = object : Migration(3, 4) {
-    override fun migrate(db: SupportSQLiteDatabase) {
-        db.execSQL(
-            "CREATE TABLE IF NOT EXISTS incidents (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, ts INTEGER NOT NULL, " +
-                "source TEXT NOT NULL, triggerValue REAL NOT NULL, level TEXT NOT NULL, causes TEXT NOT NULL, " +
-                "advice TEXT NOT NULL, symptoms TEXT NOT NULL, bpm INTEGER, rmssd REAL, spo2 INTEGER, stress REAL, " +
-                "skinTemp REAL, hrTrend TEXT NOT NULL, checked INTEGER NOT NULL)",
-        )
-    }
-}
-
-/** v4 -> v5: user categories and note on incidents. */
-val MIGRATION_4_5 = object : Migration(4, 5) {
-    override fun migrate(db: SupportSQLiteDatabase) {
-        db.execSQL("ALTER TABLE incidents ADD COLUMN categories TEXT NOT NULL DEFAULT ''")
-        db.execSQL("ALTER TABLE incidents ADD COLUMN note TEXT NOT NULL DEFAULT ''")
-    }
-}
-
-/** v5 -> v6: alarms (feature removed again in v7). */
-val MIGRATION_5_6 = object : Migration(5, 6) {
-    override fun migrate(db: SupportSQLiteDatabase) {
-        db.execSQL(
-            "CREATE TABLE IF NOT EXISTS alarms (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, hour INTEGER NOT NULL, " +
-                "minute INTEGER NOT NULL, weekdays INTEGER NOT NULL, enabled INTEGER NOT NULL, name TEXT NOT NULL)",
-        )
-    }
-}
-
-/** v6 -> v7: the R09 has no vibration motor, so the alarms table is dropped. */
-val MIGRATION_6_7 = object : Migration(6, 7) {
-    override fun migrate(db: SupportSQLiteDatabase) {
-        db.execSQL("DROP TABLE IF EXISTS alarms")
-    }
-}
-
-/** v7 -> v8: step counting was removed (the ring's step data is unreliable), so its samples are dropped. */
-val MIGRATION_7_8 = object : Migration(7, 8) {
-    override fun migrate(db: SupportSQLiteDatabase) {
-        db.execSQL("DELETE FROM samples WHERE type = 'steps'")
-    }
-}
+}.toTypedArray()

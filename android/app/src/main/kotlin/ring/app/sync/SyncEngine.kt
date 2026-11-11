@@ -6,6 +6,7 @@ import ring.app.data.RingDao
 import ring.app.data.Sample
 import ring.app.data.SampleType
 import ring.app.data.SleepEntity
+import ring.domain.Hypnogram
 import ring.protocol.commands.Battery
 import ring.protocol.commands.BatteryCommand
 import ring.protocol.commands.Capabilities
@@ -127,6 +128,7 @@ class SyncEngine(private val dao: RingDao) {
             minutes(SleepStageType.DEEP),
             minutes(SleepStageType.REM),
             minutes(SleepStageType.AWAKE),
+            stages = Hypnogram.encode(s.stages),
         )
     }
 
