@@ -74,7 +74,7 @@ class SyncEngine(private val dao: RingDao) {
         }
         step("stress") { SlotLogCommand.readStress(session.v1)?.let { save(SampleType.STRESS, it.readings(today)) } }
         step("temperature") {
-            TemperatureCommand.read(session.big, days).forEach { day ->
+            (TemperatureCommand.read(session.big, days) + TemperatureCommand.read(session.big, TODAY_ONLY)).forEach { day ->
                 Log.i(
                     TAG,
                     "temperature block daysAgo=${day.daysAgo} step=${day.intervalMinutes} nonzero=${day.samples.count {
@@ -134,5 +134,6 @@ class SyncEngine(private val dao: RingDao) {
         const val TAG = "SyncEngine"
         const val SECONDS_PER_DAY = 86_400L
         const val TOTAL_FIXED_STEPS = 6
+        const val TODAY_ONLY = 0
     }
 }

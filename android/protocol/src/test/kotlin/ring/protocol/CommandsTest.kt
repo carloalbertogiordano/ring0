@@ -109,6 +109,9 @@ class CommandsTest {
         assertEquals(at(14, 30), reading.time)
         assertEquals(36.9, reading.value, 1e-9)
         assertTrue(TemperatureCommand.decode(BigFrame(0x25, "001e".hexToBytes())).isEmpty())
+        assertContentEquals(byteArrayOf(0), TemperatureCommand.encodeRequest(0)) // today only
+        assertContentEquals(byteArrayOf(2), TemperatureCommand.encodeRequest())
+        assertFailsWith<IllegalArgumentException> { TemperatureCommand.encodeRequest(-1) }
         assertFailsWith<IllegalArgumentException> { TemperatureCommand.decode(BigFrame(0x25, payload.copyOf(49))) }
     }
 

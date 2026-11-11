@@ -27,8 +27,9 @@ object TemperatureCommand {
     private const val DEFAULT_DAYS = 2
     private const val MAX_DAYS = 255
 
+    /** `days` 0 asks for today only (what the official app does for the current day); N >= 1 asks for the last N days. */
     fun encodeRequest(days: Int = DEFAULT_DAYS): ByteArray {
-        require(days in 1..MAX_DAYS) { "days must be 1..$MAX_DAYS: $days" }
+        require(days in 0..MAX_DAYS) { "days must be 0..$MAX_DAYS: $days" }
         return byteArrayOf(days.toByte())
     }
 

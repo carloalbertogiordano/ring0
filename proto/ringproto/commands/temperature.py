@@ -40,8 +40,8 @@ class TemperatureDay:
 
 def encode_request(days: int = DEFAULT_DAYS) -> bytes:
     """Request payload (1 byte)."""
-    if not 1 <= days <= MAX_DAYS:
-        msg = f"days must be 1..{MAX_DAYS}: {days}"
+    if not 0 <= days <= MAX_DAYS:
+        msg = f"days must be 0..{MAX_DAYS}: {days}"
         raise ValueError(msg)
     return bytes([days])
 

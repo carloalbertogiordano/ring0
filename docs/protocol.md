@@ -155,7 +155,9 @@ growing towards the morning) and matches the 5-minute heart rate log (49-56 bpm 
 Observations: the ring reported **no AWAKE stage** in the whole night (the app therefore scores sleep without efficiency and continuity), and the
 last two stages are LIGHT (49 and 25 min) while the heart rate was already rising.
 
-## 0x25 Temperature: no block for the current UTC day (2026-11-11, to be re-checked)
-At 09:00 local the ring returned a single block (`daysAgo=1`, last non-zero slot 47 = 23:30 UTC) and none for the current UTC day, although
-heart rate, HRV, stress and SpO2 existed for it. Either the ring does not measure temperature while you sleep or the new day's block is
-created late. To be verified with a daytime sync.
+## 0x25 Temperature: request byte 0 = today (2026-11-11, VERIFIED)
+The request payload is a single byte. N >= 1 returns the completed days (at most N, empty days omitted) **but not the current UTC day**;
+**0 returns today's block**. Found by reading the official app (`TemperatureRepository.syncTodayTemperature` calls the series request with 0,
+the history sync with 2 or 6) and confirmed on the ring: the same sync that returned only `daysAgo=1` for N=2 returned `daysAgo=0` with 18
+values (00:00-09:30 UTC+1... i.e. the whole night, 36.7-36.9 C every 30 minutes) for N=0. Always request both. The ring measured all night:
+the "missing" temperature was only the unrequested block.

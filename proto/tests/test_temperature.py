@@ -29,9 +29,10 @@ def block(days_ago: int, values: dict[int, int] | None = None, step: int = 30) -
 def test_encode_request_is_a_single_byte() -> None:
     assert encode_request() == b"\x02"
     assert encode_request(7) == b"\x07"
+    assert encode_request(0) == b"\x00"  # 0 = today only (the ring holds back today otherwise)
 
 
-@pytest.mark.parametrize("days", [0, 256])
+@pytest.mark.parametrize("days", [-1, 256])
 def test_encode_request_rejects_invalid_days(days: int) -> None:
     with pytest.raises(ValueError, match="days"):
         encode_request(days)
