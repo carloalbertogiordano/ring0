@@ -3,6 +3,7 @@ package ring.app.ui
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
@@ -39,6 +40,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
@@ -149,11 +151,14 @@ private fun PermissionDenied() {
 @Composable
 private fun MainScaffold(graph: Graph, onOpenCheck: () -> Unit, onForget: () -> Unit) {
     var tab by remember { mutableIntStateOf(0) }
+    var detail by remember { mutableStateOf<MetricSpec?>(null) }
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
         Box(Modifier.weight(1f)) {
-            when (tab) {
-                0 -> HomeScreen(graph, onOpenCheck)
-                1 -> HistoryScreen(graph)
+            val open = detail
+            when {
+                open != null -> MetricDetailScreen(graph, open) { detail = null }
+                tab == 0 -> HomeScreen(graph, onOpenCheck) { detail = it }
+                tab == 1 -> HistoryScreen(graph)
                 else -> SettingsScreen(graph, onForget)
             }
         }
@@ -176,7 +181,7 @@ private fun MainScaffold(graph: Graph, onOpenCheck: () -> Unit, onForget: () -> 
 private val PAD = PaddingValues(horizontal = 14.dp, vertical = 10.dp)
 
 @Composable
-private fun HomeScreen(graph: Graph, onOpenCheck: () -> Unit) {
+private fun HomeScreen(graph: Graph, onOpenCheck: () -> Unit, onOpenMetric: (MetricSpec) -> Unit) {
     val status by graph.status.collectAsStateWithLifecycle()
     val thresholds by graph.settings.thresholds.collectAsStateWithLifecycle()
     val alerts by graph.dao.observeAlerts().collectAsStateWithLifecycle(emptyList())
@@ -233,6 +238,7 @@ private fun HomeScreen(graph: Graph, onOpenCheck: () -> Unit) {
                         graph,
                         Modifier.weight(1f),
                         warnAbove = thresholds.hrHigh.toDouble(),
+                        onClick = { onOpenMetric(Metrics.HEART) },
                     )
                     MetricTile(
                         stringResource(R.string.tile_temp),
@@ -243,6 +249,7 @@ private fun HomeScreen(graph: Graph, onOpenCheck: () -> Unit) {
                         graph,
                         Modifier.weight(1f),
                         warnAbove = thresholds.tempHigh,
+                        onClick = { onOpenMetric(Metrics.TEMPERATURE) },
                     )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -255,8 +262,18 @@ private fun HomeScreen(graph: Graph, onOpenCheck: () -> Unit) {
                         graph,
                         Modifier.weight(1f),
                         warnAbove = thresholds.stressHigh.toDouble(),
+                        onClick = { onOpenMetric(Metrics.STRESS) },
                     )
-                    MetricTile(stringResource(R.string.tile_hrv), SampleType.HRV, "ms", 0, Term.info, graph, Modifier.weight(1f))
+                    MetricTile(
+                        stringResource(R.string.tile_hrv),
+                        SampleType.HRV,
+                        "ms",
+                        0,
+                        Term.info,
+                        graph,
+                        Modifier.weight(1f),
+                        onClick = { onOpenMetric(Metrics.HRV) },
+                    )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     MetricTile(
@@ -268,6 +285,7 @@ private fun HomeScreen(graph: Graph, onOpenCheck: () -> Unit) {
                         graph,
                         Modifier.weight(1f),
                         warnBelow = thresholds.spo2Low.toDouble(),
+                        onClick = { onOpenMetric(Metrics.SPO2) },
                     )
                     val last = sleep.firstOrNull()
                     Tile(
@@ -431,6 +449,7 @@ private fun MetricTile(
     modifier: Modifier,
     warnAbove: Double? = null,
     warnBelow: Double? = null,
+    onClick: () -> Unit = {},
 ) {
     val now = remember { Instant.now().epochSecond }
     val samples by remember(type) { graph.dao.observe(type, now - 86_400, now + 3600) }.collectAsStateWithLifecycle(emptyList())
@@ -443,12 +462,22 @@ private fun MetricTile(
         last?.let { "${clock(it.ts)} · ${ago(it.ts)}" } ?: stringResource(R.string.no_data),
         modifier,
         alert,
+        onClick,
     ) { if (samples.size >= 2) Sparkline(samples.map { TimedValue(it.ts, it.value) }, if (alert) Term.warn else color, from = now - 86_400L, to = now) }
 }
 
 @Composable
-private fun Tile(title: String, value: String, unit: String, sub: String, modifier: Modifier, alert: Boolean = false, spark: @Composable () -> Unit) = Column(
-    modifier.background(
+private fun Tile(
+    title: String,
+    value: String,
+    unit: String,
+    sub: String,
+    modifier: Modifier,
+    alert: Boolean = false,
+    onClick: (() -> Unit)? = null,
+    spark: @Composable () -> Unit,
+) = Column(
+    modifier.then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier).background(
         Term.panel,
     ).border(BorderStroke(1.dp, if (alert) Term.warn.copy(alpha = 0.6f) else Term.line)).padding(horizontal = 10.dp, vertical = 8.dp),
     verticalArrangement = Arrangement.spacedBy(2.dp),
@@ -510,57 +539,15 @@ private fun HistoryScreen(graph: Graph) {
                 }
             }
         }
-        item { HistoryPanel(graph, stringResource(R.string.chart_hr), SampleType.HR, " bpm", from, to, Term.accent, 20.0, 0, thresholds.hrHigh.toDouble()) }
-        item {
-            HistoryPanel(
-                graph,
-                stringResource(R.string.chart_temp),
-                SampleType.TEMP,
-                " °C",
-                from,
-                to,
-                Color(0xFFFF9D3B),
-                1.0,
-                1,
-                thresholds.tempHigh,
-                R.string.info_temp,
-            )
-        }
-        item {
-            HistoryPanel(
-                graph,
-                stringResource(R.string.chart_stress),
-                SampleType.STRESS,
-                "",
-                from,
-                to,
-                Term.rem,
-                20.0,
-                0,
-                thresholds.stressHigh.toDouble(),
-                R.string.info_stress,
-            )
-        }
+        item { HistoryPanel(graph, Metrics.HEART, from, to, thresholds) }
+        item { HistoryPanel(graph, Metrics.TEMPERATURE, from, to, thresholds) }
+        item { HistoryPanel(graph, Metrics.STRESS, from, to, thresholds) }
         item { T(stringResource(R.string.chart_gap_hint), size = 10.sp, color = Term.faint) }
         item { HabitsCard(graph) }
-        item { HistoryPanel(graph, stringResource(R.string.chart_hrv_ring), SampleType.HRV, " ms", from, to, Term.info, 20.0, 0, null, R.string.info_hrv) }
-        item { HistoryPanel(graph, stringResource(R.string.chart_hrv_live), SampleType.HRV_LIVE, " ms", from, to, Term.rem, 20.0, 0, null, R.string.info_hrv) }
-        item { HistoryPanel(graph, stringResource(R.string.chart_resp), SampleType.RESP, " /min", from, to, Term.info, 4.0, 0, null, R.string.info_resp) }
-        item {
-            HistoryPanel(
-                graph,
-                stringResource(R.string.chart_spo2),
-                SampleType.SPO2,
-                " %",
-                from,
-                to,
-                Term.accent,
-                4.0,
-                0,
-                thresholds.spo2Low.toDouble(),
-                R.string.info_spo2,
-            )
-        }
+        item { HistoryPanel(graph, Metrics.HRV, from, to, thresholds) }
+        item { HistoryPanel(graph, Metrics.HRV_LIVE, from, to, thresholds) }
+        item { HistoryPanel(graph, Metrics.BREATHING, from, to, thresholds) }
+        item { HistoryPanel(graph, Metrics.SPO2, from, to, thresholds) }
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Label(stringResource(R.string.incidents_title))
@@ -577,22 +564,36 @@ private fun HistoryScreen(graph: Graph) {
     }
 }
 
+/** Full chart of one metric, opened from a Home tile: pick a period and touch the chart for exact values. */
 @Composable
-private fun HistoryPanel(
-    graph: Graph,
-    title: String,
-    type: String,
-    unit: String,
-    from: Long,
-    to: Long,
-    color: Color,
-    minSpan: Double,
-    decimals: Int,
-    threshold: Double?,
-    @StringRes info: Int? = null,
-) {
-    val samples by remember(type, from) { graph.dao.observe(type, from, to) }.collectAsStateWithLifecycle(emptyList())
-    val fmt = { v: Double -> "%.${decimals}f".format(v) }
+private fun MetricDetailScreen(graph: Graph, spec: MetricSpec, onBack: () -> Unit) {
+    BackHandler(onBack = onBack)
+    var period by remember { mutableIntStateOf(0) }
+    val thresholds by graph.settings.thresholds.collectAsStateWithLifecycle()
+    val to = remember(period) { Instant.now().epochSecond }
+    val from = to - PERIODS[period].second
+    Column(Modifier.fillMaxSize().padding(PAD), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            T("← " + stringResource(spec.title), Modifier.clickable(onClick = onBack).padding(vertical = 6.dp), size = 15.sp, weight = FontWeight.Bold)
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                PERIODS.forEachIndexed { i, (label, _) -> TChip(stringResource(label), period == i) { period = i } }
+            }
+        }
+        HistoryPanel(graph, spec, from, to, thresholds, chartHeight = DETAIL_CHART_HEIGHT)
+        T(stringResource(R.string.chart_touch_hint), size = 10.sp, color = Term.faint)
+        T(stringResource(R.string.chart_gap_hint), size = 10.sp, color = Term.faint)
+    }
+}
+
+private val DETAIL_CHART_HEIGHT = 260.dp
+
+@Composable
+private fun HistoryPanel(graph: Graph, spec: MetricSpec, from: Long, to: Long, thresholds: Thresholds, chartHeight: Dp = 120.dp) {
+    val title = stringResource(spec.title)
+    val unit = spec.unit
+    val info = spec.info
+    val samples by remember(spec.type, from) { graph.dao.observe(spec.type, from, to) }.collectAsStateWithLifecycle(emptyList())
+    val fmt = { v: Double -> "%.${spec.decimals}f".format(v) }
     TCard {
         if (info != null) LabelWithInfo(title, info) else Label(title)
         if (samples.isNotEmpty()) {
@@ -610,7 +611,17 @@ private fun HistoryPanel(
                 color = Term.dim,
             )
         }
-        TermChart(samples, from, to, color, minSpan = minSpan, threshold = threshold, unit = unit, format = fmt)
+        TermChart(
+            samples,
+            from,
+            to,
+            spec.color,
+            height = chartHeight,
+            minSpan = spec.minSpan,
+            threshold = spec.threshold(thresholds),
+            unit = unit,
+            format = fmt,
+        )
     }
 }
 
