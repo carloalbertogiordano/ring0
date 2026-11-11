@@ -44,9 +44,15 @@ object Trimp {
         return minutes * ratio * factor * exp(exponent * ratio)
     }
 
-    /** Load of a stretch of evenly spaced samples (zero readings skipped). */
+    /**
+     * Load of a stretch of evenly spaced samples. Only effort counts (from 50% of the maximum heart rate, the first zone): the formula
+     * was made for training sessions, and summed over a sedentary day the minutes just above the resting rate would add up to a
+     * large load. Zero readings (no signal) are skipped.
+     */
     fun fromSamples(samples: List<TimedValue>, sampleMinutes: Int, hrRest: Int, hrMax: Int, sex: Sex): Double =
-        samples.filter { it.value > 0 }.sumOf { session(it.value, sampleMinutes.toDouble(), hrRest, hrMax, sex) }
+        samples
+            .filter { HeartRateModel.zone(it.value, hrMax) != HrZone.REST && it.value > 0 }
+            .sumOf { session(it.value, sampleMinutes.toDouble(), hrRest, hrMax, sex) }
 }
 
 enum class LoadLevel { LOW, USUAL, HIGH }

@@ -49,7 +49,7 @@ class SummaryNotifier(private val context: Context, private val settings: Settin
 
     private fun eveningParts(s: InsightsSnapshot): List<String> = listOfNotNull(
         s.training?.let { context.getString(R.string.summary_load, it.today.trimp.roundToInt()) },
-        s.training?.let { context.getString(R.string.summary_kcal, (it.basalSoFarKcal + it.today.activeKcal).roundToInt()) },
+        s.training?.let { context.getString(R.string.summary_kcal, it.today.activeKcal.roundToInt(), (it.basalSoFarKcal + it.today.activeKcal).roundToInt()) },
         s.bodyBattery?.takeIf { it.anchored }?.let { context.getString(R.string.summary_energy, it.current.roundToInt()) },
         s.sleep?.bedtimeMinute?.let { context.getString(R.string.summary_bedtime, "%02d:%02d".format(it / MINUTES_PER_HOUR, it % MINUTES_PER_HOUR)) },
     )

@@ -67,11 +67,13 @@ private fun TrainingBody(report: TrainingReport, recovery: RecoveryEvent?, fitne
     T(zoneLegend.joinToString("  ·  "), size = 10.sp, color = Term.dim)
     val kcalActive = today.activeKcal.roundToInt()
     KeyValue(stringResource(R.string.training_worn), "${durationText(report.wornSeconds)} / ${durationText(report.elapsedSeconds)}")
+    KeyValue(stringResource(R.string.training_kcal_active), stringResource(R.string.training_kcal_value, kcalActive))
+    KeyValue(stringResource(R.string.training_kcal_basal), stringResource(R.string.training_kcal_value, report.basalSoFarKcal.roundToInt()))
     KeyValue(
         stringResource(R.string.training_kcal_total),
         stringResource(R.string.training_kcal_value, (report.basalSoFarKcal + today.activeKcal).roundToInt()),
     )
-    KeyValue(stringResource(R.string.training_kcal_active), stringResource(R.string.training_kcal_value, kcalActive))
+    T(stringResource(R.string.training_kcal_hint), size = 10.sp, color = Term.faint)
     recovery?.let {
         KeyValue(stringResource(R.string.training_recovery), stringResource(R.string.training_recovery_value, it.drop5min.roundToInt()))
     }

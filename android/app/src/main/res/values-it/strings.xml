@@ -129,6 +129,13 @@ Controlla che l\'anello sia carico, fuori dalla custodia e non collegato ad altr
     <string name="stage_rem">REM</string>
     <string name="stage_light">Leggero</string>
     <string name="stage_deep">Profondo</string>
+    <string name="sleep_enough_title">Basta?</string>
+    <string name="sleep_enough_row">%1$d min · %2$d%% (tipico %3$d-%4$d%%)</string>
+    <string name="sleep_enough_short">Sonno troppo breve per giudicare le fasi.</string>
+    <string name="sleep_enough_hint">Quote del tempo addormentato, rispetto agli intervalli tipici di adulti sani della tua età. L\'anello stima le fasi soltanto e le persone differiscono molto: una guida approssimativa, non un esito.</string>
+    <string name="sleep_verdict_low">poco</string>
+    <string name="sleep_verdict_ok">ok</string>
+    <string name="sleep_verdict_high">troppo</string>
     <string name="sleep_label">Sonno</string>
     <string name="sleep_stages">profondo %1$dm · leggero %2$dm · REM %3$dm · sveglio %4$dm</string>
     <string name="stats_line">ultimo %1$s%2$s (%3$s) · min %4$s · media %5$s · max %6$s</string>
@@ -274,8 +281,10 @@ Controlla che l\'anello sia carico, fuori dalla custodia e non collegato ad altr
     <string name="training_trimp_unit">TRIMP</string>
     <string name="zone_rest_min">riposo %1$d min</string>
     <string name="zone_min">Z%1$d %2$d min</string>
-    <string name="training_kcal_total">Calorie finora</string>
-    <string name="training_kcal_active">di cui attive</string>
+    <string name="training_kcal_total">Totale finora</string>
+    <string name="training_kcal_active">Calorie attive</string>
+    <string name="training_kcal_basal">Basale finora</string>
+    <string name="training_kcal_hint">Il basale è ciò che il corpo brucia anche da fermo, quindi cresce nel corso della giornata. Le attive contano solo lo sforzo registrato con l\'anello: un allenamento senza anello non viene contato.</string>
     <string name="training_kcal_value">%1$d kcal</string>
     <string name="training_trend">Ultimi 7 giorni rispetto al tuo solito</string>
     <string name="training_trend_value">%1$s (x%2$.2f)</string>
@@ -327,7 +336,7 @@ Controlla che l\'anello sia carico, fuori dalla custodia e non collegato ad altr
     <string name="summary_sleep">Sonno %1$s (punteggio %2$d)</string>
     <string name="summary_energy">Batteria corporea %1$d</string>
     <string name="summary_load">Carico %1$d TRIMP</string>
-    <string name="summary_kcal">%1$d kcal</string>
+    <string name="summary_kcal">Attive %1$d kcal (totale %2$d)</string>
     <string name="summary_bedtime">Punta a dormire entro le %1$s</string>
     <string name="rhythm_title">Controllo del ritmo (sperimentale)</string>
     <string name="rhythm_intro">Stai fermo tre minuti, mano appoggiata, senza parlare. L\'anello registra il segnale grezzo del polso e l\'app guarda se il tempo tra i battiti è regolare.</string>

@@ -129,6 +129,13 @@ Check that the ring is charged, out of its case and not connected to anything el
     <string name="stage_rem">REM</string>
     <string name="stage_light">Light</string>
     <string name="stage_deep">Deep</string>
+    <string name="sleep_enough_title">Is it enough?</string>
+    <string name="sleep_enough_row">%1$d min · %2$d%% (typical %3$d-%4$d%%)</string>
+    <string name="sleep_enough_short">Too short a sleep to judge the stages.</string>
+    <string name="sleep_enough_hint">Shares of the time asleep, against ranges typical of healthy adults of your age. The ring only estimates its stages and people differ a lot: a rough guide, not a finding.</string>
+    <string name="sleep_verdict_low">low</string>
+    <string name="sleep_verdict_ok">ok</string>
+    <string name="sleep_verdict_high">high</string>
     <string name="sleep_label">Sleep</string>
     <string name="sleep_stages">deep %1$dm · light %2$dm · REM %3$dm · awake %4$dm</string>
     <string name="stats_line">last %1$s%2$s (%3$s) · min %4$s · avg %5$s · max %6$s</string>
@@ -274,8 +281,10 @@ Check that the ring is charged, out of its case and not connected to anything el
     <string name="training_trimp_unit">TRIMP</string>
     <string name="zone_rest_min">rest %1$d min</string>
     <string name="zone_min">Z%1$d %2$d min</string>
-    <string name="training_kcal_total">Calories so far</string>
-    <string name="training_kcal_active">of which active</string>
+    <string name="training_kcal_total">Total so far</string>
+    <string name="training_kcal_active">Active calories</string>
+    <string name="training_kcal_basal">Basal so far</string>
+    <string name="training_kcal_hint">Basal is what your body burns even sitting still, so it grows through the day. Active counts only effort recorded with the ring on: a workout without the ring is not counted.</string>
     <string name="training_kcal_value">%1$d kcal</string>
     <string name="training_trend">Last 7 days vs your usual</string>
     <string name="training_trend_value">%1$s (x%2$.2f)</string>
@@ -327,7 +336,7 @@ Check that the ring is charged, out of its case and not connected to anything el
     <string name="summary_sleep">Sleep %1$s (score %2$d)</string>
     <string name="summary_energy">Body battery %1$d</string>
     <string name="summary_load">Load %1$d TRIMP</string>
-    <string name="summary_kcal">%1$d kcal</string>
+    <string name="summary_kcal">Active %1$d kcal (total %2$d)</string>
     <string name="summary_bedtime">Aim to be asleep by %1$s</string>
     <string name="rhythm_title">Rhythm check (experimental)</string>
     <string name="rhythm_intro">Sit still for three minutes, hand resting, no talking. The ring records the raw pulse signal and the app looks at whether the timing between heartbeats is regular.</string>

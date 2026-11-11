@@ -150,3 +150,11 @@ PPG senza calibrazione non e' affidabile: nessun numero.
    pisolini, batteria corporea, autonomia, non indossato, inattivita', apnea (indicatore), ciclo, correlazioni.
 3. Scaricare MIT-BIH AF DB (PhysioNet) per calibrare/verificare il controllo del ritmo prima di esporlo.
 4. UI: schede nelle schermate esistenti, con etichette "stima"/"indicativo" e spiegazione breve di ogni numero.
+
+## Calorie e carico (correzione 2026-11-11)
+- "Calorie finora" mostrava il **metabolismo basale** (Mifflin-St Jeor, ~1965 kcal/giorno per il profilo di prova, ~1280 alle 15:30) piu' le attive: da seduti
+  sembrava un valore gonfiato. Ora la card separa **attive** (Keytel, solo dal 60% della FC max, solo con l'anello al dito), **basale finora** e **totale**,
+  con una nota: un allenamento senza anello non e' contato.
+- Il TRIMP (Banister) sommava ogni campione sopra la FC a riposo: da seduti 845 min "a riposo" davano ~100 punti. Ora conta solo lo sforzo (dal 50% della FC max).
+  Cambia anche il consumo della batteria corporea, che usa il TRIMP.
+- Fasi del sonno: quote del tempo addormentato contro intervalli tipici (Ohayon 2004): profondo 13-23% (8-18% dai 40 anni, 5-15% dai 60), REM 18-28%, leggero 45-60%.

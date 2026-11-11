@@ -34,13 +34,17 @@ import ring.app.Graph
 import ring.app.R
 import ring.app.data.SleepEntity
 import ring.domain.Hypnogram
+import ring.domain.SleepStageCheck
 import ring.protocol.commands.SleepStageType
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import kotlin.math.roundToInt
 
 private const val NIGHTS_BACK_DAYS = 14L
 private const val SECONDS_PER_DAY = 86_400L
+private const val DEFAULT_AGE = 30
+private const val PERCENT = 100
 private val NIGHT_LABEL = DateTimeFormatter.ofPattern("d MMM").withZone(ZoneId.systemDefault())
 
 /** Stage rows from top to bottom, as on a clinical hypnogram: awake on top, deep sleep at the bottom. */
@@ -68,13 +72,14 @@ fun SleepDetailScreen(graph: Graph, onBack: () -> Unit) {
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 nights.forEachIndexed { i, n -> TChip(NIGHT_LABEL.format(Instant.ofEpochSecond(n.end)), selected == i) { selected = i } }
             }
-            NightCard(nights[selected.coerceIn(0, nights.lastIndex)])
+            val profile by graph.settings.profile.collectAsStateWithLifecycle()
+            NightCard(nights[selected.coerceIn(0, nights.lastIndex)], profile?.ageYears ?: DEFAULT_AGE)
         }
     }
 }
 
 @Composable
-private fun NightCard(night: SleepEntity) = TCard(hot = true) {
+private fun NightCard(night: SleepEntity, ageYears: Int) = TCard(hot = true) {
     val total = ((night.end - night.start) / 60).toInt()
     T("${dayTime(night.start)} → ${dayTime(night.end)}  (${total / 60}h ${total % 60}m)", size = 12.sp)
     val stages = Hypnogram.decode(night.stages)
@@ -84,6 +89,46 @@ private fun NightCard(night: SleepEntity) = TCard(hot = true) {
         HypnogramChart(night.start, Hypnogram.timeline(night.start, stages))
     }
     T(stringResource(R.string.sleep_stages, night.deepMin, night.lightMin, night.remMin, night.awakeMin), size = 10.sp, color = Term.dim)
+    StageAdequacy(SleepStageCheck.assess(night.lightMin, night.deepMin, night.remMin, ageYears))
+}
+
+/** Is each stage in the typical range? Under the hypnogram, so the chart and the verdict are read together. */
+@Composable
+private fun StageAdequacy(assessments: List<SleepStageCheck.Assessment>?) {
+    Label(stringResource(R.string.sleep_enough_title))
+    if (assessments == null) {
+        T(stringResource(R.string.sleep_enough_short), size = 11.sp, color = Term.dim)
+        return
+    }
+    for (a in assessments) {
+        val (word, color) = when (a.verdict) {
+            SleepStageCheck.Verdict.LOW -> R.string.sleep_verdict_low to Term.warn
+            SleepStageCheck.Verdict.OK -> R.string.sleep_verdict_ok to Term.accent
+            SleepStageCheck.Verdict.HIGH -> R.string.sleep_verdict_high to Term.warn
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            T(stringResource(stageName(a.stage)), size = 12.sp)
+            T(
+                stringResource(
+                    R.string.sleep_enough_row,
+                    a.minutes,
+                    (a.share * PERCENT).roundToInt(),
+                    a.typicalPercent.start.roundToInt(),
+                    a.typicalPercent.endInclusive.roundToInt(),
+                ),
+                size = 11.sp,
+                color = Term.dim,
+            )
+            T(stringResource(word), size = 12.sp, color = color, weight = FontWeight.Bold)
+        }
+    }
+    T(stringResource(R.string.sleep_enough_hint), size = 10.sp, color = Term.faint)
+}
+
+private fun stageName(stage: SleepStageCheck.Stage) = when (stage) {
+    SleepStageCheck.Stage.LIGHT -> R.string.stage_light
+    SleepStageCheck.Stage.DEEP -> R.string.stage_deep
+    SleepStageCheck.Stage.REM -> R.string.stage_rem
 }
 
 @Composable

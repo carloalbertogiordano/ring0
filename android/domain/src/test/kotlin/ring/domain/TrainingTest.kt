@@ -69,6 +69,21 @@ class TrimpTest {
         val expected = 2 * Trimp.session(150.0, 5.0, 60, 190, Sex.MALE)
         assertEquals(expected, Trimp.fromSamples(samples, sampleMinutes = 5, hrRest = 60, hrMax = 190, sex = Sex.MALE), 1e-9)
     }
+
+    @Test fun `a day spent sitting is not training load`() {
+        // 14 hours at 70-90 bpm with a resting rate of 55: every sample is above rest, none is effort (below 50% of the maximum)
+        val sitting = hr(*DoubleArray(168) { 70.0 + it % 21 })
+        assertEquals(0.0, Trimp.fromSamples(sitting, sampleMinutes = 5, hrRest = 55, hrMax = 195, sex = Sex.MALE))
+    }
+
+    @Test fun `light effort from half of the maximum heart rate counts`() {
+        val walking = hr(100.0, 100.0)
+        assertEquals(
+            2 * Trimp.session(100.0, 5.0, 55, 195, Sex.MALE),
+            Trimp.fromSamples(walking, sampleMinutes = 5, hrRest = 55, hrMax = 195, sex = Sex.MALE),
+            1e-9,
+        )
+    }
 }
 
 class LoadTrendTest {
