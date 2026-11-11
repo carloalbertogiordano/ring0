@@ -30,7 +30,7 @@ jobs:
       - name: Style and static analysis (ktlint, detekt)
         run: ./gradlew qualityGate
       - name: Unit tests
-        run: ./gradlew :protocol:runTests :domain:runTests
+        run: ./gradlew :protocol:runTests :domain:runTests :migrations:runTests
       - name: Debug APK
         run: ./gradlew :app:assembleDebug
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
