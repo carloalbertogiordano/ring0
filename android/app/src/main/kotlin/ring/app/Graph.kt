@@ -8,6 +8,7 @@ import androidx.core.content.ContextCompat
 import androidx.room.Room
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -142,8 +143,9 @@ class Graph(private val context: Context) {
     init {
         scope.launch { refreshInsights() }
         if (debuggable) {
-            val lab = LabReceiver(scope) { start, max, silence, onPacket -> probeRealTime(start, max, silence, onPacket) }
-            ContextCompat.registerReceiver(context, lab, IntentFilter(LabReceiver.ACTION), ContextCompat.RECEIVER_EXPORTED)
+            val lab = LabReceiver(scope, ::probeRealTime, ::labCommand)
+            val filter = IntentFilter(LabReceiver.ACTION_PROBE).apply { addAction(LabReceiver.ACTION_DO) }
+            ContextCompat.registerReceiver(context, lab, filter, ContextCompat.RECEIVER_EXPORTED)
         }
     }
 
@@ -151,6 +153,23 @@ class Graph(private val context: Context) {
     private suspend fun probeRealTime(start: ByteArray, max: Int, silenceMs: Long, onPacket: (Packet) -> Unit) {
         ensureConnected()
         RealTimeCommand.stream(session.v1, start, max, silenceMs, onPacket)
+    }
+
+    /** Debug builds: runs an app function by name (`adb shell am broadcast -a ring.app.LAB_DO --es cmd quick`) and returns the outcome. */
+    private suspend fun labCommand(cmd: String): String {
+        when (cmd) {
+            "quick" -> measureLive(false).join()
+            "full" -> measureLive(true).join()
+            "spo2" -> measureSpo2().join()
+            "stress" -> measureStress().join()
+            "rhythm" -> rhythmCheck().join()
+            "sync" -> syncNow()
+            "status" -> Unit
+            else -> return "unknown command: quick full spo2 stress rhythm sync status"
+        }
+        val s = status.value
+        return "connected=${s.connected} battery=${s.battery} live=${s.live} spo2=${s.liveSpo2} stress=${s.liveStress} " +
+            "rhythm=${s.rhythm?.result} advice=${s.rhythm?.advice} error=${s.lastError}"
     }
 
     private suspend fun ensureConnected() {
@@ -217,7 +236,7 @@ class Graph(private val context: Context) {
     }
 
     /** Rhythm check: about two minutes of RR intervals at rest, screened for pulse irregularity (not a diagnosis). */
-    fun rhythmCheck() {
+    fun rhythmCheck(): Job =
         scope.launch {
             _status.update { it.copy(rhythmMeasuring = true, rhythmSeconds = 0, rhythm = null, lastError = null) }
             try {
@@ -231,7 +250,6 @@ class Graph(private val context: Context) {
                 _status.update { it.copy(rhythmMeasuring = false) }
             }
         }
-    }
 
     /** Recomputes every derived number (recovery, training, energy, sleep, fitness, ...) from the stored data. */
     suspend fun refreshInsights() {
@@ -326,20 +344,14 @@ class Graph(private val context: Context) {
         }
     }
 
-    fun measureLive(withRespiration: Boolean = false) {
-        scope.launch {
-            // the full measure also takes SpO2 afterwards (same sensor, so one after the other)
-            if (heartMeasure(withRespiration) != null && withRespiration) spo2Measure()
-        }
+    fun measureLive(withRespiration: Boolean = false): Job = scope.launch {
+        // the full measure also takes SpO2 afterwards (same sensor, so one after the other)
+        if (heartMeasure(withRespiration) != null && withRespiration) spo2Measure()
     }
 
-    fun measureSpo2() {
-        scope.launch { spo2Measure() }
-    }
+    fun measureSpo2(): Job = scope.launch { spo2Measure() }
 
-    fun measureStress() {
-        scope.launch { stressMeasure() }
-    }
+    fun measureStress(): Job = scope.launch { stressMeasure() }
 
     /** Asks the UI to open the check screen (from a notification). */
     fun requestCheck() {
