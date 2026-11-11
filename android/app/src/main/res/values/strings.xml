@@ -89,7 +89,7 @@ Check that the ring is charged, out of its case and not connected to anything el
     <string name="live_phase2">2/2 · Recording your pulse: %1$d/%2$d s. Breathe normally.</string>
     <string name="btn_quick">Quick measure · 45 s</string>
     <string name="btn_measuring">Measuring…</string>
-    <string name="btn_full">Full measure · 90 s</string>
+    <string name="btn_full">Full measure · 105 s</string>
     <string name="full_hint">The full measure collects more beats and also estimates breaths per minute. Sit down, keep your finger still, breathe normally.</string>
     <string name="breathing_line">Breathing: %1$.0f/min (confidence %2$d%%)</string>
     <string name="measure_failed">Live measurement failed: is the ring snug on your finger? Try again</string>
@@ -124,6 +124,11 @@ Check that the ring is charged, out of its case and not connected to anything el
     <string name="chart_hrv_live">HRV live (RMSSD)</string>
     <string name="chart_resp">Breathing</string>
     <string name="chart_spo2">SpO2</string>
+    <string name="sleep_no_stages">No stage detail for this night: it was stored before the ring\'s stages were kept.</string>
+    <string name="stage_awake">Awake</string>
+    <string name="stage_rem">REM</string>
+    <string name="stage_light">Light</string>
+    <string name="stage_deep">Deep</string>
     <string name="sleep_label">Sleep</string>
     <string name="sleep_stages">deep %1$dm · light %2$dm · REM %3$dm · awake %4$dm</string>
     <string name="stats_line">last %1$s%2$s (%3$s) · min %4$s · avg %5$s · max %6$s</string>

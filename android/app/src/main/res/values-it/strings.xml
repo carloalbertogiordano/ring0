@@ -89,7 +89,7 @@ Controlla che l\'anello sia carico, fuori dalla custodia e non collegato ad altr
     <string name="live_phase2">2/2 · Registro il polso: %1$d/%2$d s. Respira normalmente.</string>
     <string name="btn_quick">Misura rapida · 45 s</string>
     <string name="btn_measuring">Misuro…</string>
-    <string name="btn_full">Misura completa · 90 s</string>
+    <string name="btn_full">Misura completa · 105 s</string>
     <string name="full_hint">La completa raccoglie più battiti e stima anche i respiri al minuto. Siediti, dito fermo, respira normalmente.</string>
     <string name="breathing_line">Respiro: %1$.0f/min (affidabilità %2$d%%)</string>
     <string name="measure_failed">Misura live non riuscita: dito ben aderente? Riprova</string>
@@ -124,6 +124,11 @@ Controlla che l\'anello sia carico, fuori dalla custodia e non collegato ad altr
     <string name="chart_hrv_live">HRV live (RMSSD)</string>
     <string name="chart_resp">Respirazione</string>
     <string name="chart_spo2">SpO2</string>
+    <string name="sleep_no_stages">Nessun dettaglio delle fasi per questa notte: salvata prima che le fasi venissero conservate.</string>
+    <string name="stage_awake">Sveglio</string>
+    <string name="stage_rem">REM</string>
+    <string name="stage_light">Leggero</string>
+    <string name="stage_deep">Profondo</string>
     <string name="sleep_label">Sonno</string>
     <string name="sleep_stages">profondo %1$dm · leggero %2$dm · REM %3$dm · sveglio %4$dm</string>
     <string name="stats_line">ultimo %1$s%2$s (%3$s) · min %4$s · media %5$s · max %6$s</string>

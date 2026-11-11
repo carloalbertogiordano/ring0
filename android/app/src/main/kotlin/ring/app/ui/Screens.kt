@@ -154,13 +154,15 @@ private fun PermissionDenied() {
 private fun MainScaffold(graph: Graph, onOpenCheck: () -> Unit, onForget: () -> Unit) {
     var tab by remember { mutableIntStateOf(0) }
     var detail by remember { mutableStateOf<MetricSpec?>(null) }
+    var sleepOpen by remember { mutableStateOf(false) }
     val homeList = rememberLazyListState()
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
         Box(Modifier.weight(1f)) {
             val open = detail
             when {
                 open != null -> MetricDetailScreen(graph, open) { detail = null }
-                tab == 0 -> HomeScreen(graph, onOpenCheck, homeList) { detail = it }
+                sleepOpen -> SleepDetailScreen(graph) { sleepOpen = false }
+                tab == 0 -> HomeScreen(graph, onOpenCheck, homeList, { sleepOpen = true }) { detail = it }
                 tab == 1 -> HistoryScreen(graph)
                 else -> SettingsScreen(graph, onForget)
             }
@@ -184,7 +186,13 @@ private fun MainScaffold(graph: Graph, onOpenCheck: () -> Unit, onForget: () -> 
 private val PAD = PaddingValues(horizontal = 14.dp, vertical = 10.dp)
 
 @Composable
-private fun HomeScreen(graph: Graph, onOpenCheck: () -> Unit, listState: LazyListState, onOpenMetric: (MetricSpec) -> Unit) {
+private fun HomeScreen(
+    graph: Graph,
+    onOpenCheck: () -> Unit,
+    listState: LazyListState,
+    onOpenSleep: () -> Unit,
+    onOpenMetric: (MetricSpec) -> Unit,
+) {
     val status by graph.status.collectAsStateWithLifecycle()
     val thresholds by graph.settings.thresholds.collectAsStateWithLifecycle()
     val alerts by graph.dao.observeAlerts().collectAsStateWithLifecycle(emptyList())
@@ -299,6 +307,7 @@ private fun HomeScreen(graph: Graph, onOpenCheck: () -> Unit, listState: LazyLis
                         "",
                         last?.let { "${clock(it.end)} · ${ago(it.end)}" } ?: stringResource(R.string.no_night),
                         Modifier.weight(1f),
+                        onClick = onOpenSleep,
                     ) {}
                 }
             }
