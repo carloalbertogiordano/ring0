@@ -147,7 +147,7 @@ class Graph(private val context: Context) {
     /** Diagnostics for debug builds: streams the raw real-time packets of an arbitrary start payload. */
     private suspend fun probeRealTime(start: ByteArray, max: Int, silenceMs: Long, onPacket: (Packet) -> Unit) {
         ensureConnected()
-        RealTimeCommand.probe(session.v1, start, max, silenceMs, onPacket)
+        RealTimeCommand.stream(session.v1, start, max, silenceMs, onPacket)
     }
 
     private suspend fun ensureConnected() {

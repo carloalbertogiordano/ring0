@@ -15,3 +15,5 @@ captures/*
 !captures/.gitkeep
 .coverage
 local.properties
+tools/ppg/local/
+refs/firmware/

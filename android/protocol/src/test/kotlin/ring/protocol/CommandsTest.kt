@@ -188,11 +188,11 @@ class CommandsTest {
         assertEquals(listOf(800, 810, 790, 805, 795), seen.map { it.rrMs })
     }
 
-    @Test fun `probe sends the raw start payload, reports packets and stops`() = runTest {
+    @Test fun `stream sends the raw start payload, reports packets and stops`() = runTest {
         fun pkt(bpm: Int) = Packet.build(0x69, byteArrayOf(13, 0, bpm.toByte(), 0, 0, 0, 0))
         val tr = FakeTransport().apply { responses[0x69] = listOf(70, 71, 72, 73).map(::pkt) }
         val seen = mutableListOf<Packet>()
-        val packets = RealTimeCommand.probe(RingClient(tr), byteArrayOf(13, 120, 0), maxPackets = 3) { seen += it }
+        val packets = RealTimeCommand.stream(RingClient(tr), byteArrayOf(13, 120, 0), maxPackets = 3) { seen += it }
         assertEquals(listOf(70, 71, 72), packets.map { RealTimeCommand.decode(it).value })
         assertEquals(packets, seen)
         assertEquals(0x69, tr.sent.first()[0].toInt())
@@ -203,9 +203,9 @@ class CommandsTest {
         assertContentEquals(byteArrayOf(0x69, 6, 4), tr.sent.last().copyOfRange(0, 3))
     }
 
-    @Test fun `probe of the second raw type also switches off the spo2 sensor`() = runTest {
+    @Test fun `stream of the second raw type also switches off the spo2 sensor`() = runTest {
         val tr = FakeTransport().apply { responses[0x69] = listOf(Packet.build(0x69, byteArrayOf(14, 0, 1, 0, 0, 0, 0))) }
-        RealTimeCommand.probe(RingClient(tr), byteArrayOf(14, 10, 0), maxPackets = 1)
+        RealTimeCommand.stream(RingClient(tr), byteArrayOf(14, 10, 0), maxPackets = 1)
         // type 14 turns the red (spo2) sensor on, but the generic stop only switches off the other one: an spo2 session closes it
         val tail = tr.sent.takeLast(2)
         assertContentEquals(byteArrayOf(0x69, 3, 1), tail[0].copyOfRange(0, 3))

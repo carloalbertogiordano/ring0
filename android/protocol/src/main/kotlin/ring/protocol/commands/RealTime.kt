@@ -92,10 +92,10 @@ object RealTimeCommand {
     }
 
     /**
-     * Diagnostics: sends `start` as the raw payload of CMD 0x69 (for example `[13, durationLo, durationHi]` for a kind with a
+     * Streams a real-time type: sends `start` as the raw payload of CMD 0x69 (for example `[13, durationLo, durationHi]` for a kind with a
      * custom duration), collects up to `maxPackets` packets or until the ring stops or goes silent, then sends the stop.
      */
-    suspend fun probe(
+    suspend fun stream(
         client: RingClient,
         start: ByteArray,
         maxPackets: Int,
