@@ -197,8 +197,19 @@ class CommandsTest {
         assertEquals(packets, seen)
         assertEquals(0x69, tr.sent.first()[0].toInt())
         assertContentEquals(byteArrayOf(13, 120, 0), tr.sent.first().copyOfRange(1, 4))
-        assertEquals(0x6A, tr.sent.last()[0].toInt())
-        assertEquals(13, tr.sent.last()[1].toInt())
+        // the stop of the type is not enough for the raw types: a new start (type 6, action 4) is what ends the old session
+        assertEquals(0x6A, tr.sent[tr.sent.size - 2][0].toInt())
+        assertEquals(13, tr.sent[tr.sent.size - 2][1].toInt())
+        assertContentEquals(byteArrayOf(0x69, 6, 4), tr.sent.last().copyOfRange(0, 3))
+    }
+
+    @Test fun `probe of the second raw type also switches off the spo2 sensor`() = runTest {
+        val tr = FakeTransport().apply { responses[0x69] = listOf(Packet.build(0x69, byteArrayOf(14, 0, 1, 0, 0, 0, 0))) }
+        RealTimeCommand.probe(RingClient(tr), byteArrayOf(14, 10, 0), maxPackets = 1)
+        // type 14 turns the red (spo2) sensor on, but the generic stop only switches off the other one: an spo2 session closes it
+        val tail = tr.sent.takeLast(2)
+        assertContentEquals(byteArrayOf(0x69, 3, 1), tail[0].copyOfRange(0, 3))
+        assertContentEquals(byteArrayOf(0x6A, 3, 0, 0), tail[1].copyOfRange(0, 4))
     }
 
     @Test fun `real time with too few beats and silence gives null`() = runTest {

@@ -172,6 +172,13 @@ ends right at 120 s. Packet payload (14 bytes after the command byte):
 `[0]=type [1]=error [2]=sequence (wraps at 256) [3]=status/gain byte (0x60-0x63, changes every ~10-50 packets) [4..5]=u16 LE optical value A
 [6..7]=u16 LE optical value B [8..9],[10..11],[12..13]=s16 LE, small values near zero: probably the accelerometer (g-sensor LIS3DH)`.
 Type 14 streams the same way (values like 65535 suggest saturation of an optical channel; probably the SpO2 pair).
-Not yet verified: that A/B are PPG with a clean pulse. The first recording was taken while the arm was moving (accelerometer SD 20-76) and the
-spectral peak was weak and unstable (10 s windows: 0.12-0.29 of the 0.7-3 Hz band power); it needs a recording with the hand at rest.
-If confirmed, this gives continuous raw PPG at about 25 Hz for as long as we want, without modifying the firmware.
+**Verified with the hand at rest (2026-11-11, 120 s, 2998 of 3140 packets received):** a clean pulse is in both optical values: 144 beats in
+120 s (mean RR 834 ms = 72 bpm, same as the ring), the two channels agree on the beat times (median 10 ms), the accelerometer values stay still
+(SD 0), the RR tachogram has a physiological shape (autocorrelation +0.45, respiratory peak at 0.28 Hz). With the arm moving (first recording)
+the pulse is lost, so the accelerometer is the motion-artefact flag. About **4.5% of the notifications are lost**: the time axis must come
+from the sequence number and the lost samples be filled. A naive peak detector on 25 Hz data gave 10% bad RR values (double or missed beats): a
+robust beat detector is needed (tools/ppg/analyze_lab_log.py is the starting point).
+**Stopping:** `6A <type> 00 00` does NOT stop types 13/14. Starting any other type shuts the previous session's sensor and timer, so
+`69 06 04` (type 6, action 4) is the stop. Type 14 turns the red (SpO2) sensor on and that stop does not switch it off (the red LED stayed lit): a
+normal SpO2 session (`69 03 01` then `6A 03 00 00`) switches it off.
+This gives continuous raw PPG at about 25 Hz for as long as we want, without modifying the firmware. Cost to measure: battery (LED always on).

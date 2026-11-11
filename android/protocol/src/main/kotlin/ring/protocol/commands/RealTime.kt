@@ -23,6 +23,9 @@ object RealTimeCommand {
     const val CMD_STOP = 0x6A
     const val KIND_HEART_RATE = 1
     const val KIND_SPO2 = 3
+    private const val KIND_REALTIME_HEART = 6
+    private const val KIND_RAW_SPO2 = 14
+    private const val ACTION_STOP_SESSION = 4
 
     /** "Pressure" in the vendor protocol, i.e. stress. Support on the R09 is not verified. */
     const val KIND_STRESS = 8
@@ -109,7 +112,20 @@ object RealTimeCommand {
         } catch (_: RingTimeoutException) {
             return latest
         } finally {
-            withContext(NonCancellable) { runCatching { client.send(CMD_STOP, byteArrayOf(start[0], 0, 0)) } }
+            withContext(NonCancellable) {
+                runCatching { client.send(CMD_STOP, byteArrayOf(start[0], 0, 0)) }
+                // the raw types ignore the stop: starting type 6 with action 4 shuts the previous session's sensor and timer
+                runCatching { client.send(CMD_START, byteArrayOf(KIND_REALTIME_HEART.toByte(), ACTION_STOP_SESSION.toByte())) }
+                if (start[0].toInt() == KIND_RAW_SPO2) closeSpo2Sensor(client)
+            }
+        }
+    }
+
+    /** A normal spo2 session ends with the stop that switches the red sensor off (the raw spo2 type leaves it on). */
+    private suspend fun closeSpo2Sensor(client: RingClient) {
+        runCatching {
+            client.send(CMD_START, byteArrayOf(KIND_SPO2.toByte(), ACTION_START.toByte()))
+            client.send(CMD_STOP, byteArrayOf(KIND_SPO2.toByte(), 0, 0))
         }
     }
 
