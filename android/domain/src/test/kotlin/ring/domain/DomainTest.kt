@@ -104,14 +104,16 @@ class ReadinessTest {
     }
 
     @Test fun `missing signals renormalize and no data gives null`() {
-        val onlySleep = assertNotNull(ReadinessScore.compute(ReadinessInput(null, emptyList(), null, emptyList(), 480, null)))
-        assertEquals(100, onlySleep.score)
+        // sleep alone says nothing about recovery against your own norm: a personal baseline is required
+        assertNull(ReadinessScore.compute(ReadinessInput(null, emptyList(), null, emptyList(), 480, null)))
         assertNull(ReadinessScore.compute(ReadinessInput(null, emptyList(), null, emptyList(), null, null)))
     }
 
     @Test fun `short baseline excludes hrv and lowers confidence`() {
-        val r = assertNotNull(ReadinessScore.compute(ReadinessInput(55.0, listOf(40.0, 41.0, 39.0), null, emptyList(), 480, 0.9)))
+        assertNull(ReadinessScore.compute(ReadinessInput(55.0, listOf(40.0, 41.0, 39.0), null, emptyList(), 480, 0.9)))
+        val r = assertNotNull(ReadinessScore.compute(ReadinessInput(55.0, listOf(40.0, 41.0, 39.0), 56.0, rhrHistory, 480, 0.9)))
         assertTrue(ReadinessComponent.HRV !in r.components)
+        assertTrue(ReadinessComponent.RESTING_HR in r.components)
     }
 }
 

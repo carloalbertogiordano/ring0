@@ -49,6 +49,13 @@ class BodyBatteryTest {
         assertEquals(0.0, low.last().value)
     }
 
+    @Test fun `slots without data keep the level instead of draining it`() {
+        val unobserved = List(4) { EnergySlot(it * SLOT, 0.0, null, 0.0, observed = false) }
+        assertEquals(listOf(60.0, 60.0, 60.0, 60.0), BodyBattery.simulate(unobserved, start = 60.0).map { it.value })
+        val mixed = unobserved + EnergySlot(4 * SLOT, 0.0, 0.0, 0.0)
+        assertEquals(60.3, BodyBattery.simulate(mixed, start = 60.0).last().value, 1e-9)
+    }
+
     @Test fun `timestamps follow the slots`() {
         val series = BodyBattery.simulate(slots(3), start = 50.0)
         assertEquals(listOf(0L, SLOT, 2 * SLOT), series.map { it.ts })

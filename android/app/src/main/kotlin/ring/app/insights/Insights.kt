@@ -157,12 +157,10 @@ class Insights(private val dao: RingDao, private val zone: ZoneId = ZoneId.syste
             } else {
                 0.0
             }
-            EnergySlot(
-                ts = to,
-                sleepWeight = sleepWeight(sleeps, from, to),
-                stress = stress.lastOrNull { it.ts in (from - HOUR)..to }?.value,
-                trimp = effort,
-            )
+            val slotHr = hr.filter { it.ts in from until to }
+            val weight = sleepWeight(sleeps, from, to)
+            val slotStress = stress.lastOrNull { it.ts in (from - HOUR)..to }?.value
+            EnergySlot(ts = to, sleepWeight = weight, stress = slotStress, trimp = effort, observed = slotHr.any { it.value > 0 } || weight > 0)
         }
         val series = BodyBattery.simulate(slots, ENERGY_START_LEVEL)
         return BodyBatteryReport(series.last().value, series, anchored = slots.any { it.sleepWeight > 0 })

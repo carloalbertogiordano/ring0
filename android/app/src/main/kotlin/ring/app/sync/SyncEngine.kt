@@ -18,6 +18,7 @@ import ring.protocol.commands.SleepStageType
 import ring.protocol.commands.SlotLogCommand
 import ring.protocol.commands.Spo2Command
 import ring.protocol.commands.TemperatureCommand
+import ring.protocol.commands.TemperatureDay
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -74,6 +75,12 @@ class SyncEngine(private val dao: RingDao) {
         step("stress") { SlotLogCommand.readStress(session.v1)?.let { save(SampleType.STRESS, it.readings(today)) } }
         step("temperature") {
             TemperatureCommand.read(session.big, days).forEach { day ->
+                Log.i(
+                    TAG,
+                    "temperature block daysAgo=${day.daysAgo} step=${day.intervalMinutes} nonzero=${day.samples.count {
+                        it > 0
+                    }}/${day.samples.size} last=${day.samples.indexOfLast { it > 0 }}",
+                )
                 save(SampleType.TEMP, day.readings(today.minusSeconds(day.daysAgo * SECONDS_PER_DAY)))
             }
         }
@@ -82,12 +89,31 @@ class SyncEngine(private val dao: RingDao) {
                 save(SampleType.SPO2, day.readings(today.minusSeconds(day.daysAgo * SECONDS_PER_DAY)))
             }
         }
-        step("sleep") {
-            val sessions = SleepCommand.read(session.big).map { toEntity(it, today) }
-            dao.upsertSleep(sessions)
-            inserted += sessions.size
-        }
+        step("sleep") { inserted += syncSleep(session, today) }
         return SyncReport(battery, caps, inserted, errors)
+    }
+
+    /** Downloads the sleep sessions and stores them; returns how many. */
+    private suspend fun syncSleep(session: RingSession, today: Instant): Int {
+        val raw = SleepCommand.read(session.big)
+        raw.forEach(::logSleep)
+        val sessions = raw.map { toEntity(it, today) }
+        dao.upsertSleep(sessions)
+        return sessions.size
+    }
+
+    // diagnostics only: counts and stage lengths, no raw values
+    private fun logTemperature(day: TemperatureDay) {
+        Log.i(TAG, "temperature block daysAgo=${day.daysAgo} step=${day.intervalMinutes} nonzero=${day.samples.count { it > 0 }}/${day.samples.size}")
+    }
+
+    private fun logSleep(s: SleepSession) {
+        Log.i(
+            TAG,
+            "sleep session daysAgo=${s.daysAgo} start=${s.startMinute} end=${s.endMinute} stages=${s.stages.joinToString {
+                "${it.type}:${it.minutes}"
+            }}",
+        )
     }
 
     private fun toEntity(s: SleepSession, today: Instant): SleepEntity {

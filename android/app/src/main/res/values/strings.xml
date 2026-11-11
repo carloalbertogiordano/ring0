@@ -95,7 +95,7 @@ Check that the ring is charged, out of its case and not connected to anything el
     <string name="measure_failed">Live measurement failed: is the ring snug on your finger? Try again</string>
     <string name="recovery_title">Recovery</string>
     <string name="baseline_pct">baseline %1$d%%</string>
-    <string name="recovery_need_data">More data needed: at least 5 days of HRV or one night of sleep to compute the score.</string>
+    <string name="recovery_need_data">Recovery compares you with your own norm, so it needs a baseline first: at least 5 nights of HRV or resting heart rate with the ring worn. Sleep alone is not enough.</string>
     <string name="hrv_days_so_far">Days with HRV so far: %1$d</string>
     <string name="level_high">excellent</string>
     <string name="level_good">good</string>

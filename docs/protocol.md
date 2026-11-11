@@ -146,3 +146,16 @@ the R09 (FW RT09CR2_3.00.03_260929) never answers them, so the app code was remo
 - V1 alarm slots: set = CMD `0x23` `[index 0..4][enable 0..2][hour BCD][minute BCD][7 bytes 0/1 = weekdays]`, read = CMD `0x24` `[index]`.
 - Push message CMD `0x72`: `[type][total chunks][chunk 1..n][up to 11 text bytes]`.
 - On the R09 every one of these gets **no reply at all**, while every other command answers within a second.
+
+## 0x27 Sleep - VERIFIED with a real night (2026-11-11)
+First recorded night on the R09 (FW RT09CR2_3.00.03_260929): the Gadgetbridge layout decodes correctly. Session `daysAgo=0 start=21
+end=472` (minutes after UTC midnight, i.e. 01:21-08:52 local) with stages `LIGHT 22, DEEP 42, LIGHT 14, REM 18, LIGHT 19, DEEP 9, ...`
+that sum exactly to the session length. The structure is textbook sleep architecture (about 90-minute cycles, deep sleep early, REM
+growing towards the morning) and matches the 5-minute heart rate log (49-56 bpm from 02:00 to 08:00, rising again at wake-up).
+Observations: the ring reported **no AWAKE stage** in the whole night (the app therefore scores sleep without efficiency and continuity), and the
+last two stages are LIGHT (49 and 25 min) while the heart rate was already rising.
+
+## 0x25 Temperature: no block for the current UTC day (2026-11-11, to be re-checked)
+At 09:00 local the ring returned a single block (`daysAgo=1`, last non-zero slot 47 = 23:30 UTC) and none for the current UTC day, although
+heart rate, HRV, stress and SpO2 existed for it. Either the ring does not measure temperature while you sleep or the new day's block is
+created late. To be verified with a daytime sync.

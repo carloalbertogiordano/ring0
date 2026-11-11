@@ -95,7 +95,7 @@ Controlla che l\'anello sia carico, fuori dalla custodia e non collegato ad altr
     <string name="measure_failed">Misura live non riuscita: dito ben aderente? Riprova</string>
     <string name="recovery_title">Recupero</string>
     <string name="baseline_pct">baseline %1$d%%</string>
-    <string name="recovery_need_data">Servono ancora dati: almeno 5 giorni di HRV o una notte di sonno per calcolare il punteggio.</string>
+    <string name="recovery_need_data">Il recupero ti confronta con la tua norma, quindi serve prima una base: almeno 5 notti di HRV o battito a riposo con l\'anello indossato. Il solo sonno non basta.</string>
     <string name="hrv_days_so_far">Giorni con HRV finora: %1$d</string>
     <string name="level_high">ottimo</string>
     <string name="level_good">buono</string>

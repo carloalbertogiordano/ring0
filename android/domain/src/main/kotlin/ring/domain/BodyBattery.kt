@@ -9,6 +9,8 @@ data class EnergySlot(
     val stress: Double?,
     /** Training load (TRIMP) accumulated in the slot. */
     val trimp: Double,
+    /** False when nothing was recorded in the slot (ring not worn): the level is held, not drained. */
+    val observed: Boolean = true,
 )
 
 /**
@@ -44,6 +46,7 @@ object BodyBattery {
     }
 
     private fun delta(slot: EnergySlot): Double {
+        if (!slot.observed) return 0.0
         val stress = slot.stress ?: UNKNOWN_STRESS
         val awake = 1 - slot.sleepWeight
         val drain = BASE_DRAIN_PER_HOUR + STRESS_DRAIN_PER_HOUR_AT_100 * stress / STRESS_SCALE

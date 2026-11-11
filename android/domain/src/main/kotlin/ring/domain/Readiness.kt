@@ -27,7 +27,8 @@ data class Readiness(
 
 /**
  * Recovery score: last night's ln(RMSSD) against your moving baseline (z-score), resting heart rate
- * (lower is better) and sleep (duration and efficiency). Missing signals are dropped and the weights renormalized.
+ * (lower is better) and sleep (duration and efficiency). Missing signals are dropped and the weights renormalized; at least
+ * one of HRV and resting heart rate must have a personal baseline.
  */
 object ReadinessScore {
     private const val W_HRV = 0.45
@@ -64,7 +65,8 @@ object ReadinessScore {
             val score = if (efficiency == null) duration else SLEEP_DURATION_WEIGHT * duration + (1 - SLEEP_DURATION_WEIGHT) * efficiency
             parts[ReadinessComponent.SLEEP] = score to W_SLEEP
         }
-        if (parts.isEmpty()) return null
+        // sleep alone says nothing about recovery against your own norm: it needs an HRV or resting heart rate baseline
+        if (ReadinessComponent.HRV !in parts && ReadinessComponent.RESTING_HR !in parts) return null
         val weight = parts.values.sumOf { it.second }
         val score = (parts.values.sumOf { it.first * it.second } / weight).toInt().coerceIn(0, 100)
         val level = when {

@@ -37,7 +37,7 @@ class SleepInsights(private val dao: RingDao, private val zone: ZoneId = ZoneId.
         val lastSummary = last?.summary()
         return SleepReport(
             lastNight = lastSummary,
-            score = lastSummary?.let { SleepScoring.score(it, targetMin) },
+            score = lastSummary?.let { SleepScoring.score(it, targetMin, awakeReported = last.awakeMin > 0) },
             debtMin = SleepMetrics.sleepDebtMin(nights.map { it.lightMin + it.deepMin + it.remMin }, targetMin),
             regularity = SleepRegularity.score(nights.map { minuteOfDay(it.start) }),
             bedtimeMinute = Bedtime.suggest(nights.map { minuteOfDay(it.end) }, targetMin),

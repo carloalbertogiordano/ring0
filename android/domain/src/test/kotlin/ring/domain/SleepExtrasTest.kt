@@ -26,6 +26,12 @@ class SleepScoringTest {
         assertEquals(30, SleepScoring.score(summary(total = 240, inBed = 400, waso = 90, deepPct = 5.0, remPct = 5.0), targetMin = 480))
     }
 
+    @Test fun `without reported awake time only duration and deep plus rem count`() {
+        // 300 of 480 minutes (0.625) and 40% deep + REM: (0.5 x 0.625 + 0.2) / 0.7
+        val s = summary(total = 300, inBed = 301, waso = 0, deepPct = 30.0, remPct = 10.0)
+        assertEquals(73, SleepScoring.score(s, targetMin = 480, awakeReported = false))
+    }
+
     @Test fun `a perfect night is 100 and the score never leaves 0 to 100`() {
         assertEquals(100, SleepScoring.score(summary(total = 540, inBed = 550, waso = 0, deepPct = 25.0, remPct = 25.0), targetMin = 480))
         assertEquals(0, SleepScoring.score(summary(total = 0, inBed = 480, waso = 200, deepPct = 0.0, remPct = 0.0), targetMin = 480))

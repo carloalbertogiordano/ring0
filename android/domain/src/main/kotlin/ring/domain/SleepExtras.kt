@@ -17,10 +17,15 @@ object SleepScoring {
     private const val WASO_ZERO_SCORE_MIN = 60.0
     private const val SCORE_SCALE = 100.0
 
-    fun score(summary: SleepSummary, targetMin: Int): Int {
+    /**
+     * `awakeReported` is false when the ring never reports awake time (the R09 does not): efficiency and continuity are then
+     * meaningless (always perfect), so the score uses only duration and deep + REM, rescaled to 0-100.
+     */
+    fun score(summary: SleepSummary, targetMin: Int, awakeReported: Boolean = true): Int {
         val duration = (summary.totalSleepMin.toDouble() / targetMin).coerceIn(0.0, 1.0)
-        val efficiency = ((summary.efficiency - EFFICIENCY_FLOOR) / EFFICIENCY_SPAN).coerceIn(0.0, 1.0)
         val restorative = ((summary.deepPct + summary.remPct) / RESTORATIVE_TARGET_PCT).coerceIn(0.0, 1.0)
+        if (!awakeReported) return (SCORE_SCALE * (W_DURATION * duration + W_RESTORATIVE * restorative) / (W_DURATION + W_RESTORATIVE)).roundToInt()
+        val efficiency = ((summary.efficiency - EFFICIENCY_FLOOR) / EFFICIENCY_SPAN).coerceIn(0.0, 1.0)
         val continuity = (1 - summary.wasoMin / WASO_ZERO_SCORE_MIN).coerceIn(0.0, 1.0)
         val total = W_DURATION * duration + W_EFFICIENCY * efficiency + W_RESTORATIVE * restorative + W_CONTINUITY * continuity
         return (SCORE_SCALE * total).roundToInt()
