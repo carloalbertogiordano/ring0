@@ -47,3 +47,27 @@ Non previsto: pressione arteriosa (PPG senza calibrazione non e' affidabile).
 ## Fase E - Ricerca sul ring
 13. [IDEA, 2026-11-11] Superare il limite dello stream real-time (l'anello chiude da solo a ~30 s, ~14 s di aggancio, 17-20 battiti utili): capire dal firmware (OTA decompilato, Ghidra) se il limite e' nel firmware o nella configurazione del sensore PPG; solo analisi a freddo, nessun flash senza ok esplicito; un solo anello, rischio di brick. Se riuscisse: RR continui per un controllo del ritmo vero (64+ battiti, specificita' 99%), PPG grezzo.
 13b. PPG grezzo ad alta frequenza (firmware / stream modificato); firmware OTA in Ghidra  [hw]
+
+## Fase F - Archivio, webapp e cifratura (decisioni del 2026-11-11, da progettare)
+Decisioni dell'utente: l'app puo' avere il permesso INTERNET, ma tutto va cifrato "a regola d'arte"; backup e ripristino cifrati; webapp
+self-hosted con lo storico di sempre; sul telefono si tengono 6 mesi; l'app esporta solo i dati che il server non ha (handshake con
+watermark, quindi anche dopo un mese di solo uso locale parte la sincronizzazione completa); export CSV solo dalla webapp; report
+settimanale sia sull'app sia sulla webapp; niente widget.
+- 27. Protocollo di sync incrementale e idempotente (chiavi (tipo, ts), watermark per tipo, ripresa dopo interruzione), potatura sul telefono
+  solo dei dati gia' confermati dal server e piu' vecchi di 6 mesi; riepiloghi giornalieri e per notte tenuti per sempre.
+- 28. Autenticazione dispositivo (coppia di chiavi nel Keystore, associazione con QR) e utente (passkey WebAuthn); TLS con pinning.
+- 29. Cifratura end-to-end dei blocchi verso la webapp e backup/ripristino cifrato con passphrase (formato `age`: destinatario X25519 e scrypt).
+- 30. Webapp self-hosted (grafici interattivi, confronto periodi, esportazione CSV, report settimanale).
+- 31. Report settimanale anche sul telefono.
+- 32. [PREREQUISITO, da fare quando si cambia lo schema per l'archivio] Test delle migrazioni del database (Room: schema esportato e
+  MigrationTestHelper), in particolare 6->7, 7->8 e le nuove (watermark di sync, riepiloghi giornalieri, sequenza ordinata delle fasi del sonno).
+  Oggi i test sulle migrazioni NON esistono.
+- 33. Schermata Sonno (dalla tile): ipnogramma con la sequenza reale delle fasi (serve salvare le fasi in ordine, cambio di schema insieme al punto 32).
+
+## Fase G - Altro deciso il 2026-11-11
+- 34. Respirazione guidata con pacer e misura prima/dopo (lo stream dell'anello dura 30 s, quindi niente biofeedback continuo finche' non cambia).
+- 35. Firmware: analisi a freddo (nessun flash senza ok esplicito) per capire il limite dei 30 s dello stream; vedi docs/research/firmware.md.
+- 36. Release firmate dalla CI con segreti in un Environment GitHub protetto e attestazione di provenienza.
+- 37. Consumo della batteria: scelta degli intervalli di misura (profili) con autonomia stimata.
+- 38. Rhythm check con ritmo irregolare reale e stima del ciclo: chiedere feedback su GitHub (README gia' aggiornato).
+- Non previsti: widget e tile rapida, test di idratazione (per ora), CSV dall'app.
