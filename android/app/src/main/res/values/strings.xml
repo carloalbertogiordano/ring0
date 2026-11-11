@@ -87,7 +87,7 @@ Check that the ring is charged, out of its case and not connected to anything el
     <string name="hrv_rmssd">HRV RMSSD</string>
     <string name="live_phase1">1/2 · Starting the raw pulse recording. Keep your finger still.</string>
     <string name="live_phase2">2/2 · Recording your pulse: %1$d/%2$d s. Breathe normally.</string>
-    <string name="btn_quick">Quick measure · 30 s</string>
+    <string name="btn_quick">Quick measure · 45 s</string>
     <string name="btn_measuring">Measuring…</string>
     <string name="btn_full">Full measure · 90 s</string>
     <string name="full_hint">The full measure collects more beats and also estimates breaths per minute. Sit down, keep your finger still, breathe normally.</string>

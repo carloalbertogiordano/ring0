@@ -83,6 +83,17 @@ class PpgTest {
         assertTrue(beats.quality > 0.8)
     }
 
+    @Test fun `the saturated settling at the start of a recording is ignored`() {
+        val synth = Synth(rsa(60), loss = 0.0)
+        // the sensor starts saturated with status 0 and settles over six seconds
+        val settling = synth.samples().mapIndexed { i, s -> if (i < 150) s.copy(status = 0, a = 65_535 - i * 150, b = 0) else s }
+        val beats = Ppg.analyze(settling)
+        val expected = synth.beatTimes.last() + 1.0 - 6.0
+        assertEquals(expected, beats.durationSec, 0.5, "the six settling seconds are not part of the duration")
+        assertTrue(beats.rrMs.all { Ppg.plausible(it) }, "implausible: ${beats.rrMs.filterNot { Ppg.plausible(it) }}")
+        assertTrue(beats.quality > 0.8, "quality ${beats.quality}")
+    }
+
     @Test fun `a stall of lost packets cuts the interval series instead of making one huge interval`() {
         val all = Synth(rsa(90), loss = 0.0).samples()
         val stalled = all.filterIndexed { i, _ -> i !in 1000..1140 } // 141 packets (5.6 s) never arrive

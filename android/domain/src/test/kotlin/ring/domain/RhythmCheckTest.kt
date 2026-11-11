@@ -74,6 +74,12 @@ class RhythmCheckTest {
         assertEquals(RhythmLevel.INCONCLUSIVE, RhythmCheck.analyze(beats(0.3)).level)
     }
 
+    @Test fun `short fragments between dropouts are not artifacts`() {
+        val result = RhythmCheck.analyze(listOf(List(37) { 800.0 }, List(2) { 800.0 }, List(6) { 800.0 }, List(96) { 800.0 }, List(28) { 800.0 }))
+        assertEquals(RhythmLevel.REGULAR, result.level)
+        assertEquals(133, result.beats) // only the stretches of 32 beats or more are analysed
+    }
+
     @Test fun `impossible intervals make the check inconclusive`() {
         val noisy = List(2) { List(64) { i -> if (i % 4 == 0) 120.0 else 800.0 } }
         assertEquals(RhythmLevel.INCONCLUSIVE, RhythmCheck.analyze(noisy).level)

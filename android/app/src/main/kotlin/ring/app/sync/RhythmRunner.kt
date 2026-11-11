@@ -14,8 +14,8 @@ import java.time.Instant
 data class RhythmOutcome(val result: RhythmResult, val advice: RhythmAdvice)
 
 /**
- * Runs a rhythm check on one raw optical recording of about three minutes: long enough for several contiguous stretches of
- * 32 or more beats between the signal dropouts.
+ * Runs a rhythm check on one raw optical recording of 195 s: the sensor needs ~15 s to settle, then three minutes of pulse,
+ * long enough for several contiguous stretches of 32 or more beats between the signal dropouts.
  */
 class RhythmRunner(private val dao: RingDao, private val recorder: PpgRecorder) {
     /** Null when the ring gave nothing usable. `onSecond` receives the seconds recorded so far. */
@@ -31,7 +31,7 @@ class RhythmRunner(private val dao: RingDao, private val recorder: PpgRecorder) 
     }
 
     companion object {
-        const val DURATION_SECONDS = 180
+        const val DURATION_SECONDS = 195
         private const val WEEK = 7 * 86_400L
     }
 }

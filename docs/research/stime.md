@@ -121,6 +121,7 @@ centrale limitati. Decisione: funzione opzionale e disattivata di default, solo 
   PPG) sensibilita' ~93% e specificita' ~96%. Finestre di 24 battiti: ~89-91%. E' un risultato su pazienti con FA (i tratti "normali" contengono molta
   ectopia). Il test Kotlin usa 20 estratti da 128 battiti (10 FA, 10 sinusali) divisi in segmenti da 64: sinusali tutti regolari, 8 FA su 10
   irregolari (le altre hanno battiti oltre 200 bpm, che un sensore ottico non sa temporizzare e che vengono scartati).
+- **Assestamento del sensore**: nei primi ~15 s il grezzo e' saturo (65535 che decade, status 0, accelerometro rumoroso): `Ppg` li scarta e le registrazioni durano 15 s in piu' (rapida 45 s, completa 105 s, ritmo 195 s).
 - **Prova reale sul tuo anello (2026-11-11, PPG grezzo, 120 s a riposo)**: 133 intervalli, 5 segmenti separati da cadute di segnale; il ritmo
   sinusale non viene segnalato irregolare. Con 120 s i battiti utili sono meno di 96 ("inconcludente"): da qui i 3 minuti. Resta da verificare con
   un ritmo irregolare reale e con una registrazione da 3 minuti.

@@ -46,8 +46,8 @@ class HeartMeter(private val recorder: PpgRecorder) {
     }
 
     companion object {
-        const val QUICK_SECONDS = 30
-        const val FULL_SECONDS = 90
+        const val QUICK_SECONDS = 45
+        const val FULL_SECONDS = 105
         private const val MIN_BEATS = 12
         private const val MIN_QUALITY = 0.5
         private const val MAX_MOTION = 0.3

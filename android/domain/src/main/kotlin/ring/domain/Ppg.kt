@@ -34,7 +34,7 @@ data class PpgBeats(
         return if (diffs.size < 2) null else sqrt(diffs.sumOf { it * it } / diffs.size)
     }
 
-    val sdnn: Double? get() = rrMs.filter(Ppg::plausible).let { if (it.size < 2) null else Stats.sd(it) }
+    val sdnn: Double? get() = segments.flatten().let { if (it.size < 2) null else Stats.sd(it) }
 
     val bpm: Double? get() = if (rrMs.isEmpty()) null else 60_000.0 / Stats.median(rrMs.filter(Ppg::plausible).ifEmpty { rrMs })
 }
@@ -98,9 +98,18 @@ object Ppg {
         return out
     }
 
-    fun analyze(samples: List<RawSample>): PpgBeats {
+    /**
+     * The sensor starts saturated and settles for several seconds with status 0; those samples are dropped (when the rest of the recording
+     * has a status), and times then count from the first settled sample.
+     */
+    private fun settled(samples: List<RawSample>): List<RawSample> =
+        if (samples.count { it.status != 0 } * 2 >= samples.size) samples.dropWhile { it.status == 0 } else samples
+
+    fun analyze(recording: List<RawSample>): PpgBeats {
+        val samples = settled(recording)
         if (samples.size < MIN_SAMPLES) return PpgBeats(emptyList(), emptyList(), 0.0, 0.0, emptyList(), 0.0, 0.0)
-        val index = unwrap(IntArray(samples.size) { samples[it].seq })
+        val first = unwrap(IntArray(samples.size) { samples[it].seq })
+        val index = IntArray(first.size) { first[it] - first[0] }
         val grid = index.last() + 1
         val lost = 1.0 - samples.size.toDouble() / grid
         val gaps = lostRuns(index)

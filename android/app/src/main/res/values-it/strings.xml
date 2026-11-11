@@ -87,7 +87,7 @@ Controlla che l\'anello sia carico, fuori dalla custodia e non collegato ad altr
     <string name="hrv_rmssd">HRV RMSSD</string>
     <string name="live_phase1">1/2 · Avvio della registrazione grezza del polso. Dito fermo.</string>
     <string name="live_phase2">2/2 · Registro il polso: %1$d/%2$d s. Respira normalmente.</string>
-    <string name="btn_quick">Misura rapida · 30 s</string>
+    <string name="btn_quick">Misura rapida · 45 s</string>
     <string name="btn_measuring">Misuro…</string>
     <string name="btn_full">Misura completa · 90 s</string>
     <string name="full_hint">La completa raccoglie più battiti e stima anche i respiri al minuto. Siediti, dito fermo, respira normalmente.</string>

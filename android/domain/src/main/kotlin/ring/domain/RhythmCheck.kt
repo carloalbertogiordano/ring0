@@ -94,9 +94,9 @@ object RhythmCheck {
     /** One list of RR intervals (ms) per contiguous stretch of the recording. */
     fun analyze(segments: List<List<Double>>): RhythmResult {
         val total = segments.sumOf { it.size }
+        val artifactShare = if (total == 0) 1.0 else segments.sumOf { seg -> seg.count { it !in MIN_RR_MS..MAX_RR_MS } }.toDouble() / total
         val usable = cleanSegments(segments)
         val beats = usable.sumOf { it.size }
-        val artifactShare = if (total == 0) 1.0 else 1 - beats.toDouble() / total
         if (beats < MIN_BEATS || artifactShare > MAX_ARTIFACT_SHARE) return RhythmResult(RhythmLevel.INCONCLUSIVE, beats, 0, 0)
         val windows = usable.flatMap { seg -> (0..seg.size - WINDOW step STEP).map { seg.subList(it, it + WINDOW) } }
         val flagged = windows.count { nRmssd(it) > NRMSSD_LIMIT && sampleEntropy(it) > SAMPEN_LIMIT }
